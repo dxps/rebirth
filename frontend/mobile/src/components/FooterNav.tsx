@@ -1,4 +1,4 @@
-import { Database, Shapes, User } from 'lucide-react-native'
+import { Database, Shapes, Shield, User } from 'lucide-react-native'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { Logo } from '../Logo'
 import { type MobileView } from '../navigation'
@@ -52,6 +52,17 @@ export function FooterNav({
 				onPress={() => onSelectView('types')}
 			>
 				<Shapes color={iconColor} size={22} />
+			</Pressable>
+			<Pressable
+				accessibilityLabel="Security"
+				accessibilityRole="button"
+				style={[
+					styles.footerItem,
+					activeView === 'security' ? styles.activeFooterItem : null,
+				]}
+				onPress={() => onSelectView('security')}
+			>
+				<Shield color={iconColor} size={22} />
 			</Pressable>
 			<Pressable
 				accessibilityLabel="User profile"

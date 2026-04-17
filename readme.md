@@ -31,11 +31,16 @@ Copy `.env.example` to `.env` and update the values in the file, if needed.<br/>
 Run the service using `bun run dev:service` or `./dev_svc.sh` provided script.<br/>
 It can be accessed at `http://localhost:9908`.
 
-#### Front-end
+### Front-end
 
-Run the web frontend using `bun run dev:web`. It can be accessed at `http://localhost:9909`.
+#### Web
 
-Run the mobile frontend:
+Run the Web frontend using `bun run dev:web` or `./dev_web.sh` provided script.<br/>
+It can be accessed at `http://localhost:9909`.
+
+#### Mobile
+
+Run the mobile frontend using:
 
 - `bun run dev:mobile` starts Expo and opens the app on a connected Android device or emulator.<br/>
   (or use `./dev_mobile_android.sh` provided script)

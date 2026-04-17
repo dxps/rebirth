@@ -18,6 +18,29 @@ function getMigrationsFolder(): string {
 	return candidates.find((candidate) => existsSync(candidate)) ?? defaultFolder
 }
 
+async function seedAccessLevels(
+	client: ReturnType<typeof createDatabase>['client'],
+): Promise<void> {
+	await client`
+		INSERT INTO access_levels (id, name, description)
+		VALUES
+			(1, 'Public', 'Publicly visible'),
+			(2, 'Private', 'Private access needed'),
+			(3, 'Confidential', 'A more restricted access')
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			description = EXCLUDED.description
+	`
+
+	await client`
+		SELECT setval(
+			pg_get_serial_sequence('access_levels', 'id'),
+			GREATEST((SELECT MAX(id) FROM access_levels), 1),
+			true
+		)
+	`
+}
+
 export async function runMigrations(): Promise<void> {
 	loadEnvFiles()
 
@@ -32,6 +55,7 @@ export async function runMigrations(): Promise<void> {
 
 	try {
 		await migrate(db, { migrationsFolder: getMigrationsFolder() })
+		await seedAccessLevels(client)
 	} finally {
 		await client.end()
 	}

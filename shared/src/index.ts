@@ -1,3 +1,5 @@
+import { type AccessLevel } from './security/access-level'
+
 export type ServiceStatus = 'ok' | 'degraded' | 'down'
 
 export interface HealthResponse {
@@ -6,12 +8,17 @@ export interface HealthResponse {
 	status: ServiceStatus
 }
 
+export interface AccessLevelsResponse {
+	accessLevels: AccessLevel[]
+}
+
 export const appInfo = {
 	name: 'Rebirth',
 	description: 'An ontology simplified knowledge management system',
 } as const
 
 export const apiRoutes = {
+	accessLevels: '/access-levels',
 	health: '/health',
 } as const
 

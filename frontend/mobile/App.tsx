@@ -20,6 +20,7 @@ import { type MobileView } from './src/navigation'
 import { themes, type ThemeColors, type ThemeMode } from './src/theme'
 import { HomeView } from './src/views/HomeView'
 import { PageLabelView } from './src/views/PageLabelView'
+import { SecurityView } from './src/views/SecurityView'
 
 export default function App() {
 	const deviceTheme = useColorScheme()
@@ -58,6 +59,8 @@ export default function App() {
 				return <PageLabelView colors={colors} title="Data Explorer" />
 			case 'types':
 				return <PageLabelView colors={colors} title="Types Mgmt" />
+			case 'security':
+				return <SecurityView colors={colors} />
 			case 'profile':
 				return <PageLabelView colors={colors} title="User Profile" />
 			case 'home':

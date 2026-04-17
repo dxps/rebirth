@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Database, House, Moon, Shapes, Sun, User } from "lucide-react";
+import { Database, House, Moon, Shapes, Shield, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SpaLink, type AppPath } from "../routing";
@@ -47,6 +47,9 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
           </HeaderNavLink>
           <HeaderNavLink label="Types Mgmt" to="/types">
             <Shapes aria-hidden="true" />
+          </HeaderNavLink>
+          <HeaderNavLink label="Security" to="/security">
+            <Shield aria-hidden="true" />
           </HeaderNavLink>
         </nav>
       </TooltipProvider>

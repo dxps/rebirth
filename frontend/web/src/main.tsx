@@ -7,6 +7,7 @@ import { Header } from "./components/Header";
 import { getCurrentPath, type AppPath } from "./routing";
 import { DataExplorerView } from "./views/DataExplorerView";
 import { HomeView } from "./views/HomeView";
+import { SecurityView } from "./views/SecurityView";
 import { TypesMgmtView } from "./views/TypesMgmtView";
 import { UserProfileView } from "./views/UserProfileView";
 import "./styles.css";
@@ -41,6 +42,8 @@ function App() {
         return <DataExplorerView />;
       case "/types":
         return <TypesMgmtView />;
+      case "/security":
+        return <SecurityView />;
       case "/profile":
         return <UserProfileView />;
       case "/":

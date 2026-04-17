@@ -1,4 +1,5 @@
-import { apiRoutes, appInfo, createHealthResponse, jsonHeaders } from "@rebirth/shared";
+import { apiRoutes, appInfo, createHealthResponse, jsonHeaders, type AccessLevelsResponse } from "@rebirth/shared";
+import { listAccessLevels } from "./db/access-levels";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -10,13 +11,37 @@ await runMigrations();
 
 const server = Bun.serve({
   port,
-  fetch(request) {
+  async fetch(request) {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === apiRoutes.health) {
       return Response.json(createHealthResponse("ok"), {
         headers: jsonHeaders
       });
+    }
+
+    if (request.method === "GET" && url.pathname === apiRoutes.accessLevels) {
+      try {
+        const response: AccessLevelsResponse = {
+          accessLevels: await listAccessLevels()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load access levels"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
     }
 
     return Response.json(

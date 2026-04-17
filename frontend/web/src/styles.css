@@ -31,9 +31,13 @@
 :root {
 	--bg: #e2e0d7;
 	--fg: #504945;
+	--striped-title-fg: #1d2021;
+	--striped-title-fill: color-mix(in srgb, var(--striped-title-fg) 18%, transparent);
+	--striped-title-line: 0.019em;
+	--striped-title-gap: 0.043em;
 	--muted: #7c6f64;
 	--surface: #f2e5bc;
-	--menu-bg: #e2e0d7;
+	--menu-bg: #eeece3;
 	--border: #d5c4a1;
 	--accent: #b57614;
 	--accent-strong: #af3a03;
@@ -74,9 +78,13 @@
 :root[data-theme='dark'] {
 	--bg: #3c3c3c;
 	--fg: #e0e0e0;
+	--striped-title-fg: var(--fg);
+	--striped-title-fill: transparent;
+	--striped-title-line: 0.018em;
+	--striped-title-gap: 0.044em;
 	--muted: #c2b7a4;
 	--surface: #3c3836;
-	--menu-bg: #343434;
+	--menu-bg: #484848;
 	--border: #665c54;
 	--accent: #fabd2f;
 	--accent-strong: #fe8019;
@@ -271,7 +279,6 @@ button svg,
 .user-menu {
 	align-items: stretch;
 	background: var(--menu-bg);
-	border: 1px solid var(--border);
 	border-radius: 8px;
 	box-shadow: 0 16px 32px color-mix(in srgb, #000000 18%, transparent);
 	display: flex;
@@ -328,6 +335,82 @@ button svg,
 	width: 100%;
 }
 
+.security-view {
+	display: grid;
+	gap: 1.5rem;
+	margin: 0 auto;
+	max-width: 54rem;
+	width: 100%;
+}
+
+.section-heading {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.section-heading p {
+	color: var(--green);
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1.2;
+	margin: 0;
+}
+
+.data-table-wrap {
+	overflow-x: auto;
+	width: 100%;
+}
+
+.data-table {
+	border-collapse: separate;
+	border-spacing: 0;
+	color: var(--fg);
+	font-size: 0.95rem;
+	width: 100%;
+}
+
+.data-table th,
+.data-table td {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	padding: 0.5rem 0.7rem;
+	text-align: left;
+	vertical-align: top;
+}
+
+.data-table th {
+	color: var(--muted);
+	font-size: 0.78rem;
+	font-weight: 400;
+	text-transform: none;
+}
+
+.data-table td:first-child {
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.data-table td:nth-child(2) {
+	color: var(--muted);
+}
+
+.data-table tbody tr {
+	cursor: pointer;
+}
+
+.data-table tbody tr:hover td {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.data-table tbody tr:hover td:first-child {
+	border-bottom-left-radius: 6px;
+	border-top-left-radius: 6px;
+}
+
+.data-table tbody tr:hover td:last-child {
+	border-bottom-right-radius: 6px;
+	border-top-right-radius: 6px;
+}
+
 .eyebrow {
 	color: var(--green);
 	font-size: 0.76rem;
@@ -347,13 +430,14 @@ h1 {
 .striped-title {
 	background: repeating-linear-gradient(
 		to bottom,
-		var(--fg) 0,
-		var(--fg) 0.018em,
-		transparent 0.018em,
-		transparent 0.044em
+		var(--striped-title-fg) 0,
+		var(--striped-title-fg) var(--striped-title-line),
+		transparent var(--striped-title-line),
+		transparent var(--striped-title-gap)
 	);
 	background-clip: text;
 	color: transparent;
+	text-shadow: 0 0 0 var(--striped-title-fill);
 	-webkit-background-clip: text;
 }
 
