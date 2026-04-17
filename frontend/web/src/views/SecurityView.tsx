@@ -3,9 +3,10 @@ import {
 	type AccessLevel,
 	type AccessLevelResponse,
 	type AccessLevelsResponse,
+	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from '@rebirth/shared'
-import { ArrowLeft, Pencil, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import {
 	type FormEvent,
 	useCallback,
@@ -21,24 +22,26 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 220
 const draggableModalMargin = 16
 const draggableModalMinHeights: Record<OpenAccessLevelModal['mode'], number> = {
+	create: 220,
 	details: 220,
 	edit: 220,
 }
 const draggableModalMinWidth = 280
 
 interface OpenAccessLevelModal {
-	accessLevel: AccessLevel
+	accessLevel: AccessLevel | null
 	initialPosition: {
 		x: number
 		y: number
 	}
 	key: string
-	mode: 'details' | 'edit'
+	mode: 'create' | 'details' | 'edit'
 	zIndex: number
 }
 
 interface DraggableModalProps {
 	children: ReactNode
+	isSaveDisabled?: boolean
 	id: string
 	initialPosition: {
 		x: number
@@ -46,6 +49,7 @@ interface DraggableModalProps {
 	}
 	onActivate: (id: string) => void
 	onBack: (id: string) => void
+	onCreateSave?: (id: string) => void
 	onClose: (id: string) => void
 	onDelete: (id: string) => void
 	onEdit: (id: string) => void
@@ -62,9 +66,11 @@ function DraggableModal({
 	children,
 	id,
 	initialPosition,
+	isSaveDisabled = false,
 	mode,
 	onActivate,
 	onBack,
+	onCreateSave,
 	onClose,
 	onDelete,
 	onEdit,
@@ -178,6 +184,10 @@ function DraggableModal({
 		[id, minHeight, onActivate, position.x, position.y, size.height, size.width],
 	)
 
+	const saveTooltip = isSaveDisabled
+		? 'An access level must have a name'
+		: 'Save'
+
 	return (
 		<div
 			className="draggable-modal"
@@ -200,20 +210,49 @@ function DraggableModal({
 					className="draggable-modal-header"
 				>
 					<h2>{title}</h2>
-					<button
-						aria-label={`Delete ${title}`}
-						className="draggable-modal-titlebar-button"
-						data-no-drag="true"
-						data-tooltip="Delete"
-						title="Delete"
-						type="button"
-						onPointerDown={(event) => event.stopPropagation()}
-						onClick={() => onDelete(id)}
-					>
-						<Trash2 aria-hidden="true" />
-					</button>
-					{mode === 'edit' ? (
+					{mode === 'details' ? (
 						<>
+							<button
+								aria-label={`Delete ${title}`}
+								className="draggable-modal-titlebar-button"
+								data-no-drag="true"
+								data-tooltip="Delete"
+								title="Delete"
+								type="button"
+								onPointerDown={(event) => event.stopPropagation()}
+								onClick={() => onDelete(id)}
+							>
+								<Trash2 aria-hidden="true" />
+							</button>
+							<button
+								aria-label={`Edit ${title}`}
+								className="draggable-modal-titlebar-button"
+								data-no-drag="true"
+								data-tooltip="Edit"
+								title="Edit"
+								type="button"
+								onPointerDown={(event) => event.stopPropagation()}
+								onClick={() => onEdit(id)}
+							>
+								<Pencil aria-hidden="true" />
+							</button>
+						</>
+					) : (
+						<>
+							{mode === 'edit' ? (
+								<button
+									aria-label={`Delete ${title}`}
+									className="draggable-modal-titlebar-button"
+									data-no-drag="true"
+									data-tooltip="Delete"
+									title="Delete"
+									type="button"
+									onPointerDown={(event) => event.stopPropagation()}
+									onClick={() => onDelete(id)}
+								>
+									<Trash2 aria-hidden="true" />
+								</button>
+							) : null}
 							<button
 								aria-label={`Back to ${title} details`}
 								className="draggable-modal-titlebar-button"
@@ -230,28 +269,17 @@ function DraggableModal({
 								aria-label={`Save ${title}`}
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
-								data-tooltip="Save"
+								data-tooltip={saveTooltip}
 								form={`${id}-edit-form`}
-								title="Save"
+								disabled={isSaveDisabled}
+								title={saveTooltip}
 								type="submit"
 								onPointerDown={(event) => event.stopPropagation()}
+								onClick={() => onCreateSave?.(id)}
 							>
 								<Save aria-hidden="true" />
 							</button>
 						</>
-					) : (
-						<button
-							aria-label={`Edit ${title}`}
-							className="draggable-modal-titlebar-button"
-							data-no-drag="true"
-							data-tooltip="Edit"
-							title="Edit"
-							type="button"
-							onPointerDown={(event) => event.stopPropagation()}
-							onClick={() => onEdit(id)}
-						>
-							<Pencil aria-hidden="true" />
-						</button>
 					)}
 					<button
 						aria-label={`Close ${title}`}
@@ -286,23 +314,37 @@ function DraggableModal({
 }
 
 interface AccessLevelEditFormProps {
-	accessLevel: AccessLevel
+	accessLevel?: AccessLevel
 	formId: string
-	onSave: (input: UpdateAccessLevelInput) => Promise<void>
+	modalKey: string
+	onValidityChange: (key: string, isValid: boolean) => void
+	onSave: (input: CreateAccessLevelInput | UpdateAccessLevelInput) => Promise<void>
 }
 
 function AccessLevelEditForm({
 	accessLevel,
 	formId,
+	modalKey,
+	onValidityChange,
 	onSave,
 }: AccessLevelEditFormProps) {
-	const [description, setDescription] = useState(accessLevel.description)
+	const [description, setDescription] = useState(accessLevel?.description ?? '')
 	const [error, setError] = useState<string | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
-	const [name, setName] = useState(accessLevel.name)
+	const [name, setName] = useState(accessLevel?.name ?? '')
+
+	useEffect(() => {
+		onValidityChange(modalKey, name.trim().length > 0)
+	}, [modalKey, name, onValidityChange])
 
 	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
 		event.preventDefault()
+
+		if (name.trim().length === 0) {
+			setError('Name is required')
+			return
+		}
+
 		setError(null)
 		setIsSaving(true)
 
@@ -352,6 +394,9 @@ export function SecurityView() {
 	const [error, setError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 	const [openModals, setOpenModals] = useState<OpenAccessLevelModal[]>([])
+	const [validFormModalIds, setValidFormModalIds] = useState<Set<string>>(
+		() => new Set(),
+	)
 	const nextZIndex = useRef(1)
 
 	useEffect(() => {
@@ -415,6 +460,24 @@ export function SecurityView() {
 		[],
 	)
 
+	const setModalFormValidity = useCallback((key: string, isValid: boolean) => {
+		setValidFormModalIds((current) => {
+			if (current.has(key) === isValid) {
+				return current
+			}
+
+			const next = new Set(current)
+
+			if (isValid) {
+				next.add(key)
+			} else {
+				next.delete(key)
+			}
+
+			return next
+		})
+	}, [])
+
 	const updateAccessLevelInState = useCallback((accessLevel: AccessLevel) => {
 		setAccessLevels((current) =>
 			current.map((item) =>
@@ -422,10 +485,10 @@ export function SecurityView() {
 			),
 		)
 		setOpenModals((current) =>
-			current.map((modal) =>
-				modal.accessLevel.id === accessLevel.id
-					? { ...modal, accessLevel, mode: 'details' }
-					: modal,
+			current.filter((modal) =>
+				modal.accessLevel?.id === accessLevel.id
+					? false
+					: true,
 			),
 		)
 	}, [])
@@ -450,6 +513,29 @@ export function SecurityView() {
 		[updateAccessLevelInState],
 	)
 
+	const createAccessLevel = useCallback(
+		async (input: CreateAccessLevelInput | UpdateAccessLevelInput) => {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`, {
+				body: JSON.stringify(input),
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				method: 'POST',
+			})
+
+			if (!response.ok) {
+				throw new Error('Unable to create access level')
+			}
+
+			const data = (await response.json()) as AccessLevelResponse
+			setAccessLevels((current) => [...current, data.data])
+			setOpenModals((current) =>
+				current.filter((modal) => modal.key !== 'access-level-create'),
+			)
+		},
+		[],
+	)
+
 	const deleteAccessLevel = useCallback(
 		async (accessLevel: AccessLevel) => {
 			const response = await fetch(
@@ -467,7 +553,7 @@ export function SecurityView() {
 				current.filter((item) => item.id !== accessLevel.id),
 			)
 			setOpenModals((current) =>
-				current.filter((modal) => modal.accessLevel.id !== accessLevel.id),
+				current.filter((modal) => modal.accessLevel?.id !== accessLevel.id),
 			)
 		},
 		[],
@@ -478,7 +564,7 @@ export function SecurityView() {
 			nextZIndex.current += 1
 			setOpenModals((current) => {
 				const existing = current.find(
-					(modal) => modal.accessLevel.id === accessLevel.id,
+					(modal) => modal.accessLevel?.id === accessLevel.id,
 				)
 
 				if (existing) {
@@ -520,6 +606,43 @@ export function SecurityView() {
 		[],
 	)
 
+	const openCreateAccessLevel = useCallback((point: { clientX: number; clientY: number }) => {
+		nextZIndex.current += 1
+		setOpenModals((current) => {
+			const existing = current.find((modal) => modal.key === 'access-level-create')
+
+			if (existing) {
+				return current.map((modal) =>
+					modal.key === existing.key
+						? { ...modal, zIndex: nextZIndex.current }
+						: modal,
+				)
+			}
+
+			return [
+				...current,
+				{
+					accessLevel: null,
+					initialPosition: {
+						x: clampToRange(
+							point.clientX - 360 - 10,
+							draggableModalMargin,
+							window.innerWidth - 360 - draggableModalMargin,
+						),
+						y: clampToRange(
+							point.clientY + 10,
+							draggableModalMargin,
+							window.innerHeight - draggableModalHeight - draggableModalMargin,
+						),
+					},
+					key: 'access-level-create',
+					mode: 'create',
+					zIndex: nextZIndex.current,
+				},
+			]
+		})
+	}, [])
+
 	return (
 		<section className="security-view">
 			<div className="section-heading">
@@ -532,6 +655,17 @@ export function SecurityView() {
 						<tr>
 							<th>name</th>
 							<th>description</th>
+							<th className="data-table-action-heading">
+								<button
+									aria-label="Create access level"
+									className="section-action-button"
+									data-tooltip="Add an access level"
+									type="button"
+									onClick={(event) => openCreateAccessLevel(event)}
+								>
+									<Plus aria-hidden="true" />
+								</button>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -569,6 +703,7 @@ export function SecurityView() {
 								>
 									<td>{accessLevel.name}</td>
 									<td>{accessLevel.description}</td>
+									<td aria-hidden="true" />
 								</tr>
 							))
 						)}
@@ -581,26 +716,56 @@ export function SecurityView() {
 						key={modal.key}
 						id={modal.key}
 						initialPosition={modal.initialPosition}
+						isSaveDisabled={
+							(modal.mode === 'create' || modal.mode === 'edit') &&
+							!validFormModalIds.has(modal.key)
+						}
 						mode={modal.mode}
 						onActivate={bringToFront}
-						onBack={(key) => setModalMode(key, 'details')}
+						onBack={(key) => {
+							const modal = openModals.find((item) => item.key === key)
+
+							if (modal?.mode === 'create') {
+								closeModal(key)
+								return
+							}
+
+							setModalMode(key, 'details')
+						}}
 						onClose={closeModal}
 						onDelete={() => {
-							void deleteAccessLevel(modal.accessLevel)
+							if (modal.accessLevel) {
+								void deleteAccessLevel(modal.accessLevel)
+							}
 						}}
 						onEdit={(key) => setModalMode(key, 'edit')}
 						title="Access Level"
 						zIndex={modal.zIndex}
 					>
-						{modal.mode === 'edit' ? (
+						{modal.mode === 'create' ? (
+							<AccessLevelEditForm
+								formId={`${modal.key}-edit-form`}
+								modalKey={modal.key}
+								onValidityChange={setModalFormValidity}
+								onSave={createAccessLevel}
+							/>
+						) : modal.mode === 'edit' && modal.accessLevel ? (
 							<AccessLevelEditForm
 								accessLevel={modal.accessLevel}
 								formId={`${modal.key}-edit-form`}
-								onSave={(input) =>
-									saveAccessLevel(modal.accessLevel.id, input)
-								}
+								modalKey={modal.key}
+								onValidityChange={setModalFormValidity}
+								onSave={(input) => {
+									const accessLevel = modal.accessLevel
+
+									if (!accessLevel) {
+										return Promise.resolve()
+									}
+
+									return saveAccessLevel(accessLevel.id, input)
+								}}
 							/>
-						) : (
+						) : modal.accessLevel ? (
 							<div
 								className="access-level-details"
 								data-selectable="true"
@@ -618,7 +783,7 @@ export function SecurityView() {
 									<strong>{modal.accessLevel.description}</strong>
 								</div>
 							</div>
-						)}
+						) : null}
 					</DraggableModal>
 				))}
 			</div>

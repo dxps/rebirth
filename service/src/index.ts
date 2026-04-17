@@ -3,12 +3,13 @@ import {
   appInfo,
   createHealthResponse,
   isAccessLevelId,
+  isCreateAccessLevelInput,
   isUpdateAccessLevelInput,
   jsonHeaders,
   type AccessLevelResponse,
   type AccessLevelsResponse
 } from "@rebirth/shared";
-import { deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
+import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -51,6 +52,54 @@ const server = Bun.serve({
         return Response.json(
           {
             error: "Unable to load access levels"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.accessLevels) {
+      try {
+        const input = await request.json();
+
+        if (!isCreateAccessLevelInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid access level"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const createdAccessLevel = await createAccessLevel({
+          description: input.description.trim(),
+          name: input.name.trim()
+        });
+
+        if (!createdAccessLevel) {
+          throw new Error("Access level was not created.");
+        }
+
+        const response: AccessLevelResponse = {
+          data: createdAccessLevel
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders,
+          status: 201
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to create access level"
           },
           {
             headers: jsonHeaders,

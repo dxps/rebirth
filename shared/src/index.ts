@@ -1,5 +1,6 @@
 import {
 	type AccessLevel,
+	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from './security/access-level'
 
@@ -32,7 +33,7 @@ export const apiRoutes = {
 
 export const jsonHeaders = {
 	'Access-Control-Allow-Headers': 'Content-Type',
-	'Access-Control-Allow-Methods': 'DELETE, GET, PATCH, OPTIONS',
+	'Access-Control-Allow-Methods': 'DELETE, GET, PATCH, OPTIONS, POST',
 	'Access-Control-Allow-Origin': '*',
 	'Content-Type': 'application/json',
 } as const
@@ -58,6 +59,21 @@ export function isUpdateAccessLevelInput(
 		(input.name === undefined || typeof input.name === 'string') &&
 		(input.description === undefined ||
 			typeof input.description === 'string')
+	)
+}
+
+export function isCreateAccessLevelInput(
+	value: unknown,
+): value is CreateAccessLevelInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.name === 'string' &&
+		typeof input.description === 'string'
 	)
 }
 

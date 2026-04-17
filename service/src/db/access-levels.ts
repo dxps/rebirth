@@ -1,5 +1,8 @@
 import { asc, eq } from 'drizzle-orm'
-import { type UpdateAccessLevelInput } from '@rebirth/shared'
+import {
+	type CreateAccessLevelInput,
+	type UpdateAccessLevelInput,
+} from '@rebirth/shared'
 
 import { createDatabase, getDatabaseUrl } from './client'
 import { accessLevels } from './schema'
@@ -15,6 +18,27 @@ export async function listAccessLevels() {
 
 	try {
 		return await db.select().from(accessLevels).orderBy(asc(accessLevels.id))
+	} finally {
+		await client.end()
+	}
+}
+
+export async function createAccessLevel(input: CreateAccessLevelInput) {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client, db } = createDatabase(databaseUrl)
+
+	try {
+		const [createdAccessLevel] = await db
+			.insert(accessLevels)
+			.values(input)
+			.returning()
+
+		return createdAccessLevel
 	} finally {
 		await client.end()
 	}

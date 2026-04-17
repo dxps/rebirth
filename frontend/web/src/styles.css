@@ -377,6 +377,64 @@ button svg,
 	margin: 0;
 }
 
+.section-action-button,
+button.section-action-button {
+	background: transparent;
+	background-color: transparent;
+	border-radius: 999px;
+	color: color-mix(in srgb, var(--fg) 62%, transparent);
+	font-size: 0.95rem;
+	height: 1.45rem;
+	justify-content: center;
+	min-height: 1.45rem;
+	padding: 0;
+	width: 1.45rem;
+}
+
+.section-action-button:hover,
+button.section-action-button:hover {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+}
+
+.section-action-button svg {
+	height: 0.85rem;
+	width: 0.85rem;
+}
+
+.section-action-button[data-tooltip] {
+	position: relative;
+}
+
+.section-action-button[data-tooltip]::after {
+	background: transparent;
+	border-radius: 6px;
+	color: var(--fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0;
+	pointer-events: none;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.section-action-button[data-tooltip]:hover::after,
+.section-action-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
 .data-table-wrap {
 	overflow-x: auto;
 	width: 100%;
@@ -396,6 +454,20 @@ button svg,
 	padding: 0.5rem 0.7rem;
 	text-align: left;
 	vertical-align: top;
+}
+
+.data-table-action-heading {
+	padding-bottom: 0.25rem;
+	padding-right: 0;
+	padding-top: 0.25rem;
+	text-align: right;
+	width: 2rem;
+}
+
+.data-table td:last-child {
+	padding-left: 0;
+	padding-right: 0;
+	width: 2rem;
 }
 
 .data-table th {
@@ -516,6 +588,19 @@ button.draggable-modal-titlebar-button:hover {
 	color: var(--fg);
 }
 
+.draggable-modal-titlebar-button:disabled,
+button.draggable-modal-titlebar-button:disabled {
+	cursor: default;
+	opacity: 0.36;
+}
+
+.draggable-modal-titlebar-button:disabled:hover,
+button.draggable-modal-titlebar-button:disabled:hover {
+	background: transparent;
+	background-color: transparent;
+	color: color-mix(in srgb, var(--fg) 62%, transparent);
+}
+
 .draggable-modal-titlebar-button[data-tooltip]::after {
 	background: transparent;
 	border-radius: 6px;
@@ -528,9 +613,9 @@ button.draggable-modal-titlebar-button:hover {
 	padding: 0.32rem 0.45rem;
 	pointer-events: none;
 	position: absolute;
-	right: 0;
+	left: 50%;
 	top: calc(100% + 0.35rem);
-	transform: translateY(-0.1rem);
+	transform: translate(-50%, -0.1rem);
 	transition:
 		opacity 120ms ease,
 		transform 120ms ease;
@@ -541,7 +626,7 @@ button.draggable-modal-titlebar-button:hover {
 .draggable-modal-titlebar-button[data-tooltip]:hover::after,
 .draggable-modal-titlebar-button[data-tooltip]:focus-visible::after {
 	opacity: 1;
-	transform: translateY(0);
+	transform: translate(-50%, 0);
 }
 
 .draggable-modal-content {
