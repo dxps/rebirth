@@ -1,5 +1,13 @@
-import { apiRoutes, type AccessLevel, type AccessLevelsResponse } from '@rebirth/shared'
 import {
+	apiRoutes,
+	type AccessLevel,
+	type AccessLevelResponse,
+	type AccessLevelsResponse,
+	type UpdateAccessLevelInput,
+} from '@rebirth/shared'
+import { ArrowLeft, Pencil, Save, Trash2 } from 'lucide-react'
+import {
+	type FormEvent,
 	useCallback,
 	useEffect,
 	useRef,
@@ -12,6 +20,10 @@ import {
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 220
 const draggableModalMargin = 16
+const draggableModalMinHeights: Record<OpenAccessLevelModal['mode'], number> = {
+	details: 220,
+	edit: 220,
+}
 const draggableModalMinWidth = 280
 
 interface OpenAccessLevelModal {
@@ -21,6 +33,7 @@ interface OpenAccessLevelModal {
 		y: number
 	}
 	key: string
+	mode: 'details' | 'edit'
 	zIndex: number
 }
 
@@ -32,7 +45,11 @@ interface DraggableModalProps {
 		y: number
 	}
 	onActivate: (id: string) => void
+	onBack: (id: string) => void
 	onClose: (id: string) => void
+	onDelete: (id: string) => void
+	onEdit: (id: string) => void
+	mode: OpenAccessLevelModal['mode']
 	title: string
 	zIndex: number
 }
@@ -45,8 +62,12 @@ function DraggableModal({
 	children,
 	id,
 	initialPosition,
+	mode,
 	onActivate,
+	onBack,
 	onClose,
+	onDelete,
+	onEdit,
 	title,
 	zIndex,
 }: DraggableModalProps) {
@@ -55,6 +76,15 @@ function DraggableModal({
 		height: draggableModalHeight,
 		width: Math.min(360, Math.max(draggableModalMinWidth, window.innerWidth * 0.86)),
 	})
+	const minHeight = draggableModalMinHeights[mode]
+
+	useEffect(() => {
+		setSize((current) => ({
+			...current,
+			height: Math.min(current.height, minHeight),
+		}))
+	}, [minHeight])
+
 	const dragStart = useRef({
 		pointerX: 0,
 		pointerY: 0,
@@ -124,7 +154,7 @@ function DraggableModal({
 						resizeStart.current.height +
 							pointerEvent.clientY -
 							resizeStart.current.pointerY,
-						180,
+						minHeight,
 						window.innerHeight - position.y - draggableModalMargin,
 					),
 					width: clampToRange(
@@ -145,7 +175,7 @@ function DraggableModal({
 			window.addEventListener('pointermove', move)
 			window.addEventListener('pointerup', stop)
 		},
-		[id, onActivate, position.x, position.y, size.height, size.width],
+		[id, minHeight, onActivate, position.x, position.y, size.height, size.width],
 	)
 
 	return (
@@ -171,9 +201,64 @@ function DraggableModal({
 				>
 					<h2>{title}</h2>
 					<button
-						aria-label={`Close ${title}`}
-						className="draggable-modal-close"
+						aria-label={`Delete ${title}`}
+						className="draggable-modal-titlebar-button"
 						data-no-drag="true"
+						data-tooltip="Delete"
+						title="Delete"
+						type="button"
+						onPointerDown={(event) => event.stopPropagation()}
+						onClick={() => onDelete(id)}
+					>
+						<Trash2 aria-hidden="true" />
+					</button>
+					{mode === 'edit' ? (
+						<>
+							<button
+								aria-label={`Back to ${title} details`}
+								className="draggable-modal-titlebar-button"
+								data-no-drag="true"
+								data-tooltip="Back"
+								title="Back"
+								type="button"
+								onPointerDown={(event) => event.stopPropagation()}
+								onClick={() => onBack(id)}
+							>
+								<ArrowLeft aria-hidden="true" />
+							</button>
+							<button
+								aria-label={`Save ${title}`}
+								className="draggable-modal-titlebar-button"
+								data-no-drag="true"
+								data-tooltip="Save"
+								form={`${id}-edit-form`}
+								title="Save"
+								type="submit"
+								onPointerDown={(event) => event.stopPropagation()}
+							>
+								<Save aria-hidden="true" />
+							</button>
+						</>
+					) : (
+						<button
+							aria-label={`Edit ${title}`}
+							className="draggable-modal-titlebar-button"
+							data-no-drag="true"
+							data-tooltip="Edit"
+							title="Edit"
+							type="button"
+							onPointerDown={(event) => event.stopPropagation()}
+							onClick={() => onEdit(id)}
+						>
+							<Pencil aria-hidden="true" />
+						</button>
+					)}
+					<button
+						aria-label={`Close ${title}`}
+						className="draggable-modal-titlebar-button draggable-modal-close"
+						data-no-drag="true"
+						data-tooltip="Close"
+						title="Close"
 						type="button"
 						onPointerDown={(event) => event.stopPropagation()}
 						onClick={() => onClose(id)}
@@ -197,6 +282,68 @@ function DraggableModal({
 				</button>
 			</div>
 		</div>
+	)
+}
+
+interface AccessLevelEditFormProps {
+	accessLevel: AccessLevel
+	formId: string
+	onSave: (input: UpdateAccessLevelInput) => Promise<void>
+}
+
+function AccessLevelEditForm({
+	accessLevel,
+	formId,
+	onSave,
+}: AccessLevelEditFormProps) {
+	const [description, setDescription] = useState(accessLevel.description)
+	const [error, setError] = useState<string | null>(null)
+	const [isSaving, setIsSaving] = useState(false)
+	const [name, setName] = useState(accessLevel.name)
+
+	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+		event.preventDefault()
+		setError(null)
+		setIsSaving(true)
+
+		try {
+			await onSave({
+				description,
+				name,
+			})
+		} catch {
+			setError('Unable to save access level')
+		 } finally {
+			setIsSaving(false)
+		}
+	}
+
+	return (
+		<form
+			className="access-level-edit-form"
+			data-selectable="true"
+			id={formId}
+			onSubmit={(event) => void submit(event)}
+		>
+			<label>
+				<span>name</span>
+				<input
+					type="text"
+					value={name}
+					onChange={(event) => setName(event.target.value)}
+				/>
+			</label>
+			<label>
+				<span>description</span>
+				<textarea
+					rows={2}
+					value={description}
+					onChange={(event) => setDescription(event.target.value)}
+				/>
+			</label>
+			{error ? <p className="form-error">{error}</p> : null}
+			{isSaving ? <p className="form-status">Saving</p> : null}
+		</form>
 	)
 }
 
@@ -257,6 +404,75 @@ export function SecurityView() {
 		setOpenModals((current) => current.filter((modal) => modal.key !== key))
 	}, [])
 
+	const setModalMode = useCallback(
+		(key: string, mode: OpenAccessLevelModal['mode']) => {
+			setOpenModals((current) =>
+				current.map((modal) =>
+					modal.key === key ? { ...modal, mode } : modal,
+				),
+			)
+		},
+		[],
+	)
+
+	const updateAccessLevelInState = useCallback((accessLevel: AccessLevel) => {
+		setAccessLevels((current) =>
+			current.map((item) =>
+				item.id === accessLevel.id ? accessLevel : item,
+			),
+		)
+		setOpenModals((current) =>
+			current.map((modal) =>
+				modal.accessLevel.id === accessLevel.id
+					? { ...modal, accessLevel, mode: 'details' }
+					: modal,
+			),
+		)
+	}, [])
+
+	const saveAccessLevel = useCallback(
+		async (id: number, input: UpdateAccessLevelInput) => {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevel(id)}`, {
+				body: JSON.stringify(input),
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				method: 'PATCH',
+			})
+
+			if (!response.ok) {
+				throw new Error('Unable to save access level')
+			}
+
+			const data = (await response.json()) as AccessLevelResponse
+			updateAccessLevelInState(data.data)
+		},
+		[updateAccessLevelInState],
+	)
+
+	const deleteAccessLevel = useCallback(
+		async (accessLevel: AccessLevel) => {
+			const response = await fetch(
+				`${apiBaseUrl}${apiRoutes.accessLevel(accessLevel.id)}`,
+				{
+					method: 'DELETE',
+				},
+			)
+
+			if (!response.ok) {
+				throw new Error('Unable to delete access level')
+			}
+
+			setAccessLevels((current) =>
+				current.filter((item) => item.id !== accessLevel.id),
+			)
+			setOpenModals((current) =>
+				current.filter((modal) => modal.accessLevel.id !== accessLevel.id),
+			)
+		},
+		[],
+	)
+
 	const openAccessLevel = useCallback(
 		(accessLevel: AccessLevel, point: { clientX: number; clientY: number }) => {
 			nextZIndex.current += 1
@@ -295,6 +511,7 @@ export function SecurityView() {
 						accessLevel,
 						initialPosition: { x, y },
 						key: `access-level-${accessLevel.id}`,
+						mode: 'details',
 						zIndex: nextZIndex.current,
 					},
 				]
@@ -364,28 +581,44 @@ export function SecurityView() {
 						key={modal.key}
 						id={modal.key}
 						initialPosition={modal.initialPosition}
+						mode={modal.mode}
 						onActivate={bringToFront}
+						onBack={(key) => setModalMode(key, 'details')}
 						onClose={closeModal}
-						title={modal.accessLevel.name}
+						onDelete={() => {
+							void deleteAccessLevel(modal.accessLevel)
+						}}
+						onEdit={(key) => setModalMode(key, 'edit')}
+						title="Access Level"
 						zIndex={modal.zIndex}
 					>
-						<div
-							className="access-level-details"
-							data-selectable="true"
-						>
-							<div>
-								<p>id</p>
-								<strong>{modal.accessLevel.id}</strong>
+						{modal.mode === 'edit' ? (
+							<AccessLevelEditForm
+								accessLevel={modal.accessLevel}
+								formId={`${modal.key}-edit-form`}
+								onSave={(input) =>
+									saveAccessLevel(modal.accessLevel.id, input)
+								}
+							/>
+						) : (
+							<div
+								className="access-level-details"
+								data-selectable="true"
+							>
+								<div>
+									<p>id</p>
+									<strong>{modal.accessLevel.id}</strong>
+								</div>
+								<div>
+									<p>name</p>
+									<strong>{modal.accessLevel.name}</strong>
+								</div>
+								<div>
+									<p>description</p>
+									<strong>{modal.accessLevel.description}</strong>
+								</div>
 							</div>
-							<div>
-								<p>name</p>
-								<strong>{modal.accessLevel.name}</strong>
-							</div>
-							<div>
-								<p>description</p>
-								<strong>{modal.accessLevel.description}</strong>
-							</div>
-						</div>
+						)}
 					</DraggableModal>
 				))}
 			</div>

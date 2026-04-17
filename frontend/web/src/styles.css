@@ -118,6 +118,27 @@ body {
 	margin: 0;
 }
 
+* {
+	scrollbar-color: color-mix(in srgb, var(--fg) 30%, transparent) transparent;
+	scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+	height: 0.55rem;
+	width: 0.55rem;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--fg) 26%, transparent);
+	background-clip: content-box;
+	border: 0.18rem solid transparent;
+	border-radius: 999px;
+}
+
 a {
 	color: inherit;
 }
@@ -434,7 +455,7 @@ button svg,
 
 .draggable-modal-body {
 	background: var(--menu-bg);
-	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border: 0;
 	border-radius: 8px;
 	cursor: grab;
 	display: flex;
@@ -466,8 +487,8 @@ button svg,
 	margin: 0;
 }
 
-.draggable-modal-close,
-button.draggable-modal-close {
+.draggable-modal-titlebar-button,
+button.draggable-modal-titlebar-button {
 	background: transparent;
 	background-color: transparent;
 	border-radius: 999px;
@@ -479,20 +500,54 @@ button.draggable-modal-close {
 	line-height: 1;
 	min-height: 1.45rem;
 	padding: 0;
+	position: relative;
 	width: 1.45rem;
 }
 
-.draggable-modal-close:hover,
-button.draggable-modal-close:hover {
+.draggable-modal-titlebar-button svg {
+	height: 0.72rem;
+	width: 0.72rem;
+}
+
+.draggable-modal-titlebar-button:hover,
+button.draggable-modal-titlebar-button:hover {
 	background: color-mix(in srgb, var(--fg) 10%, transparent);
 	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
 	color: var(--fg);
 }
 
+.draggable-modal-titlebar-button[data-tooltip]::after {
+	background: transparent;
+	border-radius: 6px;
+	color: var(--fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.draggable-modal-titlebar-button[data-tooltip]:hover::after,
+.draggable-modal-titlebar-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
 .draggable-modal-content {
 	cursor: grab;
 	flex: 1;
-	overflow: auto;
+	overflow: hidden;
 	padding: 0.55rem 0.9rem 1rem;
 	user-select: none;
 }
@@ -569,6 +624,60 @@ button.draggable-modal-resize:hover {
 	font-size: 0.95rem;
 	font-weight: 400;
 	line-height: 1.45;
+}
+
+.access-level-edit-form {
+	display: grid;
+	gap: 0.8rem;
+}
+
+.access-level-edit-form label {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.78rem;
+	gap: 0.25rem;
+	line-height: 1.2;
+}
+
+.access-level-edit-form input,
+.access-level-edit-form textarea {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.95rem;
+	line-height: 1.35;
+	padding: 0.28rem 0.42rem;
+}
+
+.access-level-edit-form input {
+	height: 1.95rem;
+	resize: none;
+}
+
+.access-level-edit-form textarea {
+	height: calc((0.95rem * 1.35 * 2) + 0.56rem + 2px);
+	min-height: calc((0.95rem * 1.35 * 2) + 0.56rem + 2px);
+	resize: none;
+}
+
+.access-level-edit-form input:focus,
+.access-level-edit-form textarea:focus {
+	border-color: var(--blue);
+	outline: 0;
+}
+
+.form-error {
+	color: var(--accent-strong);
+	font-size: 0.85rem;
+	margin: 0;
+}
+
+.form-status {
+	color: var(--muted);
+	font-size: 0.85rem;
+	margin: 0;
 }
 
 .eyebrow {
