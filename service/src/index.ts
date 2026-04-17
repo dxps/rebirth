@@ -23,7 +23,7 @@ const server = Bun.serve({
     if (request.method === "GET" && url.pathname === apiRoutes.accessLevels) {
       try {
         const response: AccessLevelsResponse = {
-          accessLevels: await listAccessLevels()
+          data: await listAccessLevels()
         };
 
         return Response.json(response, {

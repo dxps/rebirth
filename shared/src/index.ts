@@ -9,7 +9,7 @@ export interface HealthResponse {
 }
 
 export interface AccessLevelsResponse {
-	accessLevels: AccessLevel[]
+	data: AccessLevel[]
 }
 
 export const appInfo = {
