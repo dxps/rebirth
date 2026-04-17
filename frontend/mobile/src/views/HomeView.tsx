@@ -13,7 +13,7 @@ interface HomeViewProps {
 	colors: ThemeColors
 }
 
-const titleStripeTops = [5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57]
+const titleStripeTops = Array.from({ length: 25 }, (_, index) => 3 + index * 2.25)
 
 export function HomeView({ colors }: HomeViewProps) {
 	const [apiStatus, setApiStatus] = useState('Not checked yet')
@@ -139,7 +139,7 @@ function createStyles(colors: ThemeColors) {
 			lineHeight: 60,
 		},
 		titleStripe: {
-			height: 1,
+			height: 0.5,
 			left: 0,
 			position: 'absolute',
 			right: 0,

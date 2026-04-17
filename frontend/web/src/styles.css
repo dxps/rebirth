@@ -348,9 +348,9 @@ h1 {
 	background: repeating-linear-gradient(
 		to bottom,
 		var(--fg) 0,
-		var(--fg) 0.055em,
-		transparent 0.055em,
-		transparent 0.11em
+		var(--fg) 0.018em,
+		transparent 0.018em,
+		transparent 0.044em
 	);
 	background-clip: text;
 	color: transparent;
