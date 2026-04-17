@@ -1,0 +1,27 @@
+{
+  "name": "rebirth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "service",
+    "frontend/web",
+    "frontend/mobile",
+    "shared"
+  ],
+  "scripts": {
+    "dev:service": "bun --filter @rebirth/service dev",
+    "dev:web": "bun --filter @rebirth/web dev",
+    "dev:mobile": "bun --cwd frontend/mobile expo start --android",
+    "dev:mobile:metro": "bun --cwd frontend/mobile expo start",
+    "dev:mobile:ios": "bun --cwd frontend/mobile expo start --ios",
+    "build": "bun --filter '*' build",
+    "typecheck": "bun --filter '*' typecheck"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  }
+}

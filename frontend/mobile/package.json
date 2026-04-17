@@ -1,0 +1,28 @@
+{
+  "name": "@rebirth/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "tsc --project tsconfig.json --noEmit",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@rebirth/shared": "workspace:*",
+    "@expo-google-fonts/work-sans": "^0.4.2",
+    "expo": "^53.0.9",
+    "expo-font": "~13.3.2",
+    "lucide-react-native": "^1.8.0",
+    "react": "19.0.0",
+    "react-native": "0.79.6",
+    "react-native-svg": "15.11.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.0.10",
+    "typescript": "~5.8.3"
+  }
+}
