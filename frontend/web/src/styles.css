@@ -630,6 +630,75 @@ button.draggable-modal-titlebar-button:disabled:hover {
 	color: color-mix(in srgb, var(--fg) 36%, transparent);
 }
 
+.draggable-modal-delete-action {
+	align-items: center;
+	display: inline-flex;
+	position: relative;
+}
+
+.delete-confirm-popover {
+	background: var(--menu-bg);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 12px 26px color-mix(in srgb, #000000 24%, transparent);
+	display: grid;
+	gap: 0.55rem;
+	left: 50%;
+	min-width: 11rem;
+	padding: 0.65rem;
+	position: absolute;
+	top: calc(100% + 0.45rem);
+	transform: translateX(-50%);
+	z-index: 3;
+}
+
+.delete-confirm-popover p {
+	color: var(--fg);
+	font-size: 0.82rem;
+	line-height: 1.25;
+	margin: 0;
+	white-space: nowrap;
+}
+
+.delete-confirm-popover div {
+	display: flex;
+	gap: 0.4rem;
+	justify-content: flex-end;
+}
+
+.delete-confirm-popover button {
+	border-radius: 6px;
+	font-size: 0.78rem;
+	min-height: 1.45rem;
+	padding: 0.12rem 0.5rem;
+}
+
+.delete-confirm-secondary,
+button.delete-confirm-secondary {
+	background: transparent;
+	background-color: transparent;
+	color: var(--fg);
+}
+
+.delete-confirm-secondary:hover,
+button.delete-confirm-secondary:hover {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.delete-confirm-danger,
+button.delete-confirm-danger {
+	background: var(--destructive);
+	background-color: var(--destructive);
+	color: var(--bg);
+}
+
+.delete-confirm-danger:hover,
+button.delete-confirm-danger:hover {
+	background: color-mix(in srgb, var(--destructive) 82%, var(--fg));
+	background-color: color-mix(in srgb, var(--destructive) 82%, var(--fg));
+}
+
 .draggable-modal-titlebar-button[data-tooltip]::after {
 	background: transparent;
 	border-radius: 6px;

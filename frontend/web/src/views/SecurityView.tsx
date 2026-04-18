@@ -94,7 +94,9 @@ function DraggableModal({
 		height: draggableModalHeight,
 		width: Math.min(360, Math.max(draggableModalMinWidth, window.innerWidth * 0.86)),
 	})
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const minHeight = draggableModalMinHeights[mode]
+	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
 
 	useEffect(() => {
 		setSize((current) => ({
@@ -102,6 +104,16 @@ function DraggableModal({
 			height: Math.min(current.height, minHeight),
 		}))
 	}, [minHeight])
+
+	useEffect(() => {
+		if (isDeleteConfirmOpen) {
+			confirmDeleteButtonRef.current?.focus()
+		}
+	}, [isDeleteConfirmOpen])
+
+	useEffect(() => {
+		setIsDeleteConfirmOpen(false)
+	}, [mode])
 
 	const dragStart = useRef({
 		pointerX: 0,
@@ -199,6 +211,56 @@ function DraggableModal({
 	const saveTooltip = isSaveDisabled
 		? 'An access level must have a name'
 		: 'Save'
+	const deleteButton = (
+		<div
+			className="draggable-modal-delete-action"
+			data-no-drag="true"
+		>
+			<button
+				aria-expanded={isDeleteConfirmOpen}
+				aria-label={`Delete ${title}`}
+				className="draggable-modal-titlebar-button"
+				data-no-drag="true"
+				data-tooltip={isDeleteConfirmOpen ? undefined : 'Delete'}
+				type="button"
+				onPointerDown={(event) => event.stopPropagation()}
+				onClick={() => setIsDeleteConfirmOpen(true)}
+			>
+				<Trash2 aria-hidden="true" />
+			</button>
+			{isDeleteConfirmOpen ? (
+				<div
+					className="delete-confirm-popover"
+					data-no-drag="true"
+					role="dialog"
+					aria-label={`Confirm delete ${title}`}
+					onPointerDown={(event) => event.stopPropagation()}
+				>
+					<p>Delete this access level?</p>
+					<div>
+						<button
+							className="delete-confirm-secondary"
+							type="button"
+							onClick={() => setIsDeleteConfirmOpen(false)}
+						>
+							Cancel
+						</button>
+						<button
+							ref={confirmDeleteButtonRef}
+							className="delete-confirm-danger"
+							type="button"
+							onClick={() => {
+								setIsDeleteConfirmOpen(false)
+								onDelete(id)
+							}}
+						>
+							Delete
+						</button>
+					</div>
+				</div>
+			) : null}
+		</div>
+	)
 
 	return (
 		<div
@@ -224,17 +286,7 @@ function DraggableModal({
 					<h2>{title}</h2>
 					{mode === 'details' ? (
 						<>
-							<button
-								aria-label={`Delete ${title}`}
-								className="draggable-modal-titlebar-button"
-								data-no-drag="true"
-								data-tooltip="Delete"
-								type="button"
-								onPointerDown={(event) => event.stopPropagation()}
-								onClick={() => onDelete(id)}
-							>
-								<Trash2 aria-hidden="true" />
-							</button>
+							{deleteButton}
 							<button
 								aria-label={`Edit ${title}`}
 								className="draggable-modal-titlebar-button"
@@ -250,17 +302,7 @@ function DraggableModal({
 					) : (
 						<>
 							{mode === 'edit' ? (
-								<button
-									aria-label={`Delete ${title}`}
-									className="draggable-modal-titlebar-button"
-									data-no-drag="true"
-									data-tooltip="Delete"
-									type="button"
-									onPointerDown={(event) => event.stopPropagation()}
-									onClick={() => onDelete(id)}
-								>
-									<Trash2 aria-hidden="true" />
-								</button>
+								deleteButton
 							) : null}
 							<button
 								aria-label={`Back to ${title} details`}
@@ -321,6 +363,7 @@ function DraggableModal({
 
 interface AccessLevelEditFormProps {
 	accessLevel?: AccessLevel
+	autoFocusName?: boolean
 	formId: string
 	modalKey: string
 	onValidityChange: (key: string, isValid: boolean) => void
@@ -329,6 +372,7 @@ interface AccessLevelEditFormProps {
 
 function AccessLevelEditForm({
 	accessLevel,
+	autoFocusName = false,
 	formId,
 	modalKey,
 	onValidityChange,
@@ -338,10 +382,17 @@ function AccessLevelEditForm({
 	const [error, setError] = useState<string | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
 	const [name, setName] = useState(accessLevel?.name ?? '')
+	const nameInputRef = useRef<HTMLInputElement>(null)
 
 	useEffect(() => {
 		onValidityChange(modalKey, name.trim().length > 0)
 	}, [modalKey, name, onValidityChange])
+
+	useEffect(() => {
+		if (autoFocusName) {
+			nameInputRef.current?.focus()
+		}
+	}, [autoFocusName])
 
 	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
 		event.preventDefault()
@@ -376,6 +427,7 @@ function AccessLevelEditForm({
 			<label>
 				<span>name</span>
 				<input
+					ref={nameInputRef}
 					type="text"
 					value={name}
 					onChange={(event) => setName(event.target.value)}
@@ -750,6 +802,7 @@ export function SecurityView() {
 					>
 						{modal.mode === 'create' ? (
 							<AccessLevelEditForm
+								autoFocusName
 								formId={`${modal.key}-edit-form`}
 								modalKey={modal.key}
 								onValidityChange={setModalFormValidity}
@@ -758,6 +811,7 @@ export function SecurityView() {
 						) : modal.mode === 'edit' && modal.accessLevel ? (
 							<AccessLevelEditForm
 								accessLevel={modal.accessLevel}
+								autoFocusName
 								formId={`${modal.key}-edit-form`}
 								modalKey={modal.key}
 								onValidityChange={setModalFormValidity}
