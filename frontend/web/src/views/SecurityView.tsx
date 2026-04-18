@@ -6,7 +6,7 @@ import {
 	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from '@rebirth/shared'
-import { ArrowLeft, Pencil, Plus, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import {
 	type FormEvent,
 	useCallback,
@@ -60,6 +60,18 @@ interface DraggableModalProps {
 
 function clampToRange(value: number, min: number, max: number) {
 	return Math.max(min, Math.min(value, max))
+}
+
+function getAccessLevelModalTitle(mode: OpenAccessLevelModal['mode']) {
+	if (mode === 'create') {
+		return 'Access Level :: New'
+	}
+
+	if (mode === 'edit') {
+		return 'Access Level :: Edit'
+	}
+
+	return 'Access Level'
 }
 
 function DraggableModal({
@@ -217,7 +229,6 @@ function DraggableModal({
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
 								data-tooltip="Delete"
-								title="Delete"
 								type="button"
 								onPointerDown={(event) => event.stopPropagation()}
 								onClick={() => onDelete(id)}
@@ -229,7 +240,6 @@ function DraggableModal({
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
 								data-tooltip="Edit"
-								title="Edit"
 								type="button"
 								onPointerDown={(event) => event.stopPropagation()}
 								onClick={() => onEdit(id)}
@@ -245,7 +255,6 @@ function DraggableModal({
 									className="draggable-modal-titlebar-button"
 									data-no-drag="true"
 									data-tooltip="Delete"
-									title="Delete"
 									type="button"
 									onPointerDown={(event) => event.stopPropagation()}
 									onClick={() => onDelete(id)}
@@ -258,7 +267,6 @@ function DraggableModal({
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
 								data-tooltip="Back"
-								title="Back"
 								type="button"
 								onPointerDown={(event) => event.stopPropagation()}
 								onClick={() => onBack(id)}
@@ -272,7 +280,6 @@ function DraggableModal({
 								data-tooltip={saveTooltip}
 								form={`${id}-edit-form`}
 								disabled={isSaveDisabled}
-								title={saveTooltip}
 								type="submit"
 								onPointerDown={(event) => event.stopPropagation()}
 								onClick={() => onCreateSave?.(id)}
@@ -286,12 +293,11 @@ function DraggableModal({
 						className="draggable-modal-titlebar-button draggable-modal-close"
 						data-no-drag="true"
 						data-tooltip="Close"
-						title="Close"
 						type="button"
 						onPointerDown={(event) => event.stopPropagation()}
 						onClick={() => onClose(id)}
 					>
-						x
+						<X aria-hidden="true" />
 					</button>
 				</div>
 				<div className="draggable-modal-content">
@@ -739,7 +745,7 @@ export function SecurityView() {
 							}
 						}}
 						onEdit={(key) => setModalMode(key, 'edit')}
-						title="Access Level"
+						title={getAccessLevelModalTitle(modal.mode)}
 						zIndex={modal.zIndex}
 					>
 						{modal.mode === 'create' ? (

@@ -43,6 +43,7 @@
 	--accent-strong: #af3a03;
 	--green: #79740e;
 	--blue: #076678;
+	--focus-ring: var(--accent-ui);
 	--radius: 8px;
 	--background: var(--bg);
 	--foreground: var(--fg);
@@ -60,7 +61,7 @@
 	--accent-foreground: var(--bg);
 	--destructive: var(--accent-strong);
 	--input: var(--border);
-	--ring: var(--blue);
+	--ring: var(--focus-ring);
 	color: var(--fg);
 	background: var(--bg);
 	font-family:
@@ -90,6 +91,7 @@
 	--accent-strong: #fe8019;
 	--green: #b8bb26;
 	--blue: #83a598;
+	--focus-ring: #b7d7da;
 	--background: var(--bg);
 	--foreground: var(--fg);
 	--card: var(--surface);
@@ -106,7 +108,7 @@
 	--accent-foreground: #282828;
 	--destructive: var(--accent-strong);
 	--input: var(--border);
-	--ring: var(--blue);
+	--ring: var(--focus-ring);
 }
 
 * {
@@ -161,6 +163,11 @@ button:not([data-slot="button"]) {
 
 button:not([data-slot="button"]):hover {
 	background: #d79921;
+}
+
+button:not([data-slot="button"]):focus-visible {
+	outline: 1px solid var(--focus-ring);
+	outline-offset: 2px;
 }
 
 button svg,
@@ -507,6 +514,23 @@ button.section-action-button:hover {
 .data-table-row:focus-visible td {
 	background: color-mix(in srgb, var(--fg) 10%, transparent);
 	outline: 0;
+	box-shadow:
+		inset 0 1px 0 var(--focus-ring),
+		inset 0 -1px 0 var(--focus-ring);
+}
+
+.data-table-row:focus-visible td:first-child {
+	box-shadow:
+		inset 1px 0 0 var(--focus-ring),
+		inset 0 1px 0 var(--focus-ring),
+		inset 0 -1px 0 var(--focus-ring);
+}
+
+.data-table-row:focus-visible td:last-child {
+	box-shadow:
+		inset -1px 0 0 var(--focus-ring),
+		inset 0 1px 0 var(--focus-ring),
+		inset 0 -1px 0 var(--focus-ring);
 }
 
 .draggable-modal-layer {
@@ -533,7 +557,7 @@ button.section-action-button:hover {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	overflow: hidden;
+	overflow: visible;
 	position: relative;
 }
 
@@ -551,9 +575,9 @@ button.section-action-button:hover {
 }
 
 .draggable-modal-header h2 {
-	color: var(--fg);
+	color: color-mix(in srgb, var(--fg) 78%, transparent);
 	flex: 1;
-	font-size: 1rem;
+	font-size: 0.88rem;
 	font-weight: 500;
 	line-height: 1.2;
 	margin: 0;
@@ -581,6 +605,11 @@ button.draggable-modal-titlebar-button {
 	width: 0.72rem;
 }
 
+.draggable-modal-close svg {
+	height: 0.82rem;
+	width: 0.82rem;
+}
+
 .draggable-modal-titlebar-button:hover,
 button.draggable-modal-titlebar-button:hover {
 	background: color-mix(in srgb, var(--fg) 10%, transparent);
@@ -591,14 +620,14 @@ button.draggable-modal-titlebar-button:hover {
 .draggable-modal-titlebar-button:disabled,
 button.draggable-modal-titlebar-button:disabled {
 	cursor: default;
-	opacity: 0.36;
+	color: color-mix(in srgb, var(--fg) 36%, transparent);
 }
 
 .draggable-modal-titlebar-button:disabled:hover,
 button.draggable-modal-titlebar-button:disabled:hover {
 	background: transparent;
 	background-color: transparent;
-	color: color-mix(in srgb, var(--fg) 62%, transparent);
+	color: color-mix(in srgb, var(--fg) 36%, transparent);
 }
 
 .draggable-modal-titlebar-button[data-tooltip]::after {
@@ -749,7 +778,8 @@ button.draggable-modal-resize:hover {
 
 .access-level-edit-form input:focus,
 .access-level-edit-form textarea:focus {
-	border-color: var(--blue);
+	border-color: var(--focus-ring);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
 	outline: 0;
 }
 
