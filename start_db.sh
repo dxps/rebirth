@@ -37,7 +37,15 @@ fi
 
 echo "Waiting for PostgreSQL to accept connections ..."
 retry=1
-while ! docker exec "$CONTAINER_NAME" pg_isready --dbname "$DATABASE_NAME" --username "$POSTGRES_USER" >/dev/null 2>&1; do
+while ! docker exec \
+	--env PGPASSWORD="$POSTGRES_PASSWORD" \
+	"$CONTAINER_NAME" \
+	psql \
+		--dbname "$DATABASE_NAME" \
+		--username "$POSTGRES_USER" \
+		--tuples-only \
+		--no-align \
+		--command "select 1;" >/dev/null 2>&1; do
 	if [ "$retry" -ge "$READINESS_RETRIES" ]; then
 		echo "PostgreSQL did not become ready after $READINESS_RETRIES attempts." >&2
 		exit 1
@@ -46,16 +54,6 @@ while ! docker exec "$CONTAINER_NAME" pg_isready --dbname "$DATABASE_NAME" --use
 	retry=$((retry + 1))
 	sleep 1
 done
-
-docker exec \
-	--env PGPASSWORD="$POSTGRES_PASSWORD" \
-	"$CONTAINER_NAME" \
-	psql \
-		--dbname "$DATABASE_NAME" \
-		--username "$POSTGRES_USER" \
-		--tuples-only \
-		--no-align \
-		--command "select 1;" >/dev/null
 
 echo "PostgreSQL container is ready to accept connections."
 echo "DATABASE_URL=postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/$DATABASE_NAME"

@@ -23,7 +23,8 @@ Install the dependencies using `bun install`.
 
 ### PostgreSQL
 
-Run PostgreSQL locally using `./dev_db.sh`. It starts or reuses a Docker container named `rebirth-db` and prints the matching `DATABASE_URL`.
+Run PostgreSQL locally as a Docker container using `./start_db.sh`.<br/>
+It starts or reuses a Docker container named `rebirth-db` and prints the matching `DATABASE_URL`.
 
 ### Service
 
