@@ -3,14 +3,20 @@ import {
   appInfo,
   createHealthResponse,
   isAccessLevelId,
+  isAttributeTemplateId,
   isCreateAccessLevelInput,
+  isCreateAttributeTemplateInput,
   isUpdateAccessLevelInput,
+  isUpdateAttributeTemplateInput,
   jsonHeaders,
   type AccessLevelResponse,
   type AccessLevelsResponse,
+  type AttributeTemplateResponse,
+  type AttributeTemplatesResponse,
   type ApiErrorResponse
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
+import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -18,10 +24,18 @@ loadEnvFiles();
 
 const port = Number.parseInt(Bun.env.PORT ?? "9908", 10);
 const uniqueConflictErrorCode = "23505";
+const attributeTemplateUniqueConstraint = "attribute_templates_name_description_unique";
 const uniqueConflictResponse: ApiErrorResponse = {
   error: {
     code: "unique_conflict",
     message: "An entry with the same name already exists"
+  }
+};
+const attributeTemplateUniqueConflictResponse: ApiErrorResponse = {
+  error: {
+    code: "unique_conflict",
+    details: "An entry with the same name and description already exists.",
+    message: "Name and description not unique"
   }
 };
 
@@ -55,6 +69,44 @@ function isPostgresErrorWithCode(
   }
 
   return false;
+}
+
+function isPostgresErrorWithConstraint(
+  error: unknown,
+  constraint: string,
+  seen = new Set<unknown>()
+): boolean {
+  if (typeof error !== "object" || error === null || seen.has(error)) {
+    return false;
+  }
+
+  seen.add(error);
+
+  if (getErrorProperty(error, "constraint_name") === constraint || getErrorProperty(error, "constraint") === constraint) {
+    return true;
+  }
+
+  for (const property of ["cause", "error", "originalError"]) {
+    if (isPostgresErrorWithConstraint(getErrorProperty(error, property), constraint, seen)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function normalizeDefaultValue(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
 await runMigrations();
@@ -156,7 +208,97 @@ const server = Bun.serve({
       }
     }
 
+    if (request.method === "GET" && url.pathname === apiRoutes.attributeTemplates) {
+      try {
+        const response: AttributeTemplatesResponse = {
+          data: await listAttributeTemplates()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load attribute templates"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.attributeTemplates) {
+      try {
+        const input = await request.json();
+
+        if (!isCreateAttributeTemplateInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid attribute template"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const createdAttributeTemplate = await createAttributeTemplate({
+          defaultValue: normalizeDefaultValue(input.defaultValue) ?? null,
+          description: input.description.trim(),
+          isRequired: input.isRequired,
+          name: input.name.trim(),
+          valueType: input.valueType
+        });
+
+        if (!createdAttributeTemplate) {
+          throw new Error("Attribute template was not created.");
+        }
+
+        const response: AttributeTemplateResponse = {
+          data: createdAttributeTemplate
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders,
+          status: 201
+        });
+      } catch (error) {
+        if (isPostgresErrorWithConstraint(error, attributeTemplateUniqueConstraint)) {
+          return Response.json(attributeTemplateUniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to create attribute template"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
     const accessLevelMatch = /^\/access-levels\/(\d+)$/.exec(url.pathname);
+    const attributeTemplateMatch = /^\/attribute-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
 
     if (request.method === "PATCH" && accessLevelMatch) {
       try {
@@ -264,6 +406,131 @@ const server = Bun.serve({
         return Response.json(
           {
             error: "Unable to delete access level"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "PATCH" && attributeTemplateMatch) {
+      try {
+        const id = attributeTemplateMatch[1] ?? "";
+        const input = await request.json();
+
+        if (!isAttributeTemplateId(id) || !isUpdateAttributeTemplateInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid attribute template update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const updatedAttributeTemplate = await updateAttributeTemplate(id, {
+          defaultValue: normalizeDefaultValue(input.defaultValue),
+          description: input.description?.trim(),
+          isRequired: input.isRequired,
+          name: input.name?.trim(),
+          valueType: input.valueType
+        });
+
+        if (!updatedAttributeTemplate) {
+          return Response.json(
+            {
+              error: "Attribute template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: AttributeTemplateResponse = {
+          data: updatedAttributeTemplate
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        if (isPostgresErrorWithConstraint(error, attributeTemplateUniqueConstraint)) {
+          return Response.json(attributeTemplateUniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to update attribute template"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "DELETE" && attributeTemplateMatch) {
+      try {
+        const id = attributeTemplateMatch[1] ?? "";
+
+        if (!isAttributeTemplateId(id)) {
+          return Response.json(
+            {
+              error: "Invalid attribute template id"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const deletedAttributeTemplate = await deleteAttributeTemplate(id);
+
+        if (!deletedAttributeTemplate) {
+          return Response.json(
+            {
+              error: "Attribute template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: AttributeTemplateResponse = {
+          data: deletedAttributeTemplate
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to delete attribute template"
           },
           {
             headers: jsonHeaders,

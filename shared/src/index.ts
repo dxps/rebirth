@@ -3,6 +3,12 @@ import {
 	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from './security/access-level'
+import {
+	isValueType,
+	type AttributeTemplate,
+	type CreateAttributeTemplateInput,
+	type UpdateAttributeTemplateInput,
+} from './types/attribute-template'
 
 export type ServiceStatus = 'ok' | 'degraded' | 'down'
 
@@ -20,11 +26,20 @@ export interface AccessLevelResponse {
 	data: AccessLevel
 }
 
+export interface AttributeTemplatesResponse {
+	data: AttributeTemplate[]
+}
+
+export interface AttributeTemplateResponse {
+	data: AttributeTemplate
+}
+
 export type ApiErrorCode = 'unique_conflict'
 
 export interface ApiErrorResponse {
 	error: {
 		code: ApiErrorCode
+		details?: string
 		message: string
 	}
 }
@@ -37,6 +52,8 @@ export const appInfo = {
 export const apiRoutes = {
 	accessLevel: (id: number) => `/access-levels/${id}`,
 	accessLevels: '/access-levels',
+	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
+	attributeTemplates: '/attribute-templates',
 	health: '/health',
 } as const
 
@@ -86,6 +103,48 @@ export function isCreateAccessLevelInput(
 	)
 }
 
+export function isUpdateAttributeTemplateInput(
+	value: unknown,
+): value is UpdateAttributeTemplateInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		(input.name === undefined || typeof input.name === 'string') &&
+		(input.description === undefined ||
+			typeof input.description === 'string') &&
+		(input.valueType === undefined || isValueType(input.valueType)) &&
+		(input.defaultValue === undefined ||
+			input.defaultValue === null ||
+			typeof input.defaultValue === 'string') &&
+		(input.isRequired === undefined ||
+			typeof input.isRequired === 'boolean')
+	)
+}
+
+export function isCreateAttributeTemplateInput(
+	value: unknown,
+): value is CreateAttributeTemplateInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.name === 'string' &&
+		typeof input.description === 'string' &&
+		isValueType(input.valueType) &&
+		(input.defaultValue === undefined ||
+			input.defaultValue === null ||
+			typeof input.defaultValue === 'string') &&
+		typeof input.isRequired === 'boolean'
+	)
+}
+
 export { accessLevelModel, isAccessLevelId } from './security/access-level'
 export type {
 	AccessLevel,
@@ -93,3 +152,16 @@ export type {
 	CreateAccessLevelInput,
 	UpdateAccessLevelInput,
 } from './security/access-level'
+export {
+	attributeTemplateModel,
+	isAttributeTemplateId,
+	isValueType,
+	ValueType,
+	valueTypes,
+} from './types/attribute-template'
+export type {
+	AttributeTemplate,
+	AttributeTemplateId,
+	CreateAttributeTemplateInput,
+	UpdateAttributeTemplateInput,
+} from './types/attribute-template'

@@ -8,6 +8,13 @@
       "when": 1776433786303,
       "tag": "0000_access_levels",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776669067759,
+      "tag": "0001_attribute_templates",
+      "breakpoints": true
     }
   ]
 }

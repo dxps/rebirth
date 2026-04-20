@@ -383,6 +383,14 @@ button svg,
 	width: 100%;
 }
 
+.types-mgmt-view {
+	display: grid;
+	gap: 1.5rem;
+	margin: 0 auto;
+	max-width: 62rem;
+	width: 100%;
+}
+
 .section-heading {
 	display: grid;
 	gap: 0.5rem;
@@ -570,6 +578,12 @@ button.access-level-refresh-button:hover {
 	color: var(--muted);
 }
 
+.attribute-templates-table th:nth-child(2),
+.attribute-templates-table td:nth-child(2) {
+	white-space: nowrap;
+	width: 7rem;
+}
+
 .data-table-row {
 	cursor: pointer;
 }
@@ -619,7 +633,10 @@ button.access-level-refresh-button:hover {
 
 .draggable-modal {
 	border-radius: 8px;
-	box-shadow: 0 0 42px rgb(0 0 0 / 38%);
+	box-shadow:
+		0 0 32px rgb(0 0 0 / 58%),
+		0 0 10px rgb(0 0 0 / 44%),
+		0 0 0 1px rgb(255 255 255 / 8%);
 	left: 0;
 	pointer-events: auto;
 	position: absolute;
@@ -901,6 +918,17 @@ button.draggable-modal-resize:hover {
 	line-height: 1.45;
 }
 
+.empty-value-space {
+	display: block;
+	min-height: 1.35em;
+}
+
+.access-level-details .attribute-template-id-value {
+	color: var(--muted);
+	font-size: 0.78rem;
+	overflow-wrap: anywhere;
+}
+
 .access-level-edit-form {
 	display: grid;
 	gap: 0.8rem;
@@ -915,6 +943,7 @@ button.draggable-modal-resize:hover {
 }
 
 .access-level-edit-form input,
+.access-level-edit-form select,
 .access-level-edit-form textarea {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
 	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
@@ -926,7 +955,32 @@ button.draggable-modal-resize:hover {
 	padding: 0.28rem 0.42rem;
 }
 
-.access-level-edit-form input {
+.access-level-edit-form select {
+	appearance: none;
+	padding-left: 0.42rem;
+	padding-right: 2rem;
+	width: 100%;
+}
+
+.attribute-template-select-wrap {
+	position: relative;
+}
+
+.attribute-template-select-wrap::after {
+	border-bottom: 1.5px solid var(--fg);
+	border-right: 1.5px solid var(--fg);
+	content: '';
+	height: 0.48rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0.62rem;
+	top: 50%;
+	transform: translateY(-65%) rotate(45deg);
+	width: 0.48rem;
+}
+
+.access-level-edit-form input,
+.access-level-edit-form select {
 	height: 1.95rem;
 	resize: none;
 }
@@ -978,16 +1032,95 @@ button.draggable-modal-resize:hover {
 }
 
 .access-level-edit-form input:focus,
+.access-level-edit-form select:focus,
 .access-level-edit-form textarea:focus {
 	border-color: var(--focus-ring);
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
 	outline: 0;
 }
 
+.access-level-edit-form .attribute-template-checkbox-label {
+	align-items: center;
+	cursor: pointer;
+	display: flex;
+	flex-direction: row;
+	gap: 0.45rem;
+	justify-self: start;
+	width: fit-content;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label input {
+	accent-color: var(--accent);
+	appearance: none;
+	background: transparent;
+	border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+	border-radius: 4px;
+	height: 1rem;
+	padding: 0;
+	position: relative;
+	width: 1rem;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label span {
+	cursor: pointer;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label input:checked {
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.access-level-edit-form .attribute-template-checkbox-label input:checked::after {
+	border: solid var(--bg);
+	border-width: 0 2px 2px 0;
+	content: '';
+	height: 0.48rem;
+	left: 0.31rem;
+	position: absolute;
+	top: 0.12rem;
+	transform: rotate(45deg);
+	width: 0.24rem;
+}
+
 .form-error {
 	color: var(--error);
 	font-size: 0.75rem;
 	margin: 0;
+}
+
+.form-error[data-tooltip] {
+	cursor: help;
+	position: relative;
+	width: fit-content;
+}
+
+.form-error[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	bottom: calc(100% + 0.35rem);
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1.25;
+	max-width: min(18rem, 80vw);
+	opacity: 0;
+	padding: 0.36rem 0.48rem;
+	pointer-events: none;
+	position: absolute;
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: normal;
+	z-index: 2;
+}
+
+.form-error[data-tooltip]:hover::after,
+.form-error[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translateY(0);
 }
 
 .form-status {
