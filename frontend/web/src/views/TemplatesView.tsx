@@ -12,6 +12,7 @@ import {
 	type EntityTemplateResponse,
 	type EntityTemplatesResponse,
 	type UpdateAttributeTemplateInput,
+	type UpdateEntityTemplateInput,
 	ValueType,
 	valueTypes,
 } from '@rebirth/shared'
@@ -20,6 +21,7 @@ import {
 	type FormEvent,
 	useCallback,
 	useEffect,
+	useLayoutEffect,
 	useRef,
 	useState,
 	type PointerEvent as ReactPointerEvent,
@@ -39,6 +41,7 @@ const draggableModalMinWidth = 320
 const draggableModalDefaultWidth = 360
 const entityTemplateModalHeight = 480
 const entityTemplateModalWidth = 520
+const entityTemplateAttributeReorderThreshold = 0.5
 
 async function getResponseErrorMessage(
 	response: Response,
@@ -318,7 +321,7 @@ function DraggableModal({
 					aria-label={`Confirm delete ${title}`}
 					onPointerDown={(event) => event.stopPropagation()}
 				>
-					<p>Delete this attribute template?</p>
+					<p>Delete this template?</p>
 					<div>
 						<button
 							className="delete-confirm-secondary"
@@ -637,6 +640,9 @@ function EntityTemplateEditForm({
 	const [draggedAttributeId, setDraggedAttributeId] = useState<
 		string | null
 	>(null)
+	const draggedAttributeIdRef = useRef<string | null>(null)
+	const attributesPanelRef = useRef<HTMLDivElement>(null)
+	const formRef = useRef<HTMLFormElement>(null)
 	const [error, setError] = useState<FormErrorState | null>(null)
 	const [includedAttributes, setIncludedAttributes] = useState<
 		IncludedEntityAttribute[]
@@ -659,12 +665,18 @@ function EntityTemplateEditForm({
 	const availableAttributeTemplates = attributeTemplates.filter(
 		(attributeTemplate) =>
 			!includedAttributes.some(
-				(attribute) => attribute.attributeTemplateId === attributeTemplate.id,
+				(attribute) =>
+					attribute.attributeTemplateId === attributeTemplate.id &&
+					attribute.name === attributeTemplate.name &&
+					attribute.description === attributeTemplate.description &&
+					attribute.valueType === attributeTemplate.valueType,
 			),
 	)
 	const [includeAttributeMode, setIncludeAttributeMode] = useState<
 		'existing' | 'new'
 	>('existing')
+	const [isAttributesPanelScrollable, setIsAttributesPanelScrollable] =
+		useState(false)
 	const [isIncludeAttributeOpen, setIsIncludeAttributeOpen] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [newAttributeDescription, setNewAttributeDescription] = useState('')
@@ -684,10 +696,13 @@ function EntityTemplateEditForm({
 	const [name, setName] = useState(entityTemplate?.name ?? '')
 	const nameInputRef = useRef<HTMLInputElement>(null)
 	const newAttributeNameInputRef = useRef<HTMLInputElement>(null)
+	const previousAttributeRowTopsRef = useRef<Map<string, number>>(new Map())
+	const shouldAnimateAttributeRowsRef = useRef(false)
 	const isValid =
 		name.trim().length > 0 &&
 		includedAttributes.length > 0 &&
-		listingAttributeId.length > 0
+		listingAttributeId.length > 0 &&
+		includedAttributes.every((attribute) => attribute.name.trim().length > 0)
 
 	useEffect(() => {
 		onValidityChange(modalKey, isValid)
@@ -753,6 +768,110 @@ function EntityTemplateEditForm({
 			setSelectedAttributeTemplateId(availableAttributeTemplates[0]?.id ?? '')
 		}
 	}, [availableAttributeTemplates, selectedAttributeTemplateId])
+
+	function getAttributeRowTops(): Map<string, number> {
+		const rows = formRef.current?.querySelectorAll<HTMLTableRowElement>(
+			'[data-entity-template-attribute-id]',
+		)
+		const rowTops = new Map<string, number>()
+
+		rows?.forEach((row) => {
+			const attributeId = row.dataset.entityTemplateAttributeId
+
+			if (attributeId) {
+				rowTops.set(attributeId, row.getBoundingClientRect().top)
+			}
+		})
+
+		return rowTops
+	}
+
+	useLayoutEffect(() => {
+		const previousRowTops = previousAttributeRowTopsRef.current
+		const nextRowTops = getAttributeRowTops()
+
+		if (shouldAnimateAttributeRowsRef.current) {
+			formRef.current
+				?.querySelectorAll<HTMLTableRowElement>(
+					'[data-entity-template-attribute-id]',
+				)
+				.forEach((row) => {
+					const attributeId = row.dataset.entityTemplateAttributeId
+					const previousTop = attributeId
+						? previousRowTops.get(attributeId)
+						: undefined
+					const nextTop = attributeId ? nextRowTops.get(attributeId) : undefined
+
+					if (previousTop === undefined || nextTop === undefined) {
+						return
+					}
+
+					const deltaY = previousTop - nextTop
+
+					if (deltaY === 0) {
+						return
+					}
+
+					row.getAnimations().forEach((animation) => animation.cancel())
+					row.animate(
+						[
+							{ transform: `translateY(${deltaY}px)` },
+							{ transform: 'translateY(0)' },
+						],
+						{
+							duration: 160,
+							easing: 'cubic-bezier(0.2, 0, 0, 1)',
+						},
+					)
+				})
+		}
+
+		shouldAnimateAttributeRowsRef.current = false
+		previousAttributeRowTopsRef.current = nextRowTops
+	}, [includedAttributes])
+
+	useLayoutEffect(() => {
+		const panel = attributesPanelRef.current
+
+		if (!panel || activeTab !== 'attributes') {
+			setIsAttributesPanelScrollable(false)
+			return
+		}
+
+		const currentPanel = panel
+
+		function updateScrollableState(): void {
+			const lastRow = currentPanel.querySelector<HTMLTableRowElement>(
+				'[data-entity-template-attribute-id]:last-of-type',
+			)
+
+			if (!lastRow) {
+				setIsAttributesPanelScrollable(false)
+				return
+			}
+
+			const panelRect = currentPanel.getBoundingClientRect()
+			const lastRowRect = lastRow.getBoundingClientRect()
+
+			setIsAttributesPanelScrollable(
+				lastRowRect.bottom > panelRect.bottom + 1,
+			)
+		}
+
+		updateScrollableState()
+
+		const resizeObserver = new ResizeObserver(updateScrollableState)
+		resizeObserver.observe(currentPanel)
+
+		const content = currentPanel.firstElementChild
+		if (content) {
+			resizeObserver.observe(content)
+		}
+
+		return () => {
+			resizeObserver.disconnect()
+		}
+	}, [activeTab, includedAttributes])
 
 	function includeExistingAttribute(): void {
 		const attributeTemplate = availableAttributeTemplates.find(
@@ -850,6 +969,40 @@ function EntityTemplateEditForm({
 		)
 	}
 
+	function updateAttributeName(attributeId: string, name: string): void {
+		setIncludedAttributes((current) =>
+			current.map((attribute) =>
+				attribute.id === attributeId
+					? {
+							...attribute,
+							description:
+								attributeTemplates.some(
+									(attributeTemplate) =>
+										attributeTemplate.id === attribute.attributeTemplateId &&
+										attributeTemplate.name === name,
+								)
+									? attribute.description
+									: '',
+							name,
+						}
+					: attribute,
+			),
+		)
+	}
+
+	function updateAttributeValueType(
+		attributeId: string,
+		valueType: ValueType,
+	): void {
+		setIncludedAttributes((current) =>
+			current.map((attribute) =>
+				attribute.id === attributeId
+					? { ...attribute, valueType }
+					: attribute,
+			),
+		)
+	}
+
 	function reorderAttribute(
 		draggedAttributeId: string,
 		targetAttributeId: string,
@@ -857,6 +1010,9 @@ function EntityTemplateEditForm({
 		if (draggedAttributeId === targetAttributeId) {
 			return
 		}
+
+		previousAttributeRowTopsRef.current = getAttributeRowTops()
+		shouldAnimateAttributeRowsRef.current = true
 
 		setIncludedAttributes((current) => {
 			const draggedIndex = current.findIndex(
@@ -885,6 +1041,95 @@ function EntityTemplateEditForm({
 		})
 	}
 
+	function setActiveDraggedAttribute(attributeId: string | null): void {
+		draggedAttributeIdRef.current = attributeId
+		setDraggedAttributeId(attributeId)
+	}
+
+	function getAttributeRowLayoutBounds(row: HTMLTableRowElement): {
+		height: number
+		top: number
+	} {
+		const tableTop = row.closest('table')?.getBoundingClientRect().top ?? 0
+
+		return {
+			height: row.offsetHeight,
+			top: tableTop + row.offsetTop,
+		}
+	}
+
+	function startAttributePointerDrag(
+		event: ReactPointerEvent<HTMLButtonElement>,
+		attributeId: string,
+	): void {
+		event.preventDefault()
+		event.stopPropagation()
+		setActiveDraggedAttribute(attributeId)
+
+		function move(pointerEvent: PointerEvent): void {
+			const rows = Array.from(
+				formRef.current?.querySelectorAll<HTMLTableRowElement>(
+					'[data-entity-template-attribute-id]',
+				) ?? [],
+			)
+			const draggedId = draggedAttributeIdRef.current
+			const draggedIndex = rows.findIndex(
+				(row) => row.dataset.entityTemplateAttributeId === draggedId,
+			)
+
+			if (!draggedId || draggedIndex < 0) {
+				return
+			}
+
+			const previousRow = rows[draggedIndex - 1]
+			const nextRow = rows[draggedIndex + 1]
+
+			if (previousRow) {
+				const previousRect = getAttributeRowLayoutBounds(previousRow)
+				const previousTriggerY =
+					previousRect.top +
+					previousRect.height * (1 - entityTemplateAttributeReorderThreshold)
+
+				if (pointerEvent.clientY < previousTriggerY) {
+					const previousAttributeId =
+						previousRow.dataset.entityTemplateAttributeId
+
+					if (previousAttributeId) {
+						reorderAttribute(draggedId, previousAttributeId)
+					}
+
+					return
+				}
+			}
+
+			if (nextRow) {
+				const nextRect = getAttributeRowLayoutBounds(nextRow)
+				const nextTriggerY =
+					nextRect.top +
+					nextRect.height * entityTemplateAttributeReorderThreshold
+
+				if (pointerEvent.clientY > nextTriggerY) {
+					const nextAttributeId = nextRow.dataset.entityTemplateAttributeId
+
+					if (nextAttributeId) {
+						reorderAttribute(draggedId, nextAttributeId)
+					}
+				}
+			}
+		}
+
+		function stop(): void {
+			window.removeEventListener('pointermove', move)
+			window.removeEventListener('pointerup', stop)
+			window.removeEventListener('pointercancel', stop)
+			setActiveDraggedAttribute(null)
+		}
+
+		window.addEventListener('pointermove', move)
+		window.addEventListener('pointerup', stop)
+		window.addEventListener('pointercancel', stop)
+	}
+
 	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
 		event.preventDefault()
 
@@ -893,6 +1138,10 @@ function EntityTemplateEditForm({
 				message:
 					includedAttributes.length === 0
 						? 'Include at least one attribute'
+						: includedAttributes.some(
+									(attribute) => attribute.name.trim().length === 0,
+								)
+							? 'Included attributes must have names'
 						: 'Name is required',
 			})
 			return
@@ -909,7 +1158,7 @@ function EntityTemplateEditForm({
 					attributeTemplateId: attribute.attributeTemplateId,
 					description: attribute.description,
 					listingIndex: index,
-					name: attribute.name,
+					name: attribute.name.trim(),
 					valueType: attribute.valueType,
 				})),
 				description,
@@ -933,6 +1182,7 @@ function EntityTemplateEditForm({
 
 	return (
 		<form
+			ref={formRef}
 			className="entity-template-edit-form"
 			id={formId}
 			onSubmit={(event) => void submit(event)}
@@ -983,32 +1233,198 @@ function EntityTemplateEditForm({
 				data-selectable="true"
 			>
 				<div
-					className="entity-template-tab-list"
-					role="tablist"
-					aria-label="Entity template sections"
+					className="entity-template-tab-row"
 				>
-					<button
-						aria-selected={activeTab === 'attributes'}
-						className="entity-template-tab"
-						role="tab"
-						type="button"
-						onClick={() => setActiveTab('attributes')}
+					<div
+						className="entity-template-tab-list"
+						role="tablist"
+						aria-label="Entity template sections"
 					>
-						Attributes
-					</button>
-					<button
-						aria-selected={activeTab === 'links'}
-						className="entity-template-tab"
-						role="tab"
-						type="button"
-						onClick={() => setActiveTab('links')}
-					>
-						Links
-					</button>
+						<button
+							aria-selected={activeTab === 'attributes'}
+							className="entity-template-tab"
+							role="tab"
+							type="button"
+							onClick={() => setActiveTab('attributes')}
+						>
+							Attributes
+						</button>
+						<button
+							aria-selected={activeTab === 'links'}
+							className="entity-template-tab"
+							role="tab"
+							type="button"
+							onClick={() => setActiveTab('links')}
+						>
+							Links
+						</button>
+					</div>
+					{activeTab === 'attributes' ? (
+						<span className="include-attribute-action">
+							<button
+								aria-expanded={isIncludeAttributeOpen}
+								aria-label="Add attribute"
+								className="section-action-button"
+								data-tooltip="Include an attribute"
+								type="button"
+								onClick={() =>
+									setIsIncludeAttributeOpen((current) => !current)
+								}
+							>
+								<Plus aria-hidden="true" />
+							</button>
+							{isIncludeAttributeOpen ? (
+								<div
+									className="include-attribute-popover"
+									data-no-drag="true"
+								>
+									<button
+										aria-label="Close include attribute popup"
+										className="icon-only-button include-attribute-close-button"
+										type="button"
+										onClick={() => setIsIncludeAttributeOpen(false)}
+									>
+										<X aria-hidden="true" />
+									</button>
+									<div className="include-attribute-mode-tabs">
+										<button
+											aria-selected={includeAttributeMode === 'existing'}
+											type="button"
+											onClick={() => setIncludeAttributeMode('existing')}
+										>
+											Existing
+										</button>
+										<button
+											aria-selected={includeAttributeMode === 'new'}
+											type="button"
+											onClick={() => setIncludeAttributeMode('new')}
+										>
+											New
+										</button>
+									</div>
+									{includeAttributeMode === 'existing' ? (
+										<div className="include-attribute-fields">
+											<label>
+												<span>attribute template</span>
+												<span className="attribute-template-select-wrap">
+													<select
+														disabled={
+															availableAttributeTemplates.length === 0
+														}
+														value={selectedAttributeTemplateId}
+														onChange={(event) =>
+															setSelectedAttributeTemplateId(
+																event.target.value,
+															)
+														}
+													>
+														{availableAttributeTemplates.map(
+															(attributeTemplate) => (
+																<option
+																	key={attributeTemplate.id}
+																	value={attributeTemplate.id}
+																>
+																	{attributeTemplate.name}
+																</option>
+															),
+														)}
+													</select>
+												</span>
+											</label>
+											<button
+												aria-label="Include"
+												className="icon-only-button include-attribute-submit-button"
+												data-tooltip="Include"
+												disabled={
+													availableAttributeTemplates.length === 0
+												}
+												type="button"
+												onClick={includeExistingAttribute}
+											>
+												<Plus aria-hidden="true" />
+											</button>
+										</div>
+									) : (
+										<div className="include-attribute-fields">
+											<label>
+												<span>name</span>
+												<input
+													ref={newAttributeNameInputRef}
+													type="text"
+													value={newAttributeName}
+													onChange={(event) =>
+														setNewAttributeName(event.target.value)
+													}
+												/>
+											</label>
+											<label>
+												<span>description</span>
+												<textarea
+													rows={2}
+													value={newAttributeDescription}
+													onChange={(event) =>
+														setNewAttributeDescription(event.target.value)
+													}
+												/>
+											</label>
+											<label>
+												<span>value type</span>
+												<span className="attribute-template-select-wrap">
+													<select
+														value={newAttributeValueType}
+														onChange={(event) =>
+															setNewAttributeValueType(
+																event.target.value as ValueType,
+															)
+														}
+													>
+														{valueTypes.map((valueType) => (
+															<option
+																key={valueType}
+																value={valueType}
+															>
+																{valueType}
+															</option>
+														))}
+													</select>
+												</span>
+											</label>
+											<label className="include-attribute-checkbox">
+												<input
+													checked={newAttributeSaveAsTemplate}
+													type="checkbox"
+													onChange={(event) =>
+														setNewAttributeSaveAsTemplate(
+															event.target.checked,
+														)
+													}
+												/>
+												<span>save it as attribute template</span>
+											</label>
+											<button
+												aria-label="Include"
+												className="icon-only-button include-attribute-submit-button"
+												data-tooltip="Include"
+												disabled={newAttributeName.trim().length === 0}
+												type="button"
+												onClick={() => void includeNewAttribute()}
+											>
+												<Plus aria-hidden="true" />
+											</button>
+										</div>
+									)}
+								</div>
+							) : null}
+						</span>
+					) : null}
 				</div>
 
 				{activeTab === 'attributes' ? (
-					<div role="tabpanel">
+					<div
+						ref={attributesPanelRef}
+						data-scrollable={isAttributesPanelScrollable || undefined}
+						role="tabpanel"
+					>
 						<table className="data-table entity-template-modal-table entity-template-attributes-table">
 							<colgroup>
 								<col className="entity-template-attribute-name-column" />
@@ -1016,175 +1432,6 @@ function EntityTemplateEditForm({
 								<col className="entity-template-attribute-access-level-column" />
 								<col className="entity-template-attribute-action-column" />
 							</colgroup>
-							<thead>
-								<tr>
-									<th colSpan={3} />
-									<th className="data-table-action-heading">
-										<span className="include-attribute-action">
-											<button
-												aria-expanded={isIncludeAttributeOpen}
-												aria-label="Add attribute"
-												className="section-action-button"
-												data-tooltip="Include an attribute"
-												type="button"
-												onClick={() =>
-													setIsIncludeAttributeOpen((current) => !current)
-												}
-											>
-												<Plus aria-hidden="true" />
-											</button>
-											{isIncludeAttributeOpen ? (
-												<div
-													className="include-attribute-popover"
-													data-no-drag="true"
-												>
-													<button
-														aria-label="Close include attribute popup"
-														className="icon-only-button include-attribute-close-button"
-														type="button"
-														onClick={() => setIsIncludeAttributeOpen(false)}
-													>
-														<X aria-hidden="true" />
-													</button>
-													<div className="include-attribute-mode-tabs">
-														<button
-															aria-selected={
-																includeAttributeMode === 'existing'
-															}
-															type="button"
-															onClick={() =>
-																setIncludeAttributeMode('existing')
-															}
-														>
-															Existing
-														</button>
-														<button
-															aria-selected={includeAttributeMode === 'new'}
-															type="button"
-															onClick={() => setIncludeAttributeMode('new')}
-														>
-															New
-														</button>
-													</div>
-													{includeAttributeMode === 'existing' ? (
-														<div className="include-attribute-fields">
-															<label>
-																<span>attribute template</span>
-																<span className="attribute-template-select-wrap">
-																	<select
-																		disabled={
-																			availableAttributeTemplates.length === 0
-																		}
-																		value={selectedAttributeTemplateId}
-																		onChange={(event) =>
-																			setSelectedAttributeTemplateId(
-																				event.target.value,
-																			)
-																		}
-																	>
-																		{availableAttributeTemplates.map(
-																			(attributeTemplate) => (
-																				<option
-																					key={attributeTemplate.id}
-																					value={attributeTemplate.id}
-																				>
-																					{attributeTemplate.name}
-																				</option>
-																			),
-																		)}
-																	</select>
-																</span>
-															</label>
-															<button
-																aria-label="Include"
-																className="icon-only-button include-attribute-submit-button"
-																data-tooltip="Include"
-																disabled={
-																	availableAttributeTemplates.length === 0
-																}
-																type="button"
-																onClick={includeExistingAttribute}
-															>
-																<Plus aria-hidden="true" />
-															</button>
-														</div>
-													) : (
-														<div className="include-attribute-fields">
-															<label>
-																<span>name</span>
-																<input
-																	ref={newAttributeNameInputRef}
-																	type="text"
-																	value={newAttributeName}
-																	onChange={(event) =>
-																		setNewAttributeName(event.target.value)
-																	}
-																/>
-															</label>
-															<label>
-																<span>description</span>
-																<textarea
-																	rows={2}
-																	value={newAttributeDescription}
-																	onChange={(event) =>
-																		setNewAttributeDescription(
-																			event.target.value,
-																		)
-																	}
-																/>
-															</label>
-															<label>
-																<span>value type</span>
-																<span className="attribute-template-select-wrap">
-																	<select
-																		value={newAttributeValueType}
-																		onChange={(event) =>
-																			setNewAttributeValueType(
-																				event.target.value as ValueType,
-																			)
-																		}
-																	>
-																		{valueTypes.map((valueType) => (
-																			<option
-																				key={valueType}
-																				value={valueType}
-																			>
-																				{valueType}
-																			</option>
-																		))}
-																	</select>
-																</span>
-															</label>
-															<label className="include-attribute-checkbox">
-																<input
-																	checked={newAttributeSaveAsTemplate}
-																	type="checkbox"
-																	onChange={(event) =>
-																		setNewAttributeSaveAsTemplate(
-																			event.target.checked,
-																		)
-																	}
-																/>
-																<span>save it as attribute template</span>
-															</label>
-															<button
-																aria-label="Include"
-																className="icon-only-button include-attribute-submit-button"
-																data-tooltip="Include"
-																disabled={newAttributeName.trim().length === 0}
-																type="button"
-																onClick={() => void includeNewAttribute()}
-															>
-																<Plus aria-hidden="true" />
-															</button>
-														</div>
-													)}
-												</div>
-											) : null}
-										</span>
-									</th>
-								</tr>
-							</thead>
 							<tbody>
 								{includedAttributes.length === 0 ? (
 									<tr>
@@ -1199,16 +1446,11 @@ function EntityTemplateEditForm({
 									includedAttributes.map((includedAttribute) => (
 											<tr
 												key={includedAttribute.id}
-												onDragOver={(event) => event.preventDefault()}
-												onDrop={() => {
-													if (draggedAttributeId) {
-														reorderAttribute(
-															draggedAttributeId,
-															includedAttribute.id,
-														)
-													}
-													setDraggedAttributeId(null)
-												}}
+												data-dragging={
+													draggedAttributeId === includedAttribute.id ||
+													undefined
+												}
+												data-entity-template-attribute-id={includedAttribute.id}
 											>
 												<td
 													className="entity-template-attribute-name"
@@ -1216,13 +1458,46 @@ function EntityTemplateEditForm({
 														includedAttribute.description || undefined
 													}
 												>
-													{includedAttribute.name}
+													<input
+														aria-label="Attribute name"
+														className="entity-template-attribute-name-input"
+														data-no-drag="true"
+														type="text"
+														value={includedAttribute.name}
+														onChange={(event) =>
+															updateAttributeName(
+																includedAttribute.id,
+																event.target.value,
+															)
+														}
+													/>
 												</td>
 												<td
 													className="entity-template-value-type-cell"
 													data-tooltip="Value type"
 												>
-													{includedAttribute.valueType}
+													<span className="attribute-template-select-wrap entity-template-value-type-wrap">
+														<select
+															aria-label={`${includedAttribute.name} value type`}
+															data-no-drag="true"
+															value={includedAttribute.valueType}
+															onChange={(event) =>
+																updateAttributeValueType(
+																	includedAttribute.id,
+																	event.target.value as ValueType,
+																)
+															}
+														>
+															{valueTypes.map((valueType) => (
+																<option
+																	key={valueType}
+																	value={valueType}
+																>
+																	{valueType}
+																</option>
+															))}
+														</select>
+													</span>
 												</td>
 												<td>
 													<span
@@ -1273,13 +1548,12 @@ function EntityTemplateEditForm({
 														className="icon-only-button entity-template-drag-handle"
 														data-no-drag="true"
 														data-tooltip={'Drag up or down\nto reorder'}
-														draggable
 														type="button"
-														onDragStart={() =>
-															setDraggedAttributeId(includedAttribute.id)
-														}
-														onMouseDown={() =>
-															setDraggedAttributeId(includedAttribute.id)
+														onPointerDown={(event) =>
+															startAttributePointerDrag(
+																event,
+																includedAttribute.id,
+															)
 														}
 													>
 														<GripVertical aria-hidden="true" />
@@ -1296,7 +1570,8 @@ function EntityTemplateEditForm({
 						className="entity-template-empty-panel"
 						role="tabpanel"
 					>
-						No entries found
+						<span>There are no links</span>
+						<span>(from this to other entity templates)</span>
 					</div>
 				)}
 			</div>
@@ -1311,6 +1586,157 @@ function EntityTemplateEditForm({
 			) : null}
 			{isSaving ? <p className="form-status">Saving</p> : null}
 		</form>
+	)
+}
+
+interface EntityTemplateDetailsViewProps {
+	accessLevels: AccessLevel[]
+	entityTemplate: EntityTemplate
+}
+
+function EntityTemplateDetailsView({
+	accessLevels,
+	entityTemplate,
+}: EntityTemplateDetailsViewProps) {
+	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>('attributes')
+	const orderedAttributes = entityTemplate.attributes
+		.slice()
+		.sort((left, right) => left.listingIndex - right.listingIndex)
+
+	return (
+		<div
+			className="entity-template-edit-form entity-template-view-form"
+			data-selectable="true"
+		>
+			<div className="entity-template-fields">
+				<label>
+					<span>name</span>
+					<input
+						readOnly
+						type="text"
+						value={entityTemplate.name}
+					/>
+				</label>
+				<label>
+					<span>description</span>
+					<textarea
+						readOnly
+						rows={2}
+						value={entityTemplate.description}
+					/>
+				</label>
+				<label>
+					<span>listing attribute</span>
+					<span className="attribute-template-select-wrap">
+						<select
+							disabled
+							value={entityTemplate.listingAttributeId}
+						>
+							{orderedAttributes.map((attribute) => (
+								<option
+									key={attribute.id}
+									value={attribute.id}
+								>
+									{attribute.name}
+								</option>
+							))}
+						</select>
+					</span>
+				</label>
+			</div>
+
+			<div className="entity-template-tabs">
+				<div
+					className="entity-template-tab-row"
+				>
+					<div
+						className="entity-template-tab-list"
+						role="tablist"
+						aria-label="Entity template sections"
+					>
+						<button
+							aria-selected={activeTab === 'attributes'}
+							className="entity-template-tab"
+							role="tab"
+							type="button"
+							onClick={() => setActiveTab('attributes')}
+						>
+							Attributes
+						</button>
+						<button
+							aria-selected={activeTab === 'links'}
+							className="entity-template-tab"
+							role="tab"
+							type="button"
+							onClick={() => setActiveTab('links')}
+						>
+							Links
+						</button>
+					</div>
+				</div>
+
+				{activeTab === 'attributes' ? (
+					<div role="tabpanel">
+						<table className="data-table entity-template-modal-table entity-template-attributes-table entity-template-view-attributes-table">
+							<colgroup>
+								<col className="entity-template-attribute-name-column" />
+								<col className="entity-template-attribute-value-type-column" />
+								<col className="entity-template-attribute-access-level-column" />
+							</colgroup>
+							<tbody>
+								{orderedAttributes.length === 0 ? (
+									<tr>
+										<td
+											className="data-table-empty-cell"
+											colSpan={3}
+										>
+											<span>No attributes included</span>
+										</td>
+									</tr>
+								) : (
+									orderedAttributes.map((attribute) => (
+										<tr key={attribute.id}>
+											<td
+												className="entity-template-attribute-name"
+												data-tooltip={attribute.description || undefined}
+											>
+												{attribute.name}
+											</td>
+											<td
+												className="entity-template-value-type-cell"
+												data-tooltip="Value type"
+											>
+												{attribute.valueType}
+											</td>
+											<td>
+												{accessLevels.find(
+													(accessLevel) =>
+														accessLevel.id === attribute.accessLevelId,
+												)?.name ?? attribute.accessLevelId}
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				) : (
+					<div
+						className="entity-template-empty-panel"
+						role="tabpanel"
+					>
+						{entityTemplate.links.length === 0 ? (
+							<>
+								<span>There are no links</span>
+								<span>(from this to other entity templates)</span>
+							</>
+						) : (
+							entityTemplate.links.map((link) => link.name).join(', ')
+						)}
+					</div>
+				)}
+			</div>
+		</div>
 	)
 }
 
@@ -1595,6 +2021,49 @@ export function TemplatesView() {
 		[],
 	)
 
+	const updateEntityTemplateInState = useCallback(
+		(entityTemplate: EntityTemplate) => {
+			setEntityTemplates((current) =>
+				current.map((item) =>
+					item.id === entityTemplate.id ? entityTemplate : item,
+				),
+			)
+			setOpenModals((current) =>
+				current.map((modal) =>
+					modal.entityTemplate?.id === entityTemplate.id
+						? { ...modal, entityTemplate, mode: 'details' }
+						: modal,
+				),
+			)
+		},
+		[],
+	)
+
+	const saveEntityTemplate = useCallback(
+		async (id: string, input: UpdateEntityTemplateInput) => {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.entityTemplate(id)}`, {
+				body: JSON.stringify(input),
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				method: 'PATCH',
+			})
+
+			if (!response.ok) {
+				throw new FormResponseError(
+					await getResponseErrorMessage(
+						response,
+						'Unable to save entity template',
+					),
+				)
+			}
+
+			const data = (await response.json()) as EntityTemplateResponse
+			updateEntityTemplateInState(data.data)
+		},
+		[updateEntityTemplateInState],
+	)
+
 	const deleteAttributeTemplate = useCallback(
 		async (attributeTemplate: AttributeTemplate) => {
 			const response = await fetch(
@@ -1616,6 +2085,83 @@ export function TemplatesView() {
 					(modal) => modal.attributeTemplate?.id !== attributeTemplate.id,
 				),
 			)
+		},
+		[],
+	)
+
+	const deleteEntityTemplate = useCallback(
+		async (entityTemplate: EntityTemplate) => {
+			const response = await fetch(
+				`${apiBaseUrl}${apiRoutes.entityTemplate(entityTemplate.id)}`,
+				{
+					method: 'DELETE',
+				},
+			)
+
+			if (!response.ok) {
+				throw new Error('Unable to delete entity template')
+			}
+
+			setEntityTemplates((current) =>
+				current.filter((item) => item.id !== entityTemplate.id),
+			)
+			setOpenModals((current) =>
+				current.filter(
+					(modal) => modal.entityTemplate?.id !== entityTemplate.id,
+				),
+			)
+		},
+		[],
+	)
+
+	const openEntityTemplate = useCallback(
+		(
+			entityTemplate: EntityTemplate,
+			point: { clientX: number; clientY: number },
+		) => {
+			nextZIndex.current += 1
+			setOpenModals((current) => {
+				const existing = current.find(
+					(modal) => modal.entityTemplate?.id === entityTemplate.id,
+				)
+
+				if (existing) {
+					return current.map((modal) =>
+						modal.key === existing.key
+							? { ...modal, zIndex: nextZIndex.current }
+							: modal,
+					)
+				}
+
+				const modalWidth = Math.min(
+					entityTemplateModalWidth,
+					Math.max(draggableModalMinWidth, window.innerWidth * 0.86),
+				)
+				const pointerOffset = 10
+				const x = clampToRange(
+					point.clientX + pointerOffset,
+					draggableModalMargin,
+					window.innerWidth - modalWidth - draggableModalMargin,
+				)
+				const y = clampToRange(
+					point.clientY + pointerOffset,
+					draggableModalMargin,
+					window.innerHeight - entityTemplateModalHeight - draggableModalMargin,
+				)
+
+				return [
+					...current,
+					{
+						attributeTemplate: null,
+						entityTemplate,
+						initialPosition: { x, y },
+						key: `entity-template-${entityTemplate.id}`,
+						mode: 'details',
+						templateType: 'entity',
+						zIndex: nextZIndex.current,
+					},
+				]
+			})
 		},
 		[],
 	)
@@ -1815,7 +2361,24 @@ export function TemplatesView() {
 									</tr>
 								) : (
 									entityTemplates.map((entityTemplate) => (
-										<tr key={entityTemplate.id}>
+										<tr
+											key={entityTemplate.id}
+											className="data-table-row"
+											tabIndex={0}
+											onClick={(event: ReactMouseEvent<HTMLTableRowElement>) =>
+												openEntityTemplate(entityTemplate, event)
+											}
+											onKeyDown={(event) => {
+												if (event.key === 'Enter' || event.key === ' ') {
+													event.preventDefault()
+													const rect = event.currentTarget.getBoundingClientRect()
+													openEntityTemplate(entityTemplate, {
+														clientX: rect.left,
+														clientY: rect.top,
+													})
+												}
+											}}
+										>
 											<td>{entityTemplate.name}</td>
 											<td>
 												<span className="empty-value-space">
@@ -1955,7 +2518,9 @@ export function TemplatesView() {
 						}}
 						onClose={closeModal}
 						onDelete={() => {
-							if (modal.attributeTemplate) {
+							if (modal.entityTemplate) {
+								void deleteEntityTemplate(modal.entityTemplate)
+							} else if (modal.attributeTemplate) {
 								void deleteAttributeTemplate(modal.attributeTemplate)
 							}
 						}}
@@ -1983,6 +2548,28 @@ export function TemplatesView() {
 									onSave={createEntityTemplate}
 									onValidityChange={setModalFormValidity}
 								/>
+							) : modal.templateType === 'entity' &&
+								modal.mode === 'edit' &&
+								modal.entityTemplate ? (
+								<EntityTemplateEditForm
+									accessLevels={accessLevels}
+									attributeTemplates={attributeTemplates}
+									autoFocusName
+									entityTemplate={modal.entityTemplate}
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onCreateAttributeTemplate={createAttributeTemplate}
+									onSave={(input) => {
+										const entityTemplate = modal.entityTemplate
+
+										if (!entityTemplate) {
+											return Promise.resolve()
+										}
+
+										return saveEntityTemplate(entityTemplate.id, input)
+									}}
+									onValidityChange={setModalFormValidity}
+								/>
 							) : modal.mode === 'create' ? (
 								<AttributeTemplateEditForm
 								autoFocusName
@@ -2007,6 +2594,11 @@ export function TemplatesView() {
 									return saveAttributeTemplate(attributeTemplate.id, input)
 								}}
 								onValidityChange={setModalFormValidity}
+							/>
+						) : modal.entityTemplate ? (
+							<EntityTemplateDetailsView
+								accessLevels={accessLevels}
+								entityTemplate={modal.entityTemplate}
 							/>
 						) : modal.attributeTemplate ? (
 							<div

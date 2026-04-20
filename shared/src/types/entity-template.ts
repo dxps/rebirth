@@ -113,20 +113,6 @@ export function hasValidEntityTemplateAttributes(
 				: undefined,
 		),
 	)
-	const uniqueAttributeTemplateIds = new Set(
-		attributes
-			.map((attribute) =>
-				typeof attribute === 'object' &&
-				attribute !== null &&
-				'attributeTemplateId' in attribute
-					? attribute.attributeTemplateId
-					: undefined,
-			)
-			.filter(
-				(attributeTemplateId) =>
-					attributeTemplateId !== undefined && attributeTemplateId !== null,
-			),
-	)
 	const uniqueListingIndexes = new Set(
 		attributes.map((attribute) =>
 			typeof attribute === 'object' &&
@@ -139,16 +125,6 @@ export function hasValidEntityTemplateAttributes(
 
 	return (
 		uniqueAttributeIds.size === attributes.length &&
-		uniqueAttributeTemplateIds.size ===
-			attributes.filter((attribute) => {
-				if (!attribute || typeof attribute !== 'object') {
-					return false
-				}
-
-				const input = attribute as Record<string, unknown>
-
-				return input.attributeTemplateId !== undefined && input.attributeTemplateId !== null
-			}).length &&
 		uniqueListingIndexes.size === attributes.length &&
 		attributes.every((attribute) => {
 			if (!attribute || typeof attribute !== 'object') {
