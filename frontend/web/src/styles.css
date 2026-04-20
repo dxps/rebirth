@@ -168,7 +168,7 @@ button:not([data-slot='button']) {
 	cursor: pointer;
 	display: inline-flex;
 	font: inherit;
-	font-size: 0.95rem;
+	font-size: 0.85rem;
 	font-weight: 400;
 	gap: 0.55rem;
 	min-height: 2.05rem;
@@ -182,6 +182,34 @@ button:not([data-slot='button']):hover {
 button:not([data-slot='button']):focus-visible {
 	outline: 1px solid var(--focus-ring);
 	outline-offset: 2px;
+}
+
+input[type='checkbox'] {
+	appearance: none;
+	background: transparent;
+	background-color: transparent;
+	border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+	border-radius: 4px;
+	padding: 0;
+	position: relative;
+}
+
+input[type='checkbox']:checked {
+	background: var(--focus-ring);
+	background-color: var(--focus-ring);
+	border-color: var(--focus-ring);
+}
+
+input[type='checkbox']:checked::after {
+	border: solid var(--bg);
+	border-width: 0 2px 2px 0;
+	content: '';
+	height: 48%;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -58%) rotate(45deg);
+	width: 24%;
 }
 
 button svg,
@@ -387,10 +415,15 @@ button svg,
 
 .types-mgmt-view {
 	display: grid;
-	gap: 1.5rem;
+	gap: 4rem;
 	margin: 0 auto;
 	max-width: 62rem;
 	width: 100%;
+}
+
+.types-mgmt-section {
+	display: grid;
+	gap: 0.65rem;
 }
 
 .section-heading {
@@ -425,6 +458,12 @@ button.section-action-button:hover {
 	background: color-mix(in srgb, var(--fg) 10%, transparent);
 	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
 	color: var(--fg);
+}
+
+.section-action-button:disabled,
+button.section-action-button:disabled {
+	cursor: default;
+	opacity: 0.35;
 }
 
 .section-action-button svg {
@@ -538,14 +577,14 @@ button.access-level-refresh-button:hover {
 	border-collapse: separate;
 	border-spacing: 0;
 	color: var(--fg);
-	font-size: 0.95rem;
+	font-size: 0.85rem;
 	width: 100%;
 }
 
 .data-table th,
 .data-table td {
-	border-bottom: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
-	padding: 0.5rem 0.7rem;
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	padding: 0.34rem 0.7rem;
 	text-align: left;
 	vertical-align: top;
 }
@@ -577,8 +616,24 @@ button.access-level-refresh-button:hover {
 	white-space: nowrap;
 }
 
+.entity-templates-table th:first-child,
+.entity-templates-table td:first-child,
+.attribute-templates-table th:first-child,
+.attribute-templates-table td:first-child {
+	width: 36%;
+}
+
 .data-table td:nth-child(2) {
 	color: var(--muted);
+}
+
+.data-table .data-table-empty-cell {
+	color: var(--muted);
+	text-align: center;
+}
+
+.data-table .data-table-empty-cell span {
+	font-style: italic;
 }
 
 .attribute-templates-table th:nth-child(2),
@@ -819,6 +874,13 @@ button.delete-confirm-danger:hover {
 	z-index: 2;
 }
 
+.draggable-modal-titlebar-button[data-tooltip-multiline='true']::after {
+	line-height: 1.25;
+	text-align: center;
+	white-space: pre-line;
+	width: max-content;
+}
+
 .draggable-modal-delete-action[data-tooltip]:hover::after,
 .draggable-modal-titlebar-button[data-tooltip]:hover::after,
 .draggable-modal-titlebar-button[data-tooltip]:focus-visible::after {
@@ -832,6 +894,10 @@ button.delete-confirm-danger:hover {
 	overflow: hidden;
 	padding: 0.55rem 0.9rem 1rem;
 	user-select: none;
+}
+
+.draggable-modal:has(.include-attribute-popover) .draggable-modal-content {
+	overflow: visible;
 }
 
 .access-level-details {
@@ -932,12 +998,14 @@ button.draggable-modal-resize:hover {
 	overflow-wrap: anywhere;
 }
 
-.access-level-edit-form {
+.access-level-edit-form,
+.entity-template-edit-form {
 	display: grid;
 	gap: 0.8rem;
 }
 
-.access-level-edit-form label {
+.access-level-edit-form label,
+.entity-template-edit-form label {
 	color: var(--muted);
 	display: grid;
 	font-size: 0.78rem;
@@ -947,7 +1015,10 @@ button.draggable-modal-resize:hover {
 
 .access-level-edit-form input,
 .access-level-edit-form select,
-.access-level-edit-form textarea {
+.access-level-edit-form textarea,
+.entity-template-edit-form input,
+.entity-template-edit-form select,
+.entity-template-edit-form textarea {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
 	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
 	border-radius: 6px;
@@ -958,7 +1029,8 @@ button.draggable-modal-resize:hover {
 	padding: 0.28rem 0.42rem;
 }
 
-.access-level-edit-form select {
+.access-level-edit-form select,
+.entity-template-edit-form select {
 	appearance: none;
 	padding-left: 0.42rem;
 	padding-right: 2rem;
@@ -983,7 +1055,9 @@ button.draggable-modal-resize:hover {
 }
 
 .access-level-edit-form input,
-.access-level-edit-form select {
+.access-level-edit-form select,
+.entity-template-edit-form input,
+.entity-template-edit-form select {
 	height: 1.95rem;
 	resize: none;
 }
@@ -1028,7 +1102,8 @@ button.draggable-modal-resize:hover {
 	cursor: default;
 }
 
-.access-level-edit-form textarea {
+.access-level-edit-form textarea,
+.entity-template-edit-form textarea {
 	height: calc((0.95rem * 1.35 * 2) + 0.56rem + 2px);
 	min-height: calc((0.95rem * 1.35 * 2) + 0.56rem + 2px);
 	resize: none;
@@ -1036,10 +1111,434 @@ button.draggable-modal-resize:hover {
 
 .access-level-edit-form input:focus,
 .access-level-edit-form select:focus,
-.access-level-edit-form textarea:focus {
+.access-level-edit-form textarea:focus,
+.entity-template-edit-form input:focus,
+.entity-template-edit-form select:focus,
+.entity-template-edit-form textarea:focus {
 	border-color: var(--focus-ring);
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
 	outline: 0;
+}
+
+.entity-template-fields {
+	display: grid;
+	gap: 0.8rem;
+}
+
+.entity-template-tabs {
+	display: grid;
+	gap: 0.55rem;
+	min-width: 0;
+}
+
+.entity-template-tab-list {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	display: flex;
+	gap: 0.3rem;
+	justify-content: center;
+}
+
+.entity-template-tab,
+button.entity-template-tab {
+	background: transparent;
+	background-color: transparent;
+	border-radius: 6px 6px 0 0;
+	color: var(--muted);
+	font-size: 0.78rem;
+	min-height: 1.8rem;
+	padding: 0.25rem 0.55rem;
+}
+
+.entity-template-tab:hover,
+button.entity-template-tab:hover {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+	color: var(--fg);
+}
+
+.entity-template-tab[aria-selected='true'],
+button.entity-template-tab[aria-selected='true'] {
+	color: var(--fg);
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.entity-template-tab[aria-selected='true']:hover,
+button.entity-template-tab[aria-selected='true']:hover {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+}
+
+.entity-template-modal-table {
+	font-size: 0.78rem;
+}
+
+.entity-template-attributes-table {
+	table-layout: fixed;
+	width: 100%;
+}
+
+.entity-template-attributes-table td {
+	padding-bottom: 0.24rem;
+	padding-top: 0.24rem;
+	vertical-align: middle;
+}
+
+.entity-template-attribute-name-column {
+	width: 42%;
+}
+
+.entity-template-attribute-value-type-column {
+	width: 5.5rem;
+}
+
+.entity-template-attribute-access-level-column {
+	width: 7.5rem;
+}
+
+.entity-template-attribute-action-column {
+	width: 4rem;
+}
+
+.entity-template-attributes-table th:nth-child(2),
+.entity-template-attributes-table td:nth-child(2) {
+	white-space: nowrap;
+}
+
+.entity-template-attributes-table th:nth-child(3),
+.entity-template-attributes-table td:nth-child(3) {
+	color: var(--muted);
+	white-space: nowrap;
+}
+
+.entity-template-attributes-table th:last-child,
+.entity-template-attributes-table td:last-child {
+	text-align: right;
+}
+
+.entity-template-attributes-table td.data-table-empty-cell {
+	text-align: center;
+}
+
+.include-attribute-action {
+	display: inline-flex;
+	position: relative;
+}
+
+.include-attribute-popover {
+	background: var(--menu-bg);
+	border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+	border-radius: 6px;
+	box-shadow: 0 0 0.9rem color-mix(in srgb, #000 18%, transparent);
+	color: var(--fg);
+	display: grid;
+	gap: 0.55rem;
+	max-height: calc(100vh - 2rem);
+	min-width: 15rem;
+	overflow-x: visible;
+	overflow-y: auto;
+	padding: 0.6rem;
+	position: absolute;
+	right: calc(100% + 0.45rem);
+	text-align: left;
+	top: -7rem;
+	z-index: 20;
+}
+
+.include-attribute-mode-tabs {
+	display: flex;
+	gap: 0.25rem;
+	justify-content: center;
+}
+
+.include-attribute-mode-tabs button {
+	background: transparent;
+	background-color: transparent;
+	border-radius: 6px;
+	color: var(--muted);
+	font-size: 0.72rem;
+	min-height: 1.5rem;
+	padding: 0.15rem 0.45rem;
+}
+
+.include-attribute-mode-tabs button:hover {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+	color: var(--fg);
+}
+
+.include-attribute-mode-tabs button[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+}
+
+.include-attribute-fields {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.include-attribute-fields label {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.72rem;
+	gap: 0.2rem;
+}
+
+.include-attribute-fields input,
+.include-attribute-fields select,
+.include-attribute-fields textarea {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.78rem;
+	line-height: 1.3;
+	padding: 0.22rem 0.38rem;
+}
+
+.include-attribute-fields input,
+.include-attribute-fields select {
+	height: 1.6rem;
+}
+
+.include-attribute-fields textarea {
+	min-height: calc((0.78rem * 1.3 * 2) + 0.44rem + 2px);
+	resize: none;
+}
+
+.include-attribute-fields button {
+	justify-self: end;
+	min-height: 1.55rem;
+	padding: 0.16rem 0.5rem;
+}
+
+.include-attribute-fields button:disabled {
+	cursor: default;
+	opacity: 0.4;
+}
+
+.include-attribute-submit-button,
+button.include-attribute-submit-button {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+	justify-self: end;
+}
+
+.include-attribute-submit-button:hover,
+button.include-attribute-submit-button:hover {
+	background: color-mix(in srgb, var(--fg) 16%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 16%, transparent);
+	color: var(--fg);
+}
+
+.include-attribute-submit-button.icon-only-button[data-tooltip]::after,
+button.include-attribute-submit-button.icon-only-button[data-tooltip]::after {
+	left: auto;
+	right: calc(100% + 0.35rem);
+	top: 50%;
+	transform: translate(0.1rem, -50%);
+}
+
+.include-attribute-submit-button.icon-only-button[data-tooltip]:hover::after,
+.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visible::after,
+button.include-attribute-submit-button.icon-only-button[data-tooltip]:hover::after,
+button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visible::after {
+	transform: translate(0, -50%);
+}
+
+.include-attribute-fields .include-attribute-checkbox {
+	align-items: center;
+	display: inline-flex;
+	grid-template-columns: auto 1fr;
+	justify-content: start;
+}
+
+.include-attribute-fields .include-attribute-checkbox input {
+	height: 0.9rem;
+	width: 0.9rem;
+}
+
+.entity-template-attribute-name {
+	position: relative;
+}
+
+.entity-template-attribute-name[data-tooltip] {
+	cursor: help;
+}
+
+.entity-template-attribute-name[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.entity-template-attribute-name[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.entity-template-value-type-cell {
+	position: relative;
+}
+
+.entity-template-value-type-cell[data-tooltip],
+.entity-template-access-level-wrap[data-tooltip],
+.icon-only-button[data-tooltip] {
+	position: relative;
+}
+
+.entity-template-value-type-cell[data-tooltip]::after,
+.icon-only-button[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border: 0;
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	height: auto;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	width: auto;
+	z-index: 2;
+}
+
+.entity-template-access-level-wrap[data-tooltip]::before {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.entity-template-value-type-cell[data-tooltip]:hover::after,
+.icon-only-button[data-tooltip]:hover::after,
+.icon-only-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.entity-template-access-level-wrap[data-tooltip]:hover::before {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.entity-template-attribute-actions {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.entity-template-attribute-actions .icon-only-button + .icon-only-button {
+	margin-left: 0.38rem;
+}
+
+.entity-template-access-level-wrap select {
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	cursor: pointer;
+	font-size: 0.78rem;
+	height: 1.2rem;
+	padding-bottom: 0;
+	padding-top: 0;
+}
+
+.entity-template-access-level-wrap::after {
+	height: 0.34rem;
+	right: 0.5rem;
+	width: 0.34rem;
+}
+
+.icon-only-button,
+button.icon-only-button {
+	background: transparent;
+	background-color: transparent;
+	border-radius: 6px;
+	color: color-mix(in srgb, var(--fg) 55%, transparent);
+	height: 1.35rem;
+	justify-content: center;
+	min-height: 1.35rem;
+	padding: 0;
+	width: 1.35rem;
+}
+
+.icon-only-button:hover,
+button.icon-only-button:hover {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+}
+
+.icon-only-button svg {
+	height: 0.78rem;
+	width: 0.78rem;
+}
+
+.entity-template-drag-handle {
+	cursor: ns-resize;
+}
+
+.entity-template-drag-handle:hover {
+	cursor: ns-resize;
+}
+
+.entity-template-drag-handle[data-tooltip]::after {
+	line-height: 1.2;
+	text-align: right;
+	white-space: pre-line;
+	width: max-content;
+}
+
+.entity-template-empty-panel {
+	color: var(--muted);
+	font-size: 0.78rem;
+	font-style: italic;
+	padding: 0.6rem 0;
+	text-align: center;
 }
 
 .access-level-edit-form .attribute-template-checkbox-label {
@@ -1053,36 +1552,12 @@ button.draggable-modal-resize:hover {
 }
 
 .access-level-edit-form .attribute-template-checkbox-label input {
-	accent-color: var(--accent);
-	appearance: none;
-	background: transparent;
-	border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
-	border-radius: 4px;
 	height: 1rem;
-	padding: 0;
-	position: relative;
 	width: 1rem;
 }
 
 .access-level-edit-form .attribute-template-checkbox-label span {
 	cursor: pointer;
-}
-
-.access-level-edit-form .attribute-template-checkbox-label input:checked {
-	background: var(--accent);
-	border-color: var(--accent);
-}
-
-.access-level-edit-form .attribute-template-checkbox-label input:checked::after {
-	border: solid var(--bg);
-	border-width: 0 2px 2px 0;
-	content: '';
-	height: 0.48rem;
-	left: 0.31rem;
-	position: absolute;
-	top: 0.12rem;
-	transform: rotate(45deg);
-	width: 0.24rem;
 }
 
 .form-error {

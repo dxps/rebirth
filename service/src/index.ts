@@ -6,17 +6,23 @@ import {
   isAttributeTemplateId,
   isCreateAccessLevelInput,
   isCreateAttributeTemplateInput,
+  isCreateEntityTemplateInput,
+  isEntityTemplateId,
   isUpdateAccessLevelInput,
   isUpdateAttributeTemplateInput,
+  isUpdateEntityTemplateInput,
   jsonHeaders,
   type AccessLevelResponse,
   type AccessLevelsResponse,
   type AttributeTemplateResponse,
   type AttributeTemplatesResponse,
+  type EntityTemplateResponse,
+  type EntityTemplatesResponse,
   type ApiErrorResponse
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
+import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -297,8 +303,91 @@ const server = Bun.serve({
       }
     }
 
+    if (request.method === "GET" && url.pathname === apiRoutes.entityTemplates) {
+      try {
+        const response: EntityTemplatesResponse = {
+          data: await listEntityTemplates()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load entity templates"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.entityTemplates) {
+      try {
+        const input = await request.json();
+
+        if (!isCreateEntityTemplateInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid entity template"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const createdEntityTemplate = await createEntityTemplate({
+          attributes: input.attributes,
+          description: input.description.trim(),
+          links: input.links,
+          listingAttributeId: input.listingAttributeId,
+          name: input.name.trim()
+        });
+
+        if (!createdEntityTemplate) {
+          throw new Error("Entity template was not created.");
+        }
+
+        const response: EntityTemplateResponse = {
+          data: createdEntityTemplate
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders,
+          status: 201
+        });
+      } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to create entity template"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
     const accessLevelMatch = /^\/access-levels\/(\d+)$/.exec(url.pathname);
     const attributeTemplateMatch = /^\/attribute-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
+    const entityTemplateMatch = /^\/entity-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
 
     if (request.method === "PATCH" && accessLevelMatch) {
       try {
@@ -531,6 +620,124 @@ const server = Bun.serve({
         return Response.json(
           {
             error: "Unable to delete attribute template"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "PATCH" && entityTemplateMatch) {
+      try {
+        const id = entityTemplateMatch[1] ?? "";
+        const input = await request.json();
+
+        if (!isEntityTemplateId(id) || !isUpdateEntityTemplateInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid entity template update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const updatedEntityTemplate = await updateEntityTemplate(id, {
+          attributes: input.attributes,
+          description: input.description?.trim(),
+          links: input.links,
+          listingAttributeId: input.listingAttributeId,
+          name: input.name?.trim()
+        });
+
+        if (!updatedEntityTemplate) {
+          return Response.json(
+            {
+              error: "Entity template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: EntityTemplateResponse = {
+          data: updatedEntityTemplate
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to update entity template"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "DELETE" && entityTemplateMatch) {
+      try {
+        const id = entityTemplateMatch[1] ?? "";
+
+        if (!isEntityTemplateId(id)) {
+          return Response.json(
+            {
+              error: "Invalid entity template id"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const deletedEntityTemplate = await deleteEntityTemplate(id);
+
+        if (!deletedEntityTemplate) {
+          return Response.json(
+            {
+              error: "Entity template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: EntityTemplateResponse = {
+          data: deletedEntityTemplate
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to delete entity template"
           },
           {
             headers: jsonHeaders,

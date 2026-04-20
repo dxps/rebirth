@@ -9,6 +9,16 @@ import {
 	type CreateAttributeTemplateInput,
 	type UpdateAttributeTemplateInput,
 } from './types/attribute-template'
+import {
+	hasValidEntityTemplateAttributes,
+	isEntityTemplateAttributeId,
+	isEntityTemplateId,
+	type CreateEntityTemplateAttributeInput,
+	type CreateEntityTemplateInput,
+	type CreateEntityTemplateLinkInput,
+	type EntityTemplate,
+	type UpdateEntityTemplateInput,
+} from './types/entity-template'
 
 export type ServiceStatus = 'ok' | 'degraded' | 'down'
 
@@ -34,6 +44,14 @@ export interface AttributeTemplateResponse {
 	data: AttributeTemplate
 }
 
+export interface EntityTemplatesResponse {
+	data: EntityTemplate[]
+}
+
+export interface EntityTemplateResponse {
+	data: EntityTemplate
+}
+
 export type ApiErrorCode = 'unique_conflict'
 
 export interface ApiErrorResponse {
@@ -54,6 +72,8 @@ export const apiRoutes = {
 	accessLevels: '/access-levels',
 	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
 	attributeTemplates: '/attribute-templates',
+	entityTemplate: (id: string) => `/entity-templates/${id}`,
+	entityTemplates: '/entity-templates',
 	health: '/health',
 } as const
 
@@ -145,6 +165,74 @@ export function isCreateAttributeTemplateInput(
 	)
 }
 
+function isCreateEntityTemplateLinkInput(
+	value: unknown,
+): value is CreateEntityTemplateLinkInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.targetEntityTemplateId === 'string' &&
+		isEntityTemplateId(input.targetEntityTemplateId) &&
+		typeof input.name === 'string' &&
+		(input.description === undefined ||
+			input.description === null ||
+			typeof input.description === 'string')
+	)
+}
+
+export function isCreateEntityTemplateInput(
+	value: unknown,
+): value is CreateEntityTemplateInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.name === 'string' &&
+		typeof input.description === 'string' &&
+		hasValidEntityTemplateAttributes(
+			input.attributes,
+			input.listingAttributeId,
+		) &&
+		(input.links === undefined ||
+			(Array.isArray(input.links) &&
+				input.links.every(isCreateEntityTemplateLinkInput)))
+	)
+}
+
+export function isUpdateEntityTemplateInput(
+	value: unknown,
+): value is UpdateEntityTemplateInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+	const hasAttributeUpdate =
+		input.attributes !== undefined ||
+		input.listingAttributeId !== undefined
+
+	return (
+		(input.name === undefined || typeof input.name === 'string') &&
+		(input.description === undefined ||
+			typeof input.description === 'string') &&
+		(!hasAttributeUpdate ||
+			hasValidEntityTemplateAttributes(
+				input.attributes,
+				input.listingAttributeId,
+			)) &&
+		(input.links === undefined ||
+			(Array.isArray(input.links) &&
+				input.links.every(isCreateEntityTemplateLinkInput)))
+	)
+}
+
 export { accessLevelModel, isAccessLevelId } from './security/access-level'
 export type {
 	AccessLevel,
@@ -165,3 +253,23 @@ export type {
 	CreateAttributeTemplateInput,
 	UpdateAttributeTemplateInput,
 } from './types/attribute-template'
+export {
+	entityTemplateAttributeModel,
+	entityTemplateLinkModel,
+	entityTemplateModel,
+	hasValidEntityTemplateAttributes,
+	isEntityTemplateAttributeId,
+	isEntityTemplateId,
+} from './types/entity-template'
+export type {
+	CreateEntityTemplateAttributeInput,
+	CreateEntityTemplateInput,
+	CreateEntityTemplateLinkInput,
+	EntityTemplate,
+	EntityTemplateAttribute,
+	EntityTemplateAttributeId,
+	EntityTemplateId,
+	EntityTemplateLink,
+	EntityTemplateLinkId,
+	UpdateEntityTemplateInput,
+} from './types/entity-template'

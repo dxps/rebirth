@@ -3,3 +3,8 @@ export {
 	attributeTemplateValueType,
 	attributeTemplates,
 } from './attribute-templates'
+export {
+	entityTemplateAttributes,
+	entityTemplateLinks,
+	entityTemplates,
+} from './entity-templates'

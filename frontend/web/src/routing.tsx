@@ -1,11 +1,16 @@
 import { forwardRef, type AnchorHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 
-export type AppPath = "/" | "/data-explorer" | "/types" | "/security" | "/profile";
+export type AppPath = "/" | "/data-explorer" | "/templates" | "/security" | "/profile";
 
 export function getCurrentPath(): AppPath {
   const path = window.location.pathname;
 
-  if (path === "/data-explorer" || path === "/types" || path === "/security" || path === "/profile") {
+  if (path === "/types") {
+    window.history.replaceState(null, "", "/templates");
+    return "/templates";
+  }
+
+  if (path === "/data-explorer" || path === "/templates" || path === "/security" || path === "/profile") {
     return path;
   }
 

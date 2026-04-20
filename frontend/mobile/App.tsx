@@ -58,7 +58,7 @@ export default function App() {
 			case 'data-explorer':
 				return <PageLabelView colors={colors} title="Data Explorer" />
 			case 'types':
-				return <PageLabelView colors={colors} title="Types Mgmt" />
+				return <PageLabelView colors={colors} title="Templates" />
 			case 'security':
 				return <SecurityView colors={colors} />
 			case 'profile':

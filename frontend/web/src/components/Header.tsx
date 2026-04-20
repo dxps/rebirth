@@ -45,7 +45,7 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
           <HeaderNavLink label="Data Explorer" to="/data-explorer">
             <Database aria-hidden="true" />
           </HeaderNavLink>
-          <HeaderNavLink label="Types Mgmt" to="/types">
+          <HeaderNavLink label="Templates" to="/templates">
             <Shapes aria-hidden="true" />
           </HeaderNavLink>
           <HeaderNavLink label="Security" to="/security">

@@ -43,7 +43,7 @@ export function FooterNav({
 				<Database color={iconColor} size={22} />
 			</Pressable>
 			<Pressable
-				accessibilityLabel="Types management"
+				accessibilityLabel="Templates"
 				accessibilityRole="button"
 				style={[
 					styles.footerItem,

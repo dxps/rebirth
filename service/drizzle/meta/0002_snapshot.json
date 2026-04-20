@@ -1,0 +1,407 @@
+{
+  "id": "8e72eff7-899e-4950-9549-3d0f4777b041",
+  "prevId": "7c585ee7-8ca9-4111-bb10-43770acaea8c",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.access_levels": {
+      "name": "access_levels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "access_levels_name_unique": {
+          "name": "access_levels_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.attribute_templates": {
+      "name": "attribute_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "attribute_template_value_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'text'"
+        },
+        "default_value": {
+          "name": "default_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_required": {
+          "name": "is_required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "attribute_templates_name_description_unique": {
+          "name": "attribute_templates_name_description_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name",
+            "description"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "attribute_templates_name_trimmed_check": {
+          "name": "attribute_templates_name_trimmed_check",
+          "value": "\"attribute_templates\".\"name\" = btrim(\"attribute_templates\".\"name\")"
+        },
+        "attribute_templates_description_trimmed_check": {
+          "name": "attribute_templates_description_trimmed_check",
+          "value": "\"attribute_templates\".\"description\" = btrim(\"attribute_templates\".\"description\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.entity_template_attributes": {
+      "name": "entity_template_attributes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_template_id": {
+          "name": "entity_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attribute_template_id": {
+          "name": "attribute_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "attribute_template_value_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_level_id": {
+          "name": "access_level_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listing_index": {
+          "name": "listing_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "entity_tmpl_attrs_entity_tmpl_id_entity_tmpls_id_fk": {
+          "name": "entity_tmpl_attrs_entity_tmpl_id_entity_tmpls_id_fk",
+          "tableFrom": "entity_template_attributes",
+          "tableTo": "entity_templates",
+          "columnsFrom": [
+            "entity_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk": {
+          "name": "entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk",
+          "tableFrom": "entity_template_attributes",
+          "tableTo": "attribute_templates",
+          "columnsFrom": [
+            "attribute_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entity_tmpl_attrs_access_level_id_access_levels_id_fk": {
+          "name": "entity_tmpl_attrs_access_level_id_access_levels_id_fk",
+          "tableFrom": "entity_template_attributes",
+          "tableTo": "access_levels",
+          "columnsFrom": [
+            "access_level_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entity_tmpl_attrs_entity_tmpl_id_listing_idx_unique": {
+          "name": "entity_tmpl_attrs_entity_tmpl_id_listing_idx_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "entity_template_id",
+            "listing_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "entity_tmpl_attrs_listing_idx_check": {
+          "name": "entity_tmpl_attrs_listing_idx_check",
+          "value": "\"entity_template_attributes\".\"listing_index\" >= 0"
+        },
+        "entity_tmpl_attrs_name_trimmed_check": {
+          "name": "entity_tmpl_attrs_name_trimmed_check",
+          "value": "\"entity_template_attributes\".\"name\" = btrim(\"entity_template_attributes\".\"name\")"
+        },
+        "entity_tmpl_attrs_desc_trimmed_check": {
+          "name": "entity_tmpl_attrs_desc_trimmed_check",
+          "value": "\"entity_template_attributes\".\"description\" = btrim(\"entity_template_attributes\".\"description\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.entity_template_links": {
+      "name": "entity_template_links",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_template_id": {
+          "name": "entity_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_entity_template_id": {
+          "name": "target_entity_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "entity_tmpl_links_entity_tmpl_id_entity_tmpls_id_fk": {
+          "name": "entity_tmpl_links_entity_tmpl_id_entity_tmpls_id_fk",
+          "tableFrom": "entity_template_links",
+          "tableTo": "entity_templates",
+          "columnsFrom": [
+            "entity_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "entity_tmpl_links_target_entity_tmpl_id_entity_tmpls_id_fk": {
+          "name": "entity_tmpl_links_target_entity_tmpl_id_entity_tmpls_id_fk",
+          "tableFrom": "entity_template_links",
+          "tableTo": "entity_templates",
+          "columnsFrom": [
+            "target_entity_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entity_tmpl_links_source_target_name_unique": {
+          "name": "entity_tmpl_links_source_target_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "entity_template_id",
+            "target_entity_template_id",
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "entity_tmpl_links_name_trimmed_check": {
+          "name": "entity_tmpl_links_name_trimmed_check",
+          "value": "\"entity_template_links\".\"name\" = btrim(\"entity_template_links\".\"name\")"
+        },
+        "entity_tmpl_links_desc_trimmed_check": {
+          "name": "entity_tmpl_links_desc_trimmed_check",
+          "value": "\"entity_template_links\".\"description\" IS NULL OR \"entity_template_links\".\"description\" = btrim(\"entity_template_links\".\"description\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.entity_templates": {
+      "name": "entity_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listing_attribute_id": {
+          "name": "listing_attribute_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entity_tmpls_name_unique": {
+          "name": "entity_tmpls_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "entity_tmpls_name_trimmed_check": {
+          "name": "entity_tmpls_name_trimmed_check",
+          "value": "\"entity_templates\".\"name\" = btrim(\"entity_templates\".\"name\")"
+        },
+        "entity_tmpls_desc_trimmed_check": {
+          "name": "entity_tmpls_desc_trimmed_check",
+          "value": "\"entity_templates\".\"description\" = btrim(\"entity_templates\".\"description\")"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.attribute_template_value_type": {
+      "name": "attribute_template_value_type",
+      "schema": "public",
+      "values": [
+        "text",
+        "number",
+        "boolean",
+        "date",
+        "datetime"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
