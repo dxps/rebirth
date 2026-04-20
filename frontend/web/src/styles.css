@@ -1246,6 +1246,13 @@ button.entity-template-tab[aria-selected='true']:hover {
 	z-index: 20;
 }
 
+.include-attribute-close-button,
+button.include-attribute-close-button {
+	position: absolute;
+	right: 0.35rem;
+	top: 0.35rem;
+}
+
 .include-attribute-mode-tabs {
 	display: flex;
 	gap: 0.25rem;

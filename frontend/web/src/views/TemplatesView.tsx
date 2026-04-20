@@ -683,6 +683,7 @@ function EntityTemplateEditForm({
 	)
 	const [name, setName] = useState(entityTemplate?.name ?? '')
 	const nameInputRef = useRef<HTMLInputElement>(null)
+	const newAttributeNameInputRef = useRef<HTMLInputElement>(null)
 	const isValid =
 		name.trim().length > 0 &&
 		includedAttributes.length > 0 &&
@@ -697,6 +698,12 @@ function EntityTemplateEditForm({
 			nameInputRef.current?.focus()
 		}
 	}, [autoFocusName])
+
+	useEffect(() => {
+		if (isIncludeAttributeOpen && includeAttributeMode === 'new') {
+			newAttributeNameInputRef.current?.focus()
+		}
+	}, [includeAttributeMode, isIncludeAttributeOpen])
 
 	useEffect(() => {
 		function blurAccessLevelSelect(event: PointerEvent): void {
@@ -1031,6 +1038,14 @@ function EntityTemplateEditForm({
 													className="include-attribute-popover"
 													data-no-drag="true"
 												>
+													<button
+														aria-label="Close include attribute popup"
+														className="icon-only-button include-attribute-close-button"
+														type="button"
+														onClick={() => setIsIncludeAttributeOpen(false)}
+													>
+														<X aria-hidden="true" />
+													</button>
 													<div className="include-attribute-mode-tabs">
 														<button
 															aria-selected={
@@ -1098,6 +1113,7 @@ function EntityTemplateEditForm({
 															<label>
 																<span>name</span>
 																<input
+																	ref={newAttributeNameInputRef}
 																	type="text"
 																	value={newAttributeName}
 																	onChange={(event) =>
