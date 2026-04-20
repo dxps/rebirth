@@ -3,6 +3,7 @@ import {
 	type AccessLevel,
 	type AccessLevelResponse,
 	type AccessLevelsResponse,
+	type ApiErrorResponse,
 	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from '@rebirth/shared'
@@ -32,6 +33,34 @@ const builtInAccessLevelDeleteTooltip =
 	'This built-in access level cannot be deleted.'
 const builtInAccessLevelRenameTooltip =
 	'This build-int access level cannot be renamed.'
+
+async function getResponseErrorMessage(
+	response: Response,
+	fallback: string,
+): Promise<string> {
+	try {
+		const data = (await response.json()) as Partial<ApiErrorResponse> & {
+			error?: ApiErrorResponse['error'] | string
+		}
+
+		if (
+			typeof data.error === 'object' &&
+			data.error !== null &&
+			typeof data.error.message === 'string' &&
+			data.error.message.length > 0
+		) {
+			return data.error.message
+		}
+
+		if (typeof data.error === 'string' && data.error.length > 0) {
+			return data.error
+		}
+	} catch {
+		return fallback
+	}
+
+	return fallback
+}
 
 interface OpenAccessLevelModal {
 	accessLevel: AccessLevel | null
@@ -434,8 +463,10 @@ function AccessLevelEditForm({
 				description,
 				name,
 			})
-		} catch {
-			setError('Unable to save access level')
+		} catch (error) {
+			setError(
+				error instanceof Error ? error.message : 'Unable to save access level',
+			)
 		} finally {
 			setIsSaving(false)
 		}
@@ -599,7 +630,9 @@ export function SecurityView() {
 			})
 
 			if (!response.ok) {
-				throw new Error('Unable to save access level')
+				throw new Error(
+					await getResponseErrorMessage(response, 'Unable to save access level'),
+				)
 			}
 
 			const data = (await response.json()) as AccessLevelResponse
@@ -619,7 +652,9 @@ export function SecurityView() {
 			})
 
 			if (!response.ok) {
-				throw new Error('Unable to create access level')
+				throw new Error(
+					await getResponseErrorMessage(response, 'Unable to create access level'),
+				)
 			}
 
 			const data = (await response.json()) as AccessLevelResponse

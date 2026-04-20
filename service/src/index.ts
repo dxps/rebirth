@@ -7,7 +7,8 @@ import {
   isUpdateAccessLevelInput,
   jsonHeaders,
   type AccessLevelResponse,
-  type AccessLevelsResponse
+  type AccessLevelsResponse,
+  type ApiErrorResponse
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { runMigrations } from "./db/migrate";
@@ -16,6 +17,45 @@ import { loadEnvFiles } from "./env";
 loadEnvFiles();
 
 const port = Number.parseInt(Bun.env.PORT ?? "9908", 10);
+const uniqueConflictErrorCode = "23505";
+const uniqueConflictResponse: ApiErrorResponse = {
+  error: {
+    code: "unique_conflict",
+    message: "An entry with the same name already exists"
+  }
+};
+
+function getErrorProperty(error: unknown, property: string): unknown {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+
+  return (error as Record<string, unknown>)[property];
+}
+
+function isPostgresErrorWithCode(
+  error: unknown,
+  code: string,
+  seen = new Set<unknown>()
+): boolean {
+  if (typeof error !== "object" || error === null || seen.has(error)) {
+    return false;
+  }
+
+  seen.add(error);
+
+  if (getErrorProperty(error, "code") === code) {
+    return true;
+  }
+
+  for (const property of ["cause", "error", "originalError"]) {
+    if (isPostgresErrorWithCode(getErrorProperty(error, property), code, seen)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 await runMigrations();
 
@@ -95,6 +135,13 @@ const server = Bun.serve({
           status: 201
         });
       } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
         console.error(error);
 
         return Response.json(
@@ -153,6 +200,13 @@ const server = Bun.serve({
           headers: jsonHeaders
         });
       } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
         console.error(error);
 
         return Response.json(

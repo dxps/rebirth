@@ -20,6 +20,15 @@ export interface AccessLevelResponse {
 	data: AccessLevel
 }
 
+export type ApiErrorCode = 'unique_conflict'
+
+export interface ApiErrorResponse {
+	error: {
+		code: ApiErrorCode
+		message: string
+	}
+}
+
 export const appInfo = {
 	name: 'Rebirth',
 	description: 'An ontology simplified knowledge management system',
