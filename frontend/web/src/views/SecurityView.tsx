@@ -27,6 +27,11 @@ const draggableModalMinHeights: Record<OpenAccessLevelModal['mode'], number> = {
 	edit: 220,
 }
 const draggableModalMinWidth = 280
+const builtInAccessLevelMaxId = 3
+const builtInAccessLevelDeleteTooltip =
+	'This built-in access level cannot be deleted.'
+const builtInAccessLevelRenameTooltip =
+	'This build-int access level cannot be renamed.'
 
 interface OpenAccessLevelModal {
 	accessLevel: AccessLevel | null
@@ -41,7 +46,9 @@ interface OpenAccessLevelModal {
 
 interface DraggableModalProps {
 	children: ReactNode
+	deleteTooltip?: string
 	isSaveDisabled?: boolean
+	isDeleteDisabled?: boolean
 	id: string
 	initialPosition: {
 		x: number
@@ -74,9 +81,15 @@ function getAccessLevelModalTitle(mode: OpenAccessLevelModal['mode']) {
 	return 'Access Level'
 }
 
+function isBuiltInAccessLevel(accessLevel?: AccessLevel | null): boolean {
+	return Boolean(accessLevel && accessLevel.id <= builtInAccessLevelMaxId)
+}
+
 function DraggableModal({
 	children,
+	deleteTooltip = 'Delete',
 	id,
+	isDeleteDisabled = false,
 	initialPosition,
 	isSaveDisabled = false,
 	mode,
@@ -215,16 +228,26 @@ function DraggableModal({
 		<div
 			className="draggable-modal-delete-action"
 			data-no-drag="true"
+			data-tooltip={isDeleteDisabled ? deleteTooltip : undefined}
 		>
 			<button
 				aria-expanded={isDeleteConfirmOpen}
 				aria-label={`Delete ${title}`}
 				className="draggable-modal-titlebar-button"
 				data-no-drag="true"
-				data-tooltip={isDeleteConfirmOpen ? undefined : 'Delete'}
+				data-tooltip={
+					isDeleteDisabled || isDeleteConfirmOpen ? undefined : deleteTooltip
+				}
+				disabled={isDeleteDisabled}
 				type="button"
 				onPointerDown={(event) => event.stopPropagation()}
-				onClick={() => setIsDeleteConfirmOpen(true)}
+				onClick={() => {
+					if (isDeleteDisabled) {
+						return
+					}
+
+					setIsDeleteConfirmOpen(true)
+				}}
 			>
 				<Trash2 aria-hidden="true" />
 			</button>
@@ -378,6 +401,7 @@ function AccessLevelEditForm({
 	onValidityChange,
 	onSave,
 }: AccessLevelEditFormProps) {
+	const isBuiltIn = isBuiltInAccessLevel(accessLevel)
 	const [description, setDescription] = useState(accessLevel?.description ?? '')
 	const [error, setError] = useState<string | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
@@ -412,7 +436,7 @@ function AccessLevelEditForm({
 			})
 		} catch {
 			setError('Unable to save access level')
-		 } finally {
+		} finally {
 			setIsSaving(false)
 		}
 	}
@@ -426,12 +450,18 @@ function AccessLevelEditForm({
 		>
 			<label>
 				<span>name</span>
-				<input
-					ref={nameInputRef}
-					type="text"
-					value={name}
-					onChange={(event) => setName(event.target.value)}
-				/>
+				<span
+					className="access-level-name-input-wrap"
+					data-tooltip={isBuiltIn ? builtInAccessLevelRenameTooltip : undefined}
+				>
+					<input
+						ref={nameInputRef}
+						readOnly={isBuiltIn}
+						type="text"
+						value={name}
+						onChange={(event) => setName(event.target.value)}
+					/>
+				</span>
 			</label>
 			<label>
 				<span>description</span>
@@ -790,8 +820,14 @@ export function SecurityView() {
 				{openModals.map((modal) => (
 					<DraggableModal
 						key={modal.key}
+						deleteTooltip={
+							isBuiltInAccessLevel(modal.accessLevel)
+								? builtInAccessLevelDeleteTooltip
+								: undefined
+						}
 						id={modal.key}
 						initialPosition={modal.initialPosition}
+						isDeleteDisabled={isBuiltInAccessLevel(modal.accessLevel)}
 						isSaveDisabled={
 							(modal.mode === 'create' || modal.mode === 'edit') &&
 							!validFormModalIds.has(modal.key)

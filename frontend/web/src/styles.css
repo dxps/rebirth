@@ -68,6 +68,8 @@
 	--destructive: var(--accent-strong);
 	--input: var(--border);
 	--ring: var(--focus-ring);
+	--tooltip-bg: color-mix(in srgb, var(--fg) 50%, transparent);
+	--tooltip-fg: #ffffff;
 	color: var(--fg);
 	background: var(--bg);
 	font-family:
@@ -115,6 +117,8 @@
 	--destructive: var(--accent-strong);
 	--input: var(--border);
 	--ring: var(--focus-ring);
+	--tooltip-bg: color-mix(in srgb, #262626 70%, transparent);
+	--tooltip-fg: #d8d8d8;
 }
 
 * {
@@ -421,15 +425,15 @@ button.section-action-button:hover {
 }
 
 .section-action-button[data-tooltip]::after {
-	background: transparent;
+	background: var(--tooltip-bg);
 	border-radius: 6px;
-	color: var(--fg);
+	color: var(--tooltip-fg);
 	content: attr(data-tooltip);
 	font-size: 0.72rem;
 	font-weight: 400;
 	line-height: 1;
 	opacity: 0;
-	padding: 0.32rem 0;
+	padding: 0.32rem 0.45rem;
 	pointer-events: none;
 	position: absolute;
 	right: 0;
@@ -486,16 +490,16 @@ button.access-level-refresh-button:hover {
 }
 
 .access-level-refresh-button[data-tooltip]::after {
-	background: transparent;
+	background: var(--tooltip-bg);
 	border-radius: 6px;
-	color: var(--fg);
+	color: var(--tooltip-fg);
 	content: attr(data-tooltip);
 	font-size: 0.72rem;
 	font-weight: 400;
 	left: 50%;
 	line-height: 1;
 	opacity: 0;
-	padding: 0.32rem 0;
+	padding: 0.32rem 0.45rem;
 	pointer-events: none;
 	position: absolute;
 	top: calc(100% + 0.35rem);
@@ -770,10 +774,11 @@ button.delete-confirm-danger:hover {
 	background-color: color-mix(in srgb, var(--destructive) 82%, var(--fg));
 }
 
+.draggable-modal-delete-action[data-tooltip]::after,
 .draggable-modal-titlebar-button[data-tooltip]::after {
-	background: transparent;
+	background: var(--tooltip-bg);
 	border-radius: 6px;
-	color: var(--fg);
+	color: var(--tooltip-fg);
 	content: attr(data-tooltip);
 	font-size: 0.72rem;
 	font-weight: 400;
@@ -792,6 +797,7 @@ button.delete-confirm-danger:hover {
 	z-index: 2;
 }
 
+.draggable-modal-delete-action[data-tooltip]:hover::after,
 .draggable-modal-titlebar-button[data-tooltip]:hover::after,
 .draggable-modal-titlebar-button[data-tooltip]:focus-visible::after {
 	opacity: 1;
@@ -908,6 +914,46 @@ button.draggable-modal-resize:hover {
 .access-level-edit-form input {
 	height: 1.95rem;
 	resize: none;
+}
+
+.access-level-name-input-wrap {
+	position: relative;
+}
+
+.access-level-name-input-wrap input {
+	width: 100%;
+}
+
+.access-level-name-input-wrap[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 50%;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translate(-50%, -0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.access-level-name-input-wrap[data-tooltip]:hover::after,
+.access-level-name-input-wrap[data-tooltip]:focus-within::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+.access-level-edit-form input:read-only {
+	cursor: default;
 }
 
 .access-level-edit-form textarea {
