@@ -47,6 +47,7 @@
 	--border: #d5c4a1;
 	--accent: #b57614;
 	--accent-strong: #af3a03;
+	--section-color: #af3a03;
 	--error: #d84a4a;
 	--green: #79740e;
 	--blue: #076678;
@@ -98,6 +99,7 @@
 	--border: #665c54;
 	--accent: #fabd2f;
 	--accent-strong: #fe8019;
+	--section-color: #f49648;
 	--error: #ff8a8a;
 	--green: #b8bb26;
 	--blue: #83a598;
@@ -397,7 +399,7 @@ button svg,
 }
 
 .section-heading p {
-	color: var(--green);
+	color: var(--section-color);
 	font-size: 1rem;
 	font-weight: 400;
 	line-height: 1.2;
@@ -566,6 +568,7 @@ button.access-level-refresh-button:hover {
 	color: var(--muted);
 	font-size: 0.78rem;
 	font-weight: 400;
+	padding-bottom: 0.3rem;
 	text-transform: none;
 }
 
