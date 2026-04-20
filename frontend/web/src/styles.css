@@ -826,13 +826,13 @@ button.draggable-modal-resize {
 	border-radius: 0;
 	bottom: 0;
 	cursor: nwse-resize;
-	height: 1rem;
-	min-height: 1rem;
+	height: 1.25rem;
+	min-height: 1.25rem;
 	overflow: hidden;
 	padding: 0;
 	position: absolute;
 	right: 0;
-	width: 1rem;
+	width: 1.25rem;
 }
 
 .draggable-modal-resize:hover,
@@ -844,28 +844,41 @@ button.draggable-modal-resize:hover {
 .draggable-modal-resize span {
 	background: var(--muted);
 	border: 0;
-	border-radius: 999px;
-	bottom: var(--grip-offset);
-	height: 1px;
-	opacity: 0.42;
+	border-radius: 1px;
+	height: 0.15rem;
+	opacity: 0.32;
 	position: absolute;
-	right: calc(var(--grip-offset) - 0.24rem);
-	transform: rotate(-45deg);
-	transform-origin: center;
-	width: 0.68rem;
+	width: 0.15rem;
 }
 
 .draggable-modal-resize span:nth-child(1) {
-	--grip-offset: 0.06rem;
+	bottom: 0.22rem;
+	right: 0.22rem;
 }
 
 .draggable-modal-resize span:nth-child(2) {
-	--grip-offset: 0.17rem;
-	width: 0.46rem;
+	bottom: 0.22rem;
+	right: 0.46rem;
 }
 
 .draggable-modal-resize span:nth-child(3) {
-	--grip-offset: 0.28rem;
+	bottom: 0.22rem;
+	right: 0.7rem;
+}
+
+.draggable-modal-resize span:nth-child(4) {
+	bottom: 0.46rem;
+	right: 0.22rem;
+}
+
+.draggable-modal-resize span:nth-child(5) {
+	bottom: 0.46rem;
+	right: 0.46rem;
+}
+
+.draggable-modal-resize span:nth-child(6) {
+	bottom: 0.7rem;
+	right: 0.22rem;
 }
 
 .access-level-details {
