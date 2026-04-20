@@ -6,7 +6,7 @@ import {
 	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from '@rebirth/shared'
-import { ArrowLeft, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
 import {
 	type FormEvent,
 	useCallback,
@@ -455,42 +455,49 @@ export function SecurityView() {
 	const [validFormModalIds, setValidFormModalIds] = useState<Set<string>>(
 		() => new Set(),
 	)
+	const isMountedRef = useRef(false)
+	const loadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
 
-	useEffect(() => {
-		let isMounted = true
+	const loadAccessLevels = useCallback(async (): Promise<void> => {
+		const requestId = loadRequestId.current + 1
+		loadRequestId.current = requestId
 
-		async function loadAccessLevels(): Promise<void> {
-			try {
-				const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`)
+		setIsLoading(true)
 
-				if (!response.ok) {
-					throw new Error('Unable to load access levels')
-				}
+		try {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`)
 
-				const data = (await response.json()) as AccessLevelsResponse
+			if (!response.ok) {
+				throw new Error('Unable to load access levels')
+			}
 
-				if (isMounted) {
-					setAccessLevels(data.data)
-					setError(null)
-				}
-			} catch {
-				if (isMounted) {
-					setError('Access levels are unavailable')
-				}
-			} finally {
-				if (isMounted) {
-					setIsLoading(false)
-				}
+			const data = (await response.json()) as AccessLevelsResponse
+
+			if (isMountedRef.current && requestId === loadRequestId.current) {
+				setAccessLevels(data.data)
+				setError(null)
+			}
+		} catch {
+			if (isMountedRef.current && requestId === loadRequestId.current) {
+				setError('Data is unavailable')
+			}
+		} finally {
+			if (isMountedRef.current && requestId === loadRequestId.current) {
+				setIsLoading(false)
 			}
 		}
+	}, [])
+
+	useEffect(() => {
+		isMountedRef.current = true
 
 		void loadAccessLevels()
 
 		return () => {
-			isMounted = false
+			isMountedRef.current = false
 		}
-	}, [])
+	}, [loadAccessLevels])
 
 	const bringToFront = useCallback((key: string) => {
 		nextZIndex.current += 1
@@ -707,67 +714,78 @@ export function SecurityView() {
 				<p>Access Levels</p>
 			</div>
 
-			<div className="data-table-wrap">
-				<table className="data-table">
-					<thead>
-						<tr>
-							<th>name</th>
-							<th>description</th>
-							<th className="data-table-action-heading">
-								<button
-									aria-label="Create access level"
-									className="section-action-button"
-									data-tooltip="Add an access level"
-									type="button"
-									onClick={(event) => openCreateAccessLevel(event)}
-								>
-									<Plus aria-hidden="true" />
-								</button>
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						{isLoading ? (
+			{error ? (
+				<div className="access-level-unavailable" role="status">
+					<p>{error}</p>
+					<button
+						aria-label="Refresh access levels"
+						className="access-level-refresh-button"
+						data-tooltip="Try again"
+						type="button"
+						onClick={() => void loadAccessLevels()}
+					>
+						<RefreshCw aria-hidden="true" />
+					</button>
+				</div>
+			) : (
+				<div className="data-table-wrap">
+					<table className="data-table">
+						<thead>
 							<tr>
-								<td colSpan={2}>Loading access levels</td>
+								<th>name</th>
+								<th>description</th>
+								<th className="data-table-action-heading">
+									<button
+										aria-label="Create access level"
+										className="section-action-button"
+										data-tooltip="Add an access level"
+										type="button"
+										onClick={(event) => openCreateAccessLevel(event)}
+									>
+										<Plus aria-hidden="true" />
+									</button>
+								</th>
 							</tr>
-						) : error ? (
-							<tr>
-								<td colSpan={2}>{error}</td>
-							</tr>
-						) : accessLevels.length === 0 ? (
-							<tr>
-								<td colSpan={2}>No access levels found</td>
-							</tr>
-						) : (
-							accessLevels.map((accessLevel) => (
-								<tr
-									key={accessLevel.id}
-									className="data-table-row"
-									tabIndex={0}
-									onClick={(event: ReactMouseEvent<HTMLTableRowElement>) =>
-										openAccessLevel(accessLevel, event)
-									}
-									onKeyDown={(event) => {
-										if (event.key === 'Enter' || event.key === ' ') {
-											event.preventDefault()
-											const rect = event.currentTarget.getBoundingClientRect()
-											openAccessLevel(accessLevel, {
-												clientX: rect.left,
-												clientY: rect.top,
-											})
-										}
-									}}
-								>
-									<td>{accessLevel.name}</td>
-									<td>{accessLevel.description}</td>
-									<td aria-hidden="true" />
+						</thead>
+						<tbody>
+							{isLoading ? (
+								<tr>
+									<td colSpan={3}>Loading access levels</td>
 								</tr>
-							))
-						)}
-					</tbody>
-				</table>
-			</div>
+							) : accessLevels.length === 0 ? (
+								<tr>
+									<td colSpan={3}>No access levels found</td>
+								</tr>
+							) : (
+								accessLevels.map((accessLevel) => (
+									<tr
+										key={accessLevel.id}
+										className="data-table-row"
+										tabIndex={0}
+										onClick={(event: ReactMouseEvent<HTMLTableRowElement>) =>
+											openAccessLevel(accessLevel, event)
+										}
+										onKeyDown={(event) => {
+											if (event.key === 'Enter' || event.key === ' ') {
+												event.preventDefault()
+												const rect = event.currentTarget.getBoundingClientRect()
+												openAccessLevel(accessLevel, {
+													clientX: rect.left,
+													clientY: rect.top,
+												})
+											}
+										}}
+									>
+										<td>{accessLevel.name}</td>
+										<td>{accessLevel.description}</td>
+										<td aria-hidden="true" />
+									</tr>
+								))
+							)}
+						</tbody>
+					</table>
+				</div>
+			)}
 			<div className="draggable-modal-layer">
 				{openModals.map((modal) => (
 					<DraggableModal

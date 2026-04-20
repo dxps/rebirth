@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -25,14 +25,20 @@
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
-	--font-sans: "Work Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-sans:
+		'Work Sans', ui-sans-serif, system-ui, -apple-system,
+		BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 :root {
 	--bg: #e2e0d7;
 	--fg: #504945;
 	--striped-title-fg: #1d2021;
-	--striped-title-fill: color-mix(in srgb, var(--striped-title-fg) 18%, transparent);
+	--striped-title-fill: color-mix(
+		in srgb,
+		var(--striped-title-fg) 18%,
+		transparent
+	);
 	--striped-title-line: 0.019em;
 	--striped-title-gap: 0.043em;
 	--muted: #7c6f64;
@@ -65,7 +71,7 @@
 	color: var(--fg);
 	background: var(--bg);
 	font-family:
-		"Work Sans",
+		'Work Sans',
 		ui-sans-serif,
 		system-ui,
 		-apple-system,
@@ -145,7 +151,7 @@ a {
 	color: inherit;
 }
 
-button:not([data-slot="button"]) {
+button:not([data-slot='button']) {
 	align-items: center;
 	border: 0;
 	border-radius: 8px;
@@ -161,11 +167,11 @@ button:not([data-slot="button"]) {
 	padding: 0.42rem 0.58rem;
 }
 
-button:not([data-slot="button"]):hover {
+button:not([data-slot='button']):hover {
 	background: #d79921;
 }
 
-button:not([data-slot="button"]):focus-visible {
+button:not([data-slot='button']):focus-visible {
 	outline: 1px solid var(--focus-ring);
 	outline-offset: 2px;
 }
@@ -440,6 +446,71 @@ button.section-action-button:hover {
 .section-action-button[data-tooltip]:focus-visible::after {
 	opacity: 1;
 	transform: translateY(0);
+}
+
+.access-level-unavailable {
+	align-items: center;
+	display: grid;
+	gap: 0.25rem;
+	justify-items: center;
+	min-height: 6rem;
+	text-align: center;
+	width: 100%;
+	margin: 2rem 0;
+}
+
+.access-level-unavailable p {
+	color: var(--muted);
+	font-size: 0.95rem;
+	line-height: 1.4;
+	margin: 0;
+}
+
+.access-level-refresh-button,
+button.access-level-refresh-button {
+	background: transparent;
+	background-color: transparent;
+	color: var(--fg);
+	justify-content: center;
+	min-height: 2.35rem;
+	padding: 0;
+	position: relative;
+	width: 2.35rem;
+}
+
+.access-level-refresh-button:hover,
+button.access-level-refresh-button:hover {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+}
+
+.access-level-refresh-button[data-tooltip]::after {
+	background: transparent;
+	border-radius: 6px;
+	color: var(--fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 50%;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translate(-50%, -0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.access-level-refresh-button[data-tooltip]:hover::after,
+.access-level-refresh-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
 }
 
 .data-table-wrap {
