@@ -2749,7 +2749,7 @@ export function TemplatesView() {
 			setOpenModals((current) =>
 				current.map((modal) =>
 					modal.attributeTemplate?.id === attributeTemplate.id
-						? { ...modal, attributeTemplate }
+						? { ...modal, attributeTemplate, mode: 'details' }
 						: modal,
 				),
 			)
@@ -3197,7 +3197,7 @@ export function TemplatesView() {
 						</button>
 					</div>
 				) : (
-					<div className="data-table-wrap">
+					<div className="data-table-wrap templates-table-wrap">
 						<table className="data-table entity-templates-table">
 							<thead>
 								<tr>
@@ -3301,7 +3301,7 @@ export function TemplatesView() {
 						</button>
 					</div>
 				) : (
-					<div className="data-table-wrap">
+					<div className="data-table-wrap templates-table-wrap">
 						<table className="data-table attribute-templates-table">
 							<thead>
 								<tr>
@@ -3540,7 +3540,6 @@ export function TemplatesView() {
 						) : modal.attributeTemplate ? (
 							<div
 								className="access-level-details access-level-edit-form"
-								data-selectable="true"
 							>
 								<div className="attribute-template-id-row">
 									<p>id</p>
@@ -3548,7 +3547,7 @@ export function TemplatesView() {
 										{modal.attributeTemplate.id}
 									</strong>
 								</div>
-								<label>
+								<label data-selectable="true">
 									<span>name</span>
 									<input
 										readOnly
@@ -3556,7 +3555,7 @@ export function TemplatesView() {
 										value={modal.attributeTemplate.name}
 									/>
 								</label>
-								<label>
+								<label data-selectable="true">
 									<span>description</span>
 									<textarea
 										readOnly
@@ -3567,7 +3566,7 @@ export function TemplatesView() {
 									/>
 								</label>
 								<div className="attribute-template-detail-pair-row">
-									<label>
+									<label data-selectable="true">
 										<span>value type</span>
 										<span className="attribute-template-select-wrap">
 											<select
@@ -3591,7 +3590,7 @@ export function TemplatesView() {
 											</select>
 										</span>
 									</label>
-									<label>
+									<label data-selectable="true">
 										<span>access level</span>
 										<span className="attribute-template-select-wrap">
 											<select
@@ -3621,7 +3620,7 @@ export function TemplatesView() {
 										</span>
 									</label>
 								</div>
-								<label>
+								<label data-selectable="true">
 									<span>default value</span>
 									<input
 										readOnly
@@ -3632,7 +3631,10 @@ export function TemplatesView() {
 										}
 									/>
 								</label>
-								<label className="attribute-template-checkbox-label attribute-template-readonly-checkbox">
+								<label
+									className="attribute-template-checkbox-label attribute-template-readonly-checkbox"
+									data-selectable="true"
+								>
 									<input
 										checked={
 											modal.attributeTemplate.isRequired
