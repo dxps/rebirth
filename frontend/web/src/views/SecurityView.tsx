@@ -5,7 +5,14 @@ import {
 	type AccessLevelsResponse,
 	type ApiErrorResponse,
 	type CreateAccessLevelInput,
+	type CreateUserInput,
+	type Permission,
+	type PermissionsResponse,
 	type UpdateAccessLevelInput,
+	type UpdateUserInput,
+	type User,
+	type UserResponse,
+	type UsersResponse,
 } from '@rebirth/shared'
 import { ArrowLeft, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
 import {
@@ -18,6 +25,7 @@ import {
 	type MouseEvent as ReactMouseEvent,
 	type ReactNode,
 } from 'react'
+import { getStoredAuth } from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 220
@@ -28,11 +36,22 @@ const draggableModalMinHeights: Record<OpenAccessLevelModal['mode'], number> = {
 	edit: 220,
 }
 const draggableModalMinWidth = 280
+const userModalHeight = 360
 const builtInAccessLevelMaxId = 3
 const builtInAccessLevelDeleteTooltip =
 	'This built-in access level cannot be deleted.'
 const builtInAccessLevelRenameTooltip =
 	'This build-int access level cannot be renamed.'
+
+function getAuthHeaders(): Record<string, string> {
+	const storedAuth = getStoredAuth()
+
+	return storedAuth
+		? {
+				Authorization: `Bearer ${storedAuth.sessionKey}`,
+			}
+		: {}
+}
 
 async function getResponseErrorMessage(
 	response: Response,
@@ -62,6 +81,8 @@ async function getResponseErrorMessage(
 	return fallback
 }
 
+type SecurityModalMode = 'create' | 'details' | 'edit'
+
 interface OpenAccessLevelModal {
 	accessLevel: AccessLevel | null
 	initialPosition: {
@@ -69,9 +90,24 @@ interface OpenAccessLevelModal {
 		y: number
 	}
 	key: string
-	mode: 'create' | 'details' | 'edit'
+	kind: 'access-level'
+	mode: SecurityModalMode
 	zIndex: number
 }
+
+interface OpenUserModal {
+	initialPosition: {
+		x: number
+		y: number
+	}
+	key: string
+	kind: 'user'
+	mode: SecurityModalMode
+	user: User | null
+	zIndex: number
+}
+
+type OpenSecurityModal = OpenAccessLevelModal | OpenUserModal
 
 interface DraggableModalProps {
 	children: ReactNode
@@ -89,7 +125,7 @@ interface DraggableModalProps {
 	onClose: (id: string) => void
 	onDelete: (id: string) => void
 	onEdit: (id: string) => void
-	mode: OpenAccessLevelModal['mode']
+	mode: SecurityModalMode
 	title: string
 	zIndex: number
 }
@@ -108,6 +144,18 @@ function getAccessLevelModalTitle(mode: OpenAccessLevelModal['mode']) {
 	}
 
 	return 'Access Level'
+}
+
+function getUserModalTitle(mode: SecurityModalMode) {
+	if (mode === 'create') {
+		return 'User :: New'
+	}
+
+	if (mode === 'edit') {
+		return 'User :: Edit'
+	}
+
+	return 'User'
 }
 
 function isBuiltInAccessLevel(accessLevel?: AccessLevel | null): boolean {
@@ -132,12 +180,15 @@ function DraggableModal({
 	zIndex,
 }: DraggableModalProps) {
 	const [position, setPosition] = useState(initialPosition)
+	const defaultHeight = id.startsWith('user') ? userModalHeight : draggableModalHeight
 	const [size, setSize] = useState({
-		height: draggableModalHeight,
+		height: defaultHeight,
 		width: Math.min(360, Math.max(draggableModalMinWidth, window.innerWidth * 0.86)),
 	})
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-	const minHeight = draggableModalMinHeights[mode]
+	const minHeight = id.startsWith('user')
+		? userModalHeight
+		: draggableModalMinHeights[mode]
 	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
 
 	useEffect(() => {
@@ -250,8 +301,8 @@ function DraggableModal({
 		[id, minHeight, onActivate, position.x, position.y, size.height, size.width],
 	)
 
-	const saveTooltip = isSaveDisabled
-		? 'An access level must have a name'
+const saveTooltip = isSaveDisabled
+		? 'Required fields must be filled'
 		: 'Save'
 	const deleteButton = (
 		<div
@@ -288,7 +339,7 @@ function DraggableModal({
 					aria-label={`Confirm delete ${title}`}
 					onPointerDown={(event) => event.stopPropagation()}
 				>
-					<p>Delete this access level?</p>
+					<p>Delete this entry?</p>
 					<div>
 						<button
 							className="delete-confirm-secondary"
@@ -511,16 +562,186 @@ function AccessLevelEditForm({
 	)
 }
 
+interface UserEditFormProps {
+	autoFocusEmail?: boolean
+	formId: string
+	modalKey: string
+	permissions: Permission[]
+	onSave: (input: CreateUserInput | UpdateUserInput) => Promise<void>
+	onValidityChange: (key: string, isValid: boolean) => void
+	user?: User
+}
+
+function UserEditForm({
+	autoFocusEmail = false,
+	formId,
+	modalKey,
+	permissions,
+	onSave,
+	onValidityChange,
+	user,
+}: UserEditFormProps) {
+	const isCreate = !user
+	const [email, setEmail] = useState(user?.email ?? '')
+	const [firstName, setFirstName] = useState(user?.firstName ?? '')
+	const [lastName, setLastName] = useState(user?.lastName ?? '')
+	const [username, setUsername] = useState(user?.username ?? '')
+	const [password, setPassword] = useState('')
+	const [permissionId, setPermissionId] = useState(
+		() => user?.permissions[0]?.id ?? permissions[0]?.id ?? 1,
+	)
+	const [error, setError] = useState<string | null>(null)
+	const [isSaving, setIsSaving] = useState(false)
+	const emailInputRef = useRef<HTMLInputElement>(null)
+	const isValid =
+		email.trim().length > 0 &&
+		firstName.trim().length > 0 &&
+		lastName.trim().length > 0 &&
+		username.trim().length > 0 &&
+		(!isCreate || password.length >= 8) &&
+		(password.length === 0 || password.length >= 8) &&
+		permissions.some((permission) => permission.id === permissionId)
+
+	useEffect(() => {
+		onValidityChange(modalKey, isValid)
+	}, [isValid, modalKey, onValidityChange])
+
+	useEffect(() => {
+		if (autoFocusEmail) {
+			emailInputRef.current?.focus()
+		}
+	}, [autoFocusEmail])
+
+	useEffect(() => {
+		if (!permissions.some((permission) => permission.id === permissionId)) {
+			setPermissionId(permissions[0]?.id ?? 1)
+		}
+	}, [permissionId, permissions])
+
+	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+		event.preventDefault()
+
+		if (!isValid) {
+			setError('Required fields must be filled')
+			return
+		}
+
+		setError(null)
+		setIsSaving(true)
+
+		try {
+			const input = {
+				email,
+				firstName,
+				lastName,
+				permissionIds: [permissionId],
+				username,
+				...(password ? { password } : {}),
+			}
+
+			if (isCreate) {
+				await onSave({
+					...input,
+					password,
+				})
+			} else {
+				await onSave(input)
+			}
+		} catch (error) {
+			setError(error instanceof Error ? error.message : 'Unable to save user')
+		} finally {
+			setIsSaving(false)
+		}
+	}
+
+	return (
+		<form
+			className="access-level-edit-form security-user-edit-form"
+			data-selectable="true"
+			id={formId}
+			onSubmit={(event) => void submit(event)}
+		>
+			<label>
+				<span>email</span>
+				<input
+					ref={emailInputRef}
+					autoComplete="email"
+					type="email"
+					value={email}
+					onChange={(event) => setEmail(event.target.value)}
+				/>
+			</label>
+			<label>
+				<span>first name</span>
+				<input
+					autoComplete="given-name"
+					type="text"
+					value={firstName}
+					onChange={(event) => setFirstName(event.target.value)}
+				/>
+			</label>
+			<label>
+				<span>last name</span>
+				<input
+					autoComplete="family-name"
+					type="text"
+					value={lastName}
+					onChange={(event) => setLastName(event.target.value)}
+				/>
+			</label>
+			<label>
+				<span>username</span>
+				<input
+					autoComplete="username"
+					type="text"
+					value={username}
+					onChange={(event) => setUsername(event.target.value)}
+				/>
+			</label>
+			<label>
+				<span>{isCreate ? 'password' : 'new password'}</span>
+				<input
+					autoComplete="new-password"
+					placeholder={isCreate ? undefined : 'Leave empty to keep current'}
+					type="password"
+					value={password}
+					onChange={(event) => setPassword(event.target.value)}
+				/>
+			</label>
+			<label>
+				<span>permission</span>
+				<select
+					value={permissionId}
+					onChange={(event) => setPermissionId(Number(event.target.value))}
+				>
+					{permissions.map((permission) => (
+						<option key={permission.id} value={permission.id}>
+							{permission.name}
+						</option>
+					))}
+				</select>
+			</label>
+			{error ? <p className="form-error">{error}</p> : null}
+			{isSaving ? <p className="form-status">Saving</p> : null}
+		</form>
+	)
+}
+
 export function SecurityView() {
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
 	const [error, setError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
-	const [openModals, setOpenModals] = useState<OpenAccessLevelModal[]>([])
+	const [openModals, setOpenModals] = useState<OpenSecurityModal[]>([])
+	const [permissions, setPermissions] = useState<Permission[]>([])
+	const [users, setUsers] = useState<User[]>([])
+	const [usersError, setUsersError] = useState<string | null>(null)
+	const [isUsersLoading, setIsUsersLoading] = useState(true)
 	const [validFormModalIds, setValidFormModalIds] = useState<Set<string>>(
 		() => new Set(),
 	)
 	const isMountedRef = useRef(false)
 	const loadRequestId = useRef(0)
+	const usersLoadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
@@ -553,15 +774,66 @@ export function SecurityView() {
 		}
 	}, [])
 
+	const loadUsersAndPermissions = useCallback(async (): Promise<void> => {
+		const requestId = usersLoadRequestId.current + 1
+		usersLoadRequestId.current = requestId
+
+		setIsUsersLoading(true)
+
+		try {
+			const [permissionsResponse, usersResponse] = await Promise.all([
+				fetch(`${apiBaseUrl}${apiRoutes.permissions}`),
+				fetch(`${apiBaseUrl}${apiRoutes.users}`, {
+					headers: getAuthHeaders(),
+				}),
+			])
+
+			if (!permissionsResponse.ok) {
+				throw new Error('Unable to load permissions')
+			}
+
+			if (!usersResponse.ok) {
+				throw new Error(
+					usersResponse.status === 401 || usersResponse.status === 403
+						? 'Admin permission is required to manage users'
+						: 'Unable to load users',
+				)
+			}
+
+			const permissionsData =
+				(await permissionsResponse.json()) as PermissionsResponse
+			const usersData = (await usersResponse.json()) as UsersResponse
+
+			if (isMountedRef.current && requestId === usersLoadRequestId.current) {
+				setPermissions(permissionsData.data)
+				setUsers(
+					usersData.data.filter((user) => user.username !== 'admin'),
+				)
+				setUsersError(null)
+			}
+		} catch (error) {
+			if (isMountedRef.current && requestId === usersLoadRequestId.current) {
+				setUsersError(
+					error instanceof Error ? error.message : 'Users are unavailable',
+				)
+			}
+		} finally {
+			if (isMountedRef.current && requestId === usersLoadRequestId.current) {
+				setIsUsersLoading(false)
+			}
+		}
+	}, [])
+
 	useEffect(() => {
 		isMountedRef.current = true
 
 		void loadAccessLevels()
+		void loadUsersAndPermissions()
 
 		return () => {
 			isMountedRef.current = false
 		}
-	}, [loadAccessLevels])
+	}, [loadAccessLevels, loadUsersAndPermissions])
 
 	const bringToFront = useCallback((key: string) => {
 		nextZIndex.current += 1
@@ -579,7 +851,7 @@ export function SecurityView() {
 	}, [])
 
 	const setModalMode = useCallback(
-		(key: string, mode: OpenAccessLevelModal['mode']) => {
+		(key: string, mode: SecurityModalMode) => {
 			setOpenModals((current) =>
 				current.map((modal) =>
 					modal.key === key ? { ...modal, mode } : modal,
@@ -615,6 +887,7 @@ export function SecurityView() {
 		)
 		setOpenModals((current) =>
 			current.filter((modal) =>
+				modal.kind === 'access-level' &&
 				modal.accessLevel?.id === accessLevel.id
 					? false
 					: true,
@@ -627,6 +900,7 @@ export function SecurityView() {
 			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevel(id)}`, {
 				body: JSON.stringify(input),
 				headers: {
+					...getAuthHeaders(),
 					'Content-Type': 'application/json',
 				},
 				method: 'PATCH',
@@ -649,6 +923,7 @@ export function SecurityView() {
 			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`, {
 				body: JSON.stringify(input),
 				headers: {
+					...getAuthHeaders(),
 					'Content-Type': 'application/json',
 				},
 				method: 'POST',
@@ -674,6 +949,7 @@ export function SecurityView() {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.accessLevel(accessLevel.id)}`,
 				{
+					headers: getAuthHeaders(),
 					method: 'DELETE',
 				},
 			)
@@ -686,18 +962,101 @@ export function SecurityView() {
 				current.filter((item) => item.id !== accessLevel.id),
 			)
 			setOpenModals((current) =>
-				current.filter((modal) => modal.accessLevel?.id !== accessLevel.id),
+				current.filter(
+					(modal) =>
+						modal.kind !== 'access-level' ||
+						modal.accessLevel?.id !== accessLevel.id,
+				),
 			)
 		},
 		[],
 	)
+
+	const createUser = useCallback(async (input: CreateUserInput) => {
+		const response = await fetch(`${apiBaseUrl}${apiRoutes.users}`, {
+			body: JSON.stringify(input),
+			headers: {
+				...getAuthHeaders(),
+				'Content-Type': 'application/json',
+			},
+			method: 'POST',
+		})
+
+		if (!response.ok) {
+			throw new Error(
+				await getResponseErrorMessage(response, 'Unable to create user'),
+			)
+		}
+
+		const data = (await response.json()) as UserResponse
+		if (data.data.username !== 'admin') {
+			setUsers((current) => [...current, data.data].sort((left, right) =>
+				left.username.localeCompare(right.username),
+			))
+		}
+		setOpenModals((current) =>
+			current.filter((modal) => modal.key !== 'user-create'),
+		)
+	}, [])
+
+	const saveUser = useCallback(
+		async (user: User, input: UpdateUserInput) => {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.user(user.id)}`, {
+				body: JSON.stringify(input),
+				headers: {
+					...getAuthHeaders(),
+					'Content-Type': 'application/json',
+				},
+				method: 'PATCH',
+			})
+
+			if (!response.ok) {
+				throw new Error(
+					await getResponseErrorMessage(response, 'Unable to save user'),
+				)
+			}
+
+			const data = (await response.json()) as UserResponse
+			setUsers((current) =>
+				current.map((item) => (item.id === data.data.id ? data.data : item)),
+			)
+			setOpenModals((current) =>
+				current.filter((modal) =>
+					modal.kind === 'user' && modal.user?.id === data.data.id
+						? false
+						: true,
+				),
+			)
+		},
+		[],
+	)
+
+	const deleteUser = useCallback(async (user: User) => {
+		const response = await fetch(`${apiBaseUrl}${apiRoutes.user(user.id)}`, {
+			headers: getAuthHeaders(),
+			method: 'DELETE',
+		})
+
+		if (!response.ok) {
+			throw new Error('Unable to delete user')
+		}
+
+		setUsers((current) => current.filter((item) => item.id !== user.id))
+		setOpenModals((current) =>
+			current.filter(
+				(modal) => modal.kind !== 'user' || modal.user?.id !== user.id,
+			),
+		)
+	}, [])
 
 	const openAccessLevel = useCallback(
 		(accessLevel: AccessLevel, point: { clientX: number; clientY: number }) => {
 			nextZIndex.current += 1
 			setOpenModals((current) => {
 				const existing = current.find(
-					(modal) => modal.accessLevel?.id === accessLevel.id,
+					(modal) =>
+						modal.kind === 'access-level' &&
+						modal.accessLevel?.id === accessLevel.id,
 				)
 
 				if (existing) {
@@ -730,6 +1089,7 @@ export function SecurityView() {
 						accessLevel,
 						initialPosition: { x, y },
 						key: `access-level-${accessLevel.id}`,
+						kind: 'access-level',
 						mode: 'details',
 						zIndex: nextZIndex.current,
 					},
@@ -769,7 +1129,97 @@ export function SecurityView() {
 						),
 					},
 					key: 'access-level-create',
+					kind: 'access-level',
 					mode: 'create',
+					zIndex: nextZIndex.current,
+				},
+			]
+		})
+	}, [])
+
+	const openUser = useCallback(
+		(user: User, point: { clientX: number; clientY: number }) => {
+			nextZIndex.current += 1
+			setOpenModals((current) => {
+				const existing = current.find(
+					(modal) => modal.kind === 'user' && modal.user?.id === user.id,
+				)
+
+				if (existing) {
+					return current.map((modal) =>
+						modal.key === existing.key
+							? { ...modal, zIndex: nextZIndex.current }
+							: modal,
+					)
+				}
+
+				const modalWidth = Math.min(
+					360,
+					Math.max(draggableModalMinWidth, window.innerWidth * 0.86),
+				)
+				const pointerOffset = 10
+
+				return [
+					...current,
+					{
+						initialPosition: {
+							x: clampToRange(
+								point.clientX + pointerOffset,
+								draggableModalMargin,
+								window.innerWidth - modalWidth - draggableModalMargin,
+							),
+							y: clampToRange(
+								point.clientY + pointerOffset,
+								draggableModalMargin,
+								window.innerHeight -
+									draggableModalHeight -
+									draggableModalMargin,
+							),
+						},
+						key: `user-${user.id}`,
+						kind: 'user',
+						mode: 'details',
+						user,
+						zIndex: nextZIndex.current,
+					},
+				]
+			})
+		},
+		[],
+	)
+
+	const openCreateUser = useCallback((point: { clientX: number; clientY: number }) => {
+		nextZIndex.current += 1
+		setOpenModals((current) => {
+			const existing = current.find((modal) => modal.key === 'user-create')
+
+			if (existing) {
+				return current.map((modal) =>
+					modal.key === existing.key
+						? { ...modal, zIndex: nextZIndex.current }
+						: modal,
+				)
+			}
+
+			return [
+				...current,
+				{
+					initialPosition: {
+						x: clampToRange(
+							point.clientX - 360 - 10,
+							draggableModalMargin,
+							window.innerWidth - 360 - draggableModalMargin,
+						),
+						y: clampToRange(
+							point.clientY + 10,
+							draggableModalMargin,
+							window.innerHeight - draggableModalHeight - draggableModalMargin,
+						),
+					},
+					key: 'user-create',
+					kind: 'user',
+					mode: 'create',
+					user: null,
 					zIndex: nextZIndex.current,
 				},
 			]
@@ -854,18 +1304,102 @@ export function SecurityView() {
 					</table>
 				</div>
 			)}
+			<div className="section-heading security-users-heading">
+				<p>Users</p>
+			</div>
+			{usersError ? (
+				<div className="access-level-unavailable" role="status">
+					<p>{usersError}</p>
+					<button
+						aria-label="Refresh users"
+						className="access-level-refresh-button"
+						data-tooltip="Try again"
+						type="button"
+						onClick={() => void loadUsersAndPermissions()}
+					>
+						<RefreshCw aria-hidden="true" />
+					</button>
+				</div>
+			) : (
+				<>
+					<div className="data-table-wrap">
+						<table className="data-table security-users-table">
+							<thead>
+								<tr>
+									<th>username</th>
+									<th>email</th>
+									<th>permission</th>
+									<th className="data-table-action-heading">
+										<button
+											aria-label="Create user"
+											className="section-action-button"
+											data-tooltip="Add a user"
+											type="button"
+											onClick={(event) => openCreateUser(event)}
+										>
+											<Plus aria-hidden="true" />
+										</button>
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{isUsersLoading ? (
+									<tr>
+										<td colSpan={4}>Loading users</td>
+									</tr>
+								) : users.length === 0 ? (
+									<tr>
+										<td colSpan={4}>No users found</td>
+									</tr>
+								) : (
+									users.map((user) => (
+										<tr
+											key={user.id}
+											className="data-table-row"
+											tabIndex={0}
+											onClick={(event: ReactMouseEvent<HTMLTableRowElement>) =>
+												openUser(user, event)
+											}
+											onKeyDown={(event) => {
+												if (event.key === 'Enter' || event.key === ' ') {
+													event.preventDefault()
+													const rect =
+														event.currentTarget.getBoundingClientRect()
+													openUser(user, {
+														clientX: rect.left,
+														clientY: rect.top,
+													})
+												}
+											}}
+										>
+											<td>{user.username}</td>
+											<td>{user.email}</td>
+											<td>{user.permissions[0]?.name ?? ''}</td>
+											<td aria-hidden="true" />
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				</>
+			)}
 			<div className="draggable-modal-layer">
 				{openModals.map((modal) => (
 					<DraggableModal
 						key={modal.key}
 						deleteTooltip={
+							modal.kind === 'access-level' &&
 							isBuiltInAccessLevel(modal.accessLevel)
 								? builtInAccessLevelDeleteTooltip
 								: undefined
 						}
 						id={modal.key}
 						initialPosition={modal.initialPosition}
-						isDeleteDisabled={isBuiltInAccessLevel(modal.accessLevel)}
+						isDeleteDisabled={
+							modal.kind === 'access-level' &&
+							isBuiltInAccessLevel(modal.accessLevel)
+						}
 						isSaveDisabled={
 							(modal.mode === 'create' || modal.mode === 'edit') &&
 							!validFormModalIds.has(modal.key)
@@ -884,15 +1418,21 @@ export function SecurityView() {
 						}}
 						onClose={closeModal}
 						onDelete={() => {
-							if (modal.accessLevel) {
+							if (modal.kind === 'access-level' && modal.accessLevel) {
 								void deleteAccessLevel(modal.accessLevel)
+							} else if (modal.kind === 'user' && modal.user) {
+								void deleteUser(modal.user)
 							}
 						}}
 						onEdit={(key) => setModalMode(key, 'edit')}
-						title={getAccessLevelModalTitle(modal.mode)}
+						title={
+							modal.kind === 'access-level'
+								? getAccessLevelModalTitle(modal.mode)
+								: getUserModalTitle(modal.mode)
+						}
 						zIndex={modal.zIndex}
 					>
-						{modal.mode === 'create' ? (
+						{modal.kind === 'access-level' && modal.mode === 'create' ? (
 							<AccessLevelEditForm
 								autoFocusName
 								formId={`${modal.key}-edit-form`}
@@ -900,7 +1440,9 @@ export function SecurityView() {
 								onValidityChange={setModalFormValidity}
 								onSave={createAccessLevel}
 							/>
-						) : modal.mode === 'edit' && modal.accessLevel ? (
+						) : modal.kind === 'access-level' &&
+							modal.mode === 'edit' &&
+							modal.accessLevel ? (
 							<AccessLevelEditForm
 								accessLevel={modal.accessLevel}
 								autoFocusName
@@ -917,7 +1459,7 @@ export function SecurityView() {
 									return saveAccessLevel(accessLevel.id, input)
 								}}
 							/>
-						) : modal.accessLevel ? (
+						) : modal.kind === 'access-level' && modal.accessLevel ? (
 							<div
 								className="access-level-details"
 								data-selectable="true"
@@ -933,6 +1475,54 @@ export function SecurityView() {
 								<div>
 									<p>description</p>
 									<strong>{modal.accessLevel.description}</strong>
+								</div>
+							</div>
+						) : modal.kind === 'user' && modal.mode === 'create' ? (
+							<UserEditForm
+								autoFocusEmail
+								formId={`${modal.key}-edit-form`}
+								modalKey={modal.key}
+								permissions={permissions}
+								onValidityChange={setModalFormValidity}
+								onSave={(input) => createUser(input as CreateUserInput)}
+							/>
+						) : modal.kind === 'user' &&
+							modal.mode === 'edit' &&
+							modal.user ? (
+							<UserEditForm
+								autoFocusEmail
+								formId={`${modal.key}-edit-form`}
+								modalKey={modal.key}
+								permissions={permissions}
+								user={modal.user}
+								onValidityChange={setModalFormValidity}
+								onSave={(input) => {
+									if (!modal.user) {
+										return Promise.resolve()
+									}
+
+									return saveUser(modal.user, input as UpdateUserInput)
+								}}
+							/>
+						) : modal.kind === 'user' && modal.user ? (
+							<div className="access-level-details" data-selectable="true">
+								<div>
+									<p>username</p>
+									<strong>{modal.user.username}</strong>
+								</div>
+								<div>
+									<p>email</p>
+									<strong>{modal.user.email}</strong>
+								</div>
+								<div>
+									<p>name</p>
+									<strong>
+										{modal.user.firstName} {modal.user.lastName}
+									</strong>
+								</div>
+								<div>
+									<p>permission</p>
+									<strong>{modal.user.permissions[0]?.name ?? ''}</strong>
 								</div>
 							</div>
 						) : null}

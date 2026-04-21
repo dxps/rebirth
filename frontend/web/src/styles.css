@@ -611,6 +611,72 @@ button svg,
 	width: 100%;
 }
 
+.security-users-heading {
+	margin-top: 2rem;
+}
+
+.security-user-create-form {
+	align-items: end;
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: repeat(6, minmax(0, 1fr)) auto;
+}
+
+.security-user-create-form label {
+	display: grid;
+	gap: 0.25rem;
+	min-width: 0;
+}
+
+.security-user-create-form label > span {
+	color: var(--muted);
+	font-size: 0.72rem;
+	padding-left: 0.36rem;
+}
+
+.security-user-create-form input,
+.security-user-create-form select,
+.security-users-table select {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.85rem;
+	min-height: 1.9rem;
+	padding: 0.22rem 0.45rem;
+	width: 100%;
+}
+
+.security-user-create-form input:focus,
+.security-user-create-form select:focus,
+.security-users-table select:focus {
+	outline: 1px solid var(--focus-ring);
+	outline-offset: 1px;
+}
+
+.security-user-create-form button {
+	justify-content: center;
+	white-space: nowrap;
+}
+
+.security-user-create-form .form-error {
+	grid-column: 1 / -1;
+}
+
+.security-users-table {
+	table-layout: fixed;
+}
+
+.security-users-table th:nth-child(3),
+.security-users-table td:nth-child(3) {
+	width: 8rem;
+}
+
+.security-users-table td:last-child {
+	text-align: right;
+}
+
 .types-mgmt-view {
 	display: grid;
 	gap: 4rem;
@@ -825,10 +891,6 @@ button.access-level-refresh-button:hover {
 
 .data-table td:nth-child(2) {
 	color: var(--muted);
-}
-
-.attribute-templates-table td:nth-child(2) {
-	color: var(--fg);
 }
 
 .attribute-templates-table {
@@ -2600,6 +2662,10 @@ p {
 	}
 
 	.profile-forms {
+		grid-template-columns: 1fr;
+	}
+
+	.security-user-create-form {
 		grid-template-columns: 1fr;
 	}
 
