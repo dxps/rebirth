@@ -673,6 +673,15 @@ button svg,
 	width: 8rem;
 }
 
+.security-users-table th.data-table-action-heading,
+.security-users-table td:last-child {
+	width: 2.15rem;
+}
+
+.security-users-table .section-action-button {
+	right: 0.35rem;
+}
+
 .security-users-table td:last-child {
 	text-align: right;
 }
@@ -835,6 +844,10 @@ button.access-level-refresh-button:hover {
 .data-table-wrap {
 	overflow-x: auto;
 	width: 100%;
+}
+
+.security-table-wrap {
+	overflow: visible;
 }
 
 .data-table {
@@ -1183,8 +1196,9 @@ button.delete-confirm-danger {
 
 .delete-confirm-danger:hover,
 button.delete-confirm-danger:hover {
-	background: var(--button-hover-bg);
-	background-color: var(--button-hover-bg);
+	background: color-mix(in srgb, var(--destructive) 78%, #000000);
+	background-color: color-mix(in srgb, var(--destructive) 78%, #000000);
+	color: #ffffff;
 }
 
 .draggable-modal-delete-action[data-tooltip]::after,
@@ -1381,6 +1395,83 @@ button.draggable-modal-resize:hover {
 .entity-template-edit-form {
 	display: grid;
 	gap: 0.8rem;
+}
+
+.security-user-name-row,
+.security-user-two-column-row {
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.security-user-password-wrap,
+.security-user-select-wrap {
+	display: block;
+	position: relative;
+}
+
+.security-user-password-wrap input {
+	padding-right: 2.1rem;
+	width: 100%;
+}
+
+.security-user-password-toggle,
+button.security-user-password-toggle {
+	background: transparent;
+	background-color: transparent;
+	border-radius: 999px;
+	color: color-mix(in srgb, var(--fg) 62%, transparent);
+	height: 1.45rem;
+	justify-content: center;
+	min-height: 1.45rem;
+	padding: 0;
+	position: absolute;
+	right: 0.14rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1.45rem;
+}
+
+.security-user-password-toggle:hover,
+button.security-user-password-toggle:hover {
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
+}
+
+.security-user-password-toggle svg {
+	height: 0.85rem;
+	width: 0.85rem;
+}
+
+.security-user-select-wrap::after {
+	border-bottom: 1.5px solid var(--fg);
+	border-right: 1.5px solid var(--fg);
+	content: '';
+	height: 0.48rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0.62rem;
+	top: 50%;
+	transform: translateY(-65%) rotate(45deg);
+	width: 0.48rem;
+}
+
+.security-user-select-wrap:has(select:disabled)::after {
+	border-color: var(--muted);
+}
+
+.security-user-details-form select:disabled {
+	cursor: default;
+	opacity: 1;
+}
+
+.security-user-id-row {
+	gap: 0;
+}
+
+.access-level-id-row {
+	gap: 0;
 }
 
 .entity-template-edit-form {
