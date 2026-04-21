@@ -1880,7 +1880,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	overflow: visible;
 }
 
-.entity-template-view-links-table td:last-child {
+.entity-template-view-links-table td:not(.data-table-empty-cell):last-child {
 	text-align: right;
 }
 
