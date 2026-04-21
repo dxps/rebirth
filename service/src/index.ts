@@ -9,10 +9,13 @@ import {
   isCreateEntityTemplateInput,
   isCreateUserInput,
   isEntityTemplateId,
+  isLoginInput,
+  isUpdateEmailInput,
   isUserId,
   isUpdateAccessLevelInput,
   isUpdateAttributeTemplateInput,
   isUpdateEntityTemplateInput,
+  isUpdatePasswordInput,
   isUpdateUserInput,
   jsonHeaders,
   PermissionName,
@@ -23,6 +26,7 @@ import {
   type EntityTemplateResponse,
   type EntityTemplatesResponse,
   type ApiErrorResponse,
+  type LoginResponse,
   type PermissionsResponse,
   type User,
   type UserResponse,
@@ -32,7 +36,7 @@ import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLev
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { listPermissions } from "./db/permissions";
-import { authenticateUser, countUsers, createUser, deleteUser, listUsers, updateUser } from "./db/users";
+import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -140,29 +144,29 @@ function canManageSecurity(user: User): boolean {
 async function getAuthenticatedUser(request: Request): Promise<User | undefined> {
   const authorization = request.headers.get("authorization");
 
-  if (!authorization?.startsWith("Basic ")) {
+  if (!authorization?.startsWith("Bearer ")) {
     return undefined;
   }
 
-  try {
-    const credentials = atob(authorization.slice("Basic ".length));
-    const separatorIndex = credentials.indexOf(":");
+  const sessionKey = authorization.slice("Bearer ".length).trim();
 
-    if (separatorIndex < 1) {
-      return undefined;
-    }
-
-    const identifier = credentials.slice(0, separatorIndex);
-    const password = credentials.slice(separatorIndex + 1);
-
-    if (!password) {
-      return undefined;
-    }
-
-    return await authenticateUser(identifier, password);
-  } catch {
+  if (!sessionKey) {
     return undefined;
   }
+
+  return await getUserBySessionKey(sessionKey);
+}
+
+function getRequestSessionKey(request: Request): string | undefined {
+  const authorization = request.headers.get("authorization");
+
+  if (!authorization?.startsWith("Bearer ")) {
+    return undefined;
+  }
+
+  const sessionKey = authorization.slice("Bearer ".length).trim();
+
+  return sessionKey.length > 0 ? sessionKey : undefined;
 }
 
 function authenticationRequiredResponse(): Response {
@@ -173,7 +177,7 @@ function authenticationRequiredResponse(): Response {
     {
       headers: {
         ...jsonHeaders,
-        "WWW-Authenticate": "Basic realm=\"Rebirth\""
+        "WWW-Authenticate": "Bearer realm=\"Rebirth\""
       },
       status: 401
     }
@@ -264,6 +268,236 @@ const server = Bun.serve({
       return Response.json(response, {
         headers: jsonHeaders
       });
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.authLogin) {
+      try {
+        const input = await request.json();
+
+        if (!isLoginInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid login"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const authenticatedUser = await authenticateUser(
+          input.identifier,
+          input.password
+        );
+
+        if (!authenticatedUser) {
+          return Response.json(
+            {
+              error: "Invalid username or password"
+            },
+            {
+              headers: jsonHeaders,
+              status: 401
+            }
+          );
+        }
+
+        const sessionKey = await createUserSession(authenticatedUser.id);
+        const response: LoginResponse = {
+          data: {
+            sessionKey,
+            user: authenticatedUser
+          }
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to login"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.authLogout) {
+      const sessionKey = getRequestSessionKey(request);
+
+      if (!sessionKey) {
+        return authenticationRequiredResponse();
+      }
+
+      try {
+        await revokeUserSession(sessionKey);
+
+        return new Response(null, {
+          headers: jsonHeaders,
+          status: 204
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to logout"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "PUT" && url.pathname === apiRoutes.userPassword) {
+      const authenticatedUser = await requireAuthenticatedUser(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const input = await request.json();
+
+        if (!isUpdatePasswordInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid password update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const updatedUser = await updateUserPassword(
+          authenticatedUser.id,
+          input.currentPassword,
+          input.newPassword
+        );
+
+        if (updatedUser === "invalid_current_password") {
+          return Response.json(
+            {
+              error: "Current password is incorrect"
+            },
+            {
+              headers: jsonHeaders,
+              status: 401
+            }
+          );
+        }
+
+        if (!updatedUser) {
+          return Response.json(
+            {
+              error: "User not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: UserResponse = {
+          data: updatedUser
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to update password"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "PUT" && url.pathname === apiRoutes.userEmail) {
+      const authenticatedUser = await requireAuthenticatedUser(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const input = await request.json();
+
+        if (!isUpdateEmailInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid email update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const updatedUser = await updateUserEmail(
+          authenticatedUser.id,
+          input.email
+        );
+
+        if (!updatedUser) {
+          return Response.json(
+            {
+              error: "User not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: UserResponse = {
+          data: updatedUser
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to update email"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
     }
 
     if (request.method === "GET" && url.pathname === apiRoutes.permissions) {

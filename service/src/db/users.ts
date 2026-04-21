@@ -29,6 +29,20 @@ interface UserPermissionRow {
 	permission_description: string
 }
 
+function createSessionKey(): string {
+	const bytes = crypto.getRandomValues(new Uint8Array(32))
+	let binary = ''
+
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte)
+	}
+
+	return btoa(binary)
+		.replaceAll('+', '-')
+		.replaceAll('/', '_')
+		.replaceAll('=', '')
+}
+
 function normalizeCreateInput(input: CreateUserInput): CreateUserInput {
 	return {
 		email: input.email.trim().toLowerCase(),
@@ -272,6 +286,84 @@ export async function updateUser(
 	}
 }
 
+export async function updateUserEmail(
+	id: string,
+	email: string,
+): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const normalizedEmail = email.trim().toLowerCase()
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		await client`
+			UPDATE users
+			SET email = ${normalizedEmail}
+			WHERE id = ${id}
+		`
+
+		const [updatedUser] = await readUserRows(client, id)
+
+		return updatedUser
+	} finally {
+		await client.end()
+	}
+}
+
+export async function updateUserPassword(
+	id: string,
+	currentPassword: string,
+	newPassword: string,
+): Promise<'invalid_current_password' | User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [row] = await client<Array<{ password_hash: string }>>`
+			SELECT password_hash
+			FROM users
+			WHERE id = ${id}
+			LIMIT 1
+		`
+
+		if (!row) {
+			return undefined
+		}
+
+		const isCurrentPasswordValid = await Bun.password.verify(
+			currentPassword,
+			row.password_hash,
+		)
+
+		if (!isCurrentPasswordValid) {
+			return 'invalid_current_password'
+		}
+
+		const passwordHash = await Bun.password.hash(newPassword)
+
+		await client`
+			UPDATE users
+			SET password_hash = ${passwordHash}
+			WHERE id = ${id}
+		`
+
+		const [updatedUser] = await readUserRows(client, id)
+
+		return updatedUser
+	} finally {
+		await client.end()
+	}
+}
+
 export async function deleteUser(id: string): Promise<User | undefined> {
 	const databaseUrl = getDatabaseUrl()
 
@@ -337,6 +429,85 @@ export async function authenticateUser(
 		const [user] = await readUserRows(client, row.id)
 
 		return user
+	} finally {
+		await client.end()
+	}
+}
+
+export async function createUserSession(userId: string): Promise<string> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+	const id = createUuidV7()
+	const sessionKey = createSessionKey()
+
+	try {
+		await client`
+			INSERT INTO user_sessions (id, user_id, session_key)
+			VALUES (${id}, ${userId}, ${sessionKey})
+		`
+
+		return sessionKey
+	} finally {
+		await client.end()
+	}
+}
+
+export async function getUserBySessionKey(
+	sessionKey: string,
+): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [session] = await client<Array<{ user_id: string }>>`
+			SELECT user_id
+			FROM user_sessions
+			WHERE session_key = ${sessionKey}
+				AND revoked_at IS NULL
+			LIMIT 1
+		`
+
+		if (!session) {
+			return undefined
+		}
+
+		const [user] = await readUserRows(client, session.user_id)
+
+		return user
+	} finally {
+		await client.end()
+	}
+}
+
+export async function revokeUserSession(sessionKey: string): Promise<boolean> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const rows = await client<Array<{ id: string }>>`
+			UPDATE user_sessions
+			SET revoked_at = now()
+			WHERE session_key = ${sessionKey}
+				AND revoked_at IS NULL
+			RETURNING id
+		`
+
+		return rows.length > 0
 	} finally {
 		await client.end()
 	}

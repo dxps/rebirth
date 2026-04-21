@@ -1,17 +1,20 @@
 import {
 	userModel,
 	userPermissionModel,
+	userSessionModel,
 } from '@rebirth/shared'
 import { sql } from 'drizzle-orm'
 import {
 	check,
 	foreignKey,
+	index,
+	integer,
 	pgTable,
 	primaryKey,
 	text,
+	timestamp,
 	unique,
 	uuid,
-	integer,
 } from 'drizzle-orm/pg-core'
 
 import { permissions } from './permissions'
@@ -57,6 +60,28 @@ export const userPermissions = pgTable(
 			columns: [table.permissionId],
 			foreignColumns: [permissions.id],
 			name: 'user_permissions_permission_id_permissions_id_fk',
+		}).onDelete('cascade'),
+	],
+)
+
+export const userSessions = pgTable(
+	userSessionModel.tableName,
+	{
+		id: uuid('id').primaryKey(),
+		userId: uuid('user_id').notNull(),
+		sessionKey: text('session_key').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		revokedAt: timestamp('revoked_at', { withTimezone: true }),
+	},
+	(table) => [
+		unique('user_sessions_session_key_unique').on(table.sessionKey),
+		index('user_sessions_user_id_idx').on(table.userId),
+		foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: 'user_sessions_user_id_users_id_fk',
 		}).onDelete('cascade'),
 	],
 )

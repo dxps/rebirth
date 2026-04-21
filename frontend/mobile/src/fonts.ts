@@ -1,5 +1,5 @@
 export const fonts = {
-	black: 'WorkSans_900Black',
-	extraBold: 'WorkSans_800ExtraBold',
+	black: 'WorkSans_600SemiBold',
+	extraBold: 'WorkSans_600SemiBold',
 	regular: 'WorkSans_400Regular',
 } as const

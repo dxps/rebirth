@@ -51,6 +51,9 @@
 	--error: #d84a4a;
 	--green: #79740e;
 	--blue: #076678;
+	--button-bg: #f2e5bc;
+	--button-fg: #504945;
+	--button-hover-bg: #fe8019;
 	--focus-ring: var(--accent-ui);
 	--radius: 8px;
 	--background: var(--bg);
@@ -59,8 +62,8 @@
 	--card-foreground: var(--fg);
 	--popover: var(--menu-bg);
 	--popover-foreground: var(--fg);
-	--primary: var(--fg);
-	--primary-foreground: var(--bg);
+	--primary: var(--button-bg);
+	--primary-foreground: var(--button-fg);
 	--secondary: var(--muted);
 	--secondary-foreground: var(--bg);
 	--muted-ui: color-mix(in srgb, var(--fg) 10%, transparent);
@@ -103,6 +106,9 @@
 	--error: #ff8a8a;
 	--green: #b8bb26;
 	--blue: #83a598;
+	--button-bg: #2f2f2f;
+	--button-fg: #e0e0e0;
+	--button-hover-bg: #303030;
 	--focus-ring: #b7d7da;
 	--background: var(--bg);
 	--foreground: var(--fg);
@@ -110,8 +116,8 @@
 	--card-foreground: var(--fg);
 	--popover: var(--menu-bg);
 	--popover-foreground: var(--fg);
-	--primary: var(--fg);
-	--primary-foreground: var(--bg);
+	--primary: var(--button-bg);
+	--primary-foreground: var(--button-fg);
 	--secondary: var(--muted);
 	--secondary-foreground: var(--bg);
 	--muted-ui: color-mix(in srgb, var(--fg) 10%, transparent);
@@ -163,20 +169,20 @@ button:not([data-slot='button']) {
 	align-items: center;
 	border: 0;
 	border-radius: 8px;
-	background: var(--fg);
-	color: var(--bg);
+	background: var(--button-bg);
+	color: var(--button-fg);
 	cursor: pointer;
 	display: inline-flex;
 	font: inherit;
 	font-size: 0.85rem;
 	font-weight: 400;
-	gap: 0.55rem;
-	min-height: 2.05rem;
-	padding: 0.42rem 0.58rem;
+	gap: 0.45rem;
+	min-height: 1.9rem;
+	padding: 0.34rem 0.5rem;
 }
 
 button:not([data-slot='button']):hover {
-	background: #d79921;
+	background: var(--button-hover-bg);
 }
 
 button:not([data-slot='button']):focus-visible {
@@ -286,7 +292,8 @@ button svg,
 .icon-button:hover,
 .user-menu a:hover,
 .user-menu button:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .header-nav svg,
@@ -327,9 +334,9 @@ button svg,
 }
 
 .icon-button.header-user-button:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .icon-button.header-user-button:active,
@@ -341,9 +348,9 @@ button svg,
 }
 
 .icon-button.header-user-button[data-state]:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .user-menu {
@@ -389,7 +396,9 @@ button svg,
 }
 
 .theme-toggle:hover {
-	background: transparent;
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .intro {
@@ -403,6 +412,195 @@ button svg,
 	min-height: calc(100vh - 7.5rem);
 	text-align: center;
 	width: 100%;
+}
+
+.login-view {
+	align-items: center;
+	display: flex;
+	justify-content: center;
+	min-height: calc(100vh - 7.5rem);
+	width: 100%;
+}
+
+.profile-view {
+	display: grid;
+	gap: 1.5rem;
+	margin: 0 auto;
+	max-width: 48rem;
+	width: 100%;
+}
+
+.profile-heading {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.profile-heading h1,
+.profile-empty h1 {
+	font-size: 1.6rem;
+	font-weight: 400;
+	line-height: 1;
+	margin: 0;
+}
+
+.profile-heading p,
+.profile-empty p {
+	color: var(--muted);
+	font-size: 0.95rem;
+	margin: 0;
+}
+
+.profile-forms {
+	display: grid;
+	gap: 1.5rem;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-empty {
+	display: grid;
+	gap: 0.85rem;
+	justify-items: center;
+	margin: 0 auto;
+	max-width: 26rem;
+	width: min(100%, 26rem);
+}
+
+.profile-empty a {
+	align-items: center;
+	background: var(--button-bg);
+	border-radius: 8px;
+	color: var(--button-fg);
+	display: inline-flex;
+	font-size: 0.85rem;
+	min-height: 2.35rem;
+	padding: 0.45rem 0.75rem;
+	text-decoration: none;
+}
+
+.login-form {
+	display: grid;
+	gap: 1rem;
+	max-width: 22rem;
+	width: min(100%, 22rem);
+}
+
+.profile-form {
+	align-content: start;
+	display: grid;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.login-heading {
+	align-items: center;
+	display: flex;
+	gap: 0.65rem;
+}
+
+.profile-form-heading {
+	align-items: center;
+	display: flex;
+	gap: 0.55rem;
+}
+
+.login-heading svg {
+	color: var(--section-color);
+	height: 1.35rem;
+	width: 1.35rem;
+}
+
+.profile-form-heading svg {
+	color: var(--section-color);
+	height: 1.15rem;
+	width: 1.15rem;
+}
+
+.login-heading h1 {
+	font-size: 1.6rem;
+	font-weight: 600;
+	line-height: 1;
+	margin: 0;
+}
+
+.profile-form-heading h2 {
+	font-size: 1.05rem;
+	font-weight: 600;
+	line-height: 1;
+	margin: 0;
+}
+
+.login-form label {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.profile-form label {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.login-form label > span {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+.profile-form label > span {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+.login-form input {
+	background: color-mix(in srgb, var(--bg) 82%, var(--fg) 18%);
+	border: 0;
+	border-radius: 8px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.95rem;
+	min-height: 2.35rem;
+	padding: 0.36rem 0.55rem;
+	width: 100%;
+}
+
+.profile-form input {
+	background: color-mix(in srgb, var(--bg) 82%, var(--fg) 18%);
+	border: 0;
+	border-radius: 8px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.95rem;
+	min-height: 2.35rem;
+	padding: 0.36rem 0.55rem;
+	width: 100%;
+}
+
+.login-form input:focus {
+	outline: 1px solid var(--focus-ring);
+	outline-offset: 1px;
+}
+
+.profile-form input:focus {
+	outline: 1px solid var(--focus-ring);
+	outline-offset: 1px;
+}
+
+.login-form button {
+	justify-content: center;
+	min-height: 2.35rem;
+}
+
+.profile-form button {
+	justify-content: center;
+	min-height: 2.35rem;
+}
+
+.login-form button:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.profile-form button:disabled {
+	cursor: default;
+	opacity: 0.6;
 }
 
 .security-view {
@@ -455,9 +653,9 @@ button.section-action-button {
 
 .section-action-button:hover,
 button.section-action-button:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .section-action-button:disabled,
@@ -535,9 +733,9 @@ button.access-level-refresh-button {
 
 .access-level-refresh-button:hover,
 button.access-level-refresh-button:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .access-level-refresh-button[data-tooltip]::after {
@@ -631,6 +829,74 @@ button.access-level-refresh-button:hover {
 
 .attribute-templates-table td:nth-child(2) {
 	color: var(--fg);
+}
+
+.attribute-templates-table {
+	table-layout: fixed;
+}
+
+.attribute-templates-table th:nth-child(2),
+.attribute-templates-table td:nth-child(2) {
+	min-width: 0;
+	width: auto;
+}
+
+.attribute-template-description-value {
+	position: relative;
+}
+
+.attribute-template-description-value span {
+	display: block;
+	overflow: hidden;
+	padding-right: 1.25rem;
+	position: relative;
+	text-overflow: clip;
+	white-space: nowrap;
+}
+
+.attribute-template-description-value[data-tooltip] span::after {
+	background: var(--bg);
+	bottom: 0;
+	content: ' ...';
+	padding-left: 0.1rem;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+.data-table-row:hover .attribute-template-description-value[data-tooltip] span::after,
+.data-table-row:focus-visible .attribute-template-description-value[data-tooltip] span::after {
+	background: color-mix(in srgb, var(--fg) 10%, var(--bg));
+}
+
+.attribute-template-description-value[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 50%;
+	line-height: 1.2;
+	max-width: 260px;
+	opacity: 0;
+	overflow-wrap: anywhere;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.2rem);
+	transform: translate(-50%, -0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: normal;
+	width: max-content;
+	z-index: 30;
+}
+
+.attribute-template-description-value[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
 }
 
 .data-table .data-table-empty-cell {
@@ -771,9 +1037,9 @@ button.draggable-modal-titlebar-button {
 
 .draggable-modal-titlebar-button:hover,
 button.draggable-modal-titlebar-button:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .draggable-modal-titlebar-button:disabled,
@@ -841,8 +1107,9 @@ button.delete-confirm-secondary {
 
 .delete-confirm-secondary:hover,
 button.delete-confirm-secondary:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .delete-confirm-danger,
@@ -854,8 +1121,8 @@ button.delete-confirm-danger {
 
 .delete-confirm-danger:hover,
 button.delete-confirm-danger:hover {
-	background: color-mix(in srgb, var(--destructive) 82%, var(--fg));
-	background-color: color-mix(in srgb, var(--destructive) 82%, var(--fg));
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
 }
 
 .draggable-modal-delete-action[data-tooltip]::after,
@@ -1513,9 +1780,9 @@ button.include-attribute-close-button {
 }
 
 .include-attribute-mode-tabs button:hover {
-	background: color-mix(in srgb, var(--fg) 8%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .include-attribute-mode-tabs button[aria-selected='true'] {
@@ -1584,9 +1851,9 @@ button.include-attribute-submit-button {
 
 .include-attribute-submit-button:hover,
 button.include-attribute-submit-button:hover {
-	background: color-mix(in srgb, var(--fg) 16%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 16%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .include-attribute-submit-button.icon-only-button[data-tooltip]::after,
@@ -2087,9 +2354,9 @@ button.icon-only-button {
 
 .icon-only-button:hover,
 button.icon-only-button:hover {
-	background: color-mix(in srgb, var(--fg) 10%, transparent);
-	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
-	color: var(--fg);
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .icon-only-button svg {
@@ -2224,7 +2491,7 @@ button.icon-only-button:hover {
 .eyebrow {
 	color: var(--green);
 	font-size: 0.76rem;
-	font-weight: 900;
+	font-weight: 600;
 	letter-spacing: 0;
 	margin: 0 0 0.75rem;
 	text-transform: uppercase;
@@ -2330,6 +2597,10 @@ p {
 
 	.user-menu .theme-toggle {
 		width: auto;
+	}
+
+	.profile-forms {
+		grid-template-columns: 1fr;
 	}
 
 	.brand,

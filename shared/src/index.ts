@@ -73,6 +73,27 @@ export interface UsersResponse {
 	data: User[]
 }
 
+export interface LoginInput {
+	identifier: string
+	password: string
+}
+
+export interface LoginResponse {
+	data: {
+		sessionKey: string
+		user: User
+	}
+}
+
+export interface UpdateEmailInput {
+	email: string
+}
+
+export interface UpdatePasswordInput {
+	currentPassword: string
+	newPassword: string
+}
+
 export type ApiErrorCode = 'unique_conflict'
 
 export interface ApiErrorResponse {
@@ -91,6 +112,8 @@ export const appInfo = {
 export const apiRoutes = {
 	accessLevel: (id: number) => `/access-levels/${id}`,
 	accessLevels: '/access-levels',
+	authLogin: '/auth/login',
+	authLogout: '/auth/logout',
 	authMe: '/auth/me',
 	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
 	attributeTemplates: '/attribute-templates',
@@ -100,12 +123,14 @@ export const apiRoutes = {
 	permission: (id: number) => `/permissions/${id}`,
 	permissions: '/permissions',
 	user: (id: string) => `/users/${id}`,
+	userEmail: '/user/email',
+	userPassword: '/user/password',
 	users: '/users',
 } as const
 
 export const jsonHeaders = {
 	'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-	'Access-Control-Allow-Methods': 'DELETE, GET, PATCH, OPTIONS, POST',
+	'Access-Control-Allow-Methods': 'DELETE, GET, PATCH, OPTIONS, POST, PUT',
 	'Access-Control-Allow-Origin': '*',
 	'Content-Type': 'application/json',
 } as const
@@ -164,6 +189,54 @@ export function isCreateUserInput(value: unknown): value is CreateUserInput {
 		typeof input.password === 'string' &&
 		input.password.length >= 8 &&
 		hasValidPermissionIds(input.permissionIds)
+	)
+}
+
+export function isLoginInput(value: unknown): value is LoginInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.identifier === 'string' &&
+		input.identifier.trim().length > 0 &&
+		typeof input.password === 'string' &&
+		input.password.length > 0
+	)
+}
+
+export function isUpdateEmailInput(
+	value: unknown,
+): value is UpdateEmailInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.email === 'string' &&
+		input.email.trim().length > 0 &&
+		input.email.includes('@')
+	)
+}
+
+export function isUpdatePasswordInput(
+	value: unknown,
+): value is UpdatePasswordInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.currentPassword === 'string' &&
+		input.currentPassword.length > 0 &&
+		typeof input.newPassword === 'string' &&
+		input.newPassword.length >= 8
 	)
 }
 
@@ -328,6 +401,7 @@ export {
 	isUserId,
 	userModel,
 	userPermissionModel,
+	userSessionModel,
 } from './security/user'
 export type {
 	CreateUserInput,

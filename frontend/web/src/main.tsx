@@ -2,12 +2,12 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource/work-sans/latin-400.css";
 import "@fontsource/work-sans/latin-400-italic.css";
-import "@fontsource/work-sans/latin-800.css";
-import "@fontsource/work-sans/latin-900.css";
+import "@fontsource/work-sans/latin-600.css";
 import { Header } from "./components/Header";
 import { getCurrentPath, type AppPath } from "./routing";
 import { DataExplorerView } from "./views/DataExplorerView";
 import { HomeView } from "./views/HomeView";
+import { LoginView } from "./views/LoginView";
 import { SecurityView } from "./views/SecurityView";
 import { TemplatesView } from "./views/TemplatesView";
 import { UserProfileView } from "./views/UserProfileView";
@@ -47,6 +47,8 @@ function App() {
         return <SecurityView />;
       case "/profile":
         return <UserProfileView />;
+      case "/login":
+        return <LoginView />;
       case "/":
         return <HomeView />;
     }

@@ -1,7 +1,6 @@
 import {
 	WorkSans_400Regular,
-	WorkSans_800ExtraBold,
-	WorkSans_900Black,
+	WorkSans_600SemiBold,
 	useFonts,
 } from '@expo-google-fonts/work-sans'
 import { Moon, Sun } from 'lucide-react-native'
@@ -26,8 +25,7 @@ export default function App() {
 	const deviceTheme = useColorScheme()
 	const [fontsLoaded] = useFonts({
 		WorkSans_400Regular,
-		WorkSans_800ExtraBold,
-		WorkSans_900Black,
+		WorkSans_600SemiBold,
 	})
 	const [theme, setTheme] = useState<ThemeMode>(
 		deviceTheme === 'dark' ? 'dark' : 'light',

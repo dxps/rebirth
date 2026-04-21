@@ -2283,6 +2283,50 @@ function LinkDescriptionValue({ description }: { description: string | null }) {
 	)
 }
 
+function AttributeTemplateDescriptionValue({
+	description,
+}: {
+	description: string
+}) {
+	const descriptionRef = useRef<HTMLSpanElement>(null)
+	const [isTrimmed, setIsTrimmed] = useState(false)
+
+	useLayoutEffect(() => {
+		const element = descriptionRef.current
+
+		if (!element) {
+			setIsTrimmed(false)
+			return
+		}
+
+		const measuredElement = element
+
+		function updateTrimmedState(): void {
+			setIsTrimmed(
+				measuredElement.scrollWidth > measuredElement.clientWidth,
+			)
+		}
+
+		updateTrimmedState()
+
+		const resizeObserver = new ResizeObserver(updateTrimmedState)
+		resizeObserver.observe(measuredElement)
+
+		return () => {
+			resizeObserver.disconnect()
+		}
+	}, [description])
+
+	return (
+		<td
+			className="attribute-template-description-value"
+			data-tooltip={isTrimmed ? description : undefined}
+		>
+			<span ref={descriptionRef}>{description}</span>
+		</td>
+	)
+}
+
 function EntityTemplateDetailsView({
 	accessLevels,
 	entityTemplate,
@@ -3273,13 +3317,11 @@ export function TemplatesView() {
 												<td>
 													{attributeTemplate.name}
 												</td>
-												<td>
-													<span className="empty-value-space">
-														{
-															attributeTemplate.description
-														}
-													</span>
-												</td>
+												<AttributeTemplateDescriptionValue
+													description={
+														attributeTemplate.description
+													}
+												/>
 												<td>
 													{
 														attributeTemplate.valueType

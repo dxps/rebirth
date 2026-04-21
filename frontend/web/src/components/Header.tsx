@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Database, House, Moon, Shapes, Shield, Sun, User } from "lucide-react";
+import { Database, House, LogIn, LogOut, Moon, Shapes, Shield, Sun, User } from "lucide-react";
+import { apiRoutes } from "@rebirth/shared";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { authChangedEventName, clearStoredAuth, getStoredAuth } from "../auth";
 import { SpaLink, type AppPath } from "../routing";
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:9908";
 
 interface HeaderProps {
   onToggleTheme: () => void;
@@ -12,6 +16,7 @@ interface HeaderProps {
 export function Header({ onToggleTheme, theme }: HeaderProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => getStoredAuth() !== null);
 
   useEffect(() => {
     function closeUserMenuOnOutsideClick(event: PointerEvent): void {
@@ -27,9 +32,48 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
     };
   }, []);
 
+  useEffect(() => {
+    function syncAuthState(): void {
+      setIsLoggedIn(getStoredAuth() !== null);
+    }
+
+    window.addEventListener(authChangedEventName, syncAuthState);
+    window.addEventListener("storage", syncAuthState);
+
+    return () => {
+      window.removeEventListener(authChangedEventName, syncAuthState);
+      window.removeEventListener("storage", syncAuthState);
+    };
+  }, []);
+
   function toggleTheme(): void {
     onToggleTheme();
     setIsUserMenuOpen(false);
+  }
+
+  async function logout(): Promise<void> {
+    const storedAuth = getStoredAuth();
+
+    if (storedAuth) {
+      try {
+        await fetch(`${apiBaseUrl}${apiRoutes.authLogout}`, {
+          headers: {
+            Authorization: `Bearer ${storedAuth.sessionKey}`
+          },
+          method: "POST"
+        });
+      } catch {
+        // Local logout should still happen when the session is already gone.
+      }
+    }
+
+    clearStoredAuth();
+    setIsUserMenuOpen(false);
+
+    if (window.location.pathname === "/profile") {
+      window.history.pushState(null, "", "/login");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
   }
 
   return (
@@ -75,10 +119,29 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
         </TooltipProvider>
         {isUserMenuOpen ? (
           <div className="user-menu" role="menu">
-            <SpaLink role="menuitem" to="/profile" onNavigate={() => setIsUserMenuOpen(false)}>
-              <User aria-hidden="true" />
-              Profile
-            </SpaLink>
+            {isLoggedIn ? (
+              <>
+                <SpaLink role="menuitem" to="/profile" onNavigate={() => setIsUserMenuOpen(false)}>
+                  <User aria-hidden="true" />
+                  Profile
+                </SpaLink>
+                <Button
+                  className="theme-toggle"
+                  role="menuitem"
+                  type="button"
+                  variant="ghost"
+                  onClick={logout}
+                >
+                  <LogOut aria-hidden="true" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <SpaLink role="menuitem" to="/login" onNavigate={() => setIsUserMenuOpen(false)}>
+                <LogIn aria-hidden="true" />
+                Login
+              </SpaLink>
+            )}
             <Button
               aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
               className="theme-toggle"
