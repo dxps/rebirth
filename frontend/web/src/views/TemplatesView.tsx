@@ -2093,9 +2093,15 @@ function EntityTemplateDetailsView({
 
 	return (
 		<div
-			className="entity-template-edit-form entity-template-view-form"
+			className="entity-template-edit-form entity-template-view-form access-level-details"
 			data-selectable="true"
 		>
+			<div className="attribute-template-id-row">
+				<p>id</p>
+				<strong className="attribute-template-id-value">
+					{entityTemplate.id}
+				</strong>
+			</div>
 			<div className="entity-template-fields">
 				<label>
 					<span>name</span>
@@ -3165,10 +3171,15 @@ export function TemplatesView() {
 										{modal.attributeTemplate.defaultValue ?? ''}
 									</strong>
 								</div>
-								<div>
-									<p>required</p>
-									<strong>{modal.attributeTemplate.isRequired ? 'yes' : 'no'}</strong>
-								</div>
+								<label className="attribute-template-checkbox-label attribute-template-readonly-checkbox">
+									<input
+										checked={modal.attributeTemplate.isRequired}
+										disabled
+										readOnly
+										type="checkbox"
+									/>
+									<span>required</span>
+								</label>
 							</div>
 						) : null}
 					</DraggableModal>
