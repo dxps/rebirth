@@ -776,6 +776,12 @@ function EntityTemplateEditForm({
 					(target) => target.id === link.targetEntityTemplateId,
 				),
 		)
+	const getAccessLevelName = (accessLevelId: number): string =>
+		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
+			?.name ?? String(accessLevelId)
+	const getLinkTargetName = (targetEntityTemplateId: string): string =>
+		availableLinkTargets.find((target) => target.id === targetEntityTemplateId)
+			?.name ?? targetEntityTemplateId
 
 	useEffect(() => {
 		onValidityChange(modalKey, isValid)
@@ -1801,7 +1807,7 @@ function EntityTemplateEditForm({
 												</td>
 												<td
 													className="entity-template-value-type-cell"
-													data-tooltip="Value type"
+													data-tooltip={includedAttribute.valueType}
 												>
 													<span className="attribute-template-select-wrap entity-template-value-type-wrap">
 														<select
@@ -1829,7 +1835,9 @@ function EntityTemplateEditForm({
 												<td>
 													<span
 														className="attribute-template-select-wrap entity-template-access-level-wrap"
-														data-tooltip="Access level"
+														data-tooltip={getAccessLevelName(
+															includedAttribute.accessLevelId,
+														)}
 													>
 														<select
 															aria-label={`${includedAttribute.name} access level`}
@@ -1958,7 +1966,12 @@ function EntityTemplateEditForm({
 												/>
 											</td>
 											<td>
-												<span className="attribute-template-select-wrap entity-template-link-target-wrap">
+												<span
+													className="attribute-template-select-wrap entity-template-link-target-wrap"
+													data-tooltip={getLinkTargetName(
+														includedLink.targetEntityTemplateId,
+													)}
+												>
 													<select
 														aria-label={`${includedLink.name || 'Link'} target entity template`}
 														data-no-drag="true"
@@ -3130,7 +3143,7 @@ export function TemplatesView() {
 							/>
 						) : modal.attributeTemplate ? (
 							<div
-								className="access-level-details"
+								className="access-level-details access-level-edit-form"
 								data-selectable="true"
 							>
 								<div className="attribute-template-id-row">
@@ -3139,38 +3152,62 @@ export function TemplatesView() {
 										{modal.attributeTemplate.id}
 									</strong>
 								</div>
-								<div>
-									<p>name</p>
-									<strong>{modal.attributeTemplate.name}</strong>
-								</div>
-								<div>
-									<p>description</p>
-									<strong className="empty-value-space">
-										{modal.attributeTemplate.description}
-									</strong>
-								</div>
+								<label>
+									<span>name</span>
+									<input
+										readOnly
+										type="text"
+										value={modal.attributeTemplate.name}
+									/>
+								</label>
+								<label>
+									<span>description</span>
+									<textarea
+										readOnly
+										rows={2}
+										value={modal.attributeTemplate.description}
+									/>
+								</label>
 								<div className="attribute-template-detail-pair-row">
-									<div>
-										<p>value type</p>
-										<strong>{modal.attributeTemplate.valueType}</strong>
-									</div>
-									<div>
-										<p>access level</p>
-										<strong>
-											{accessLevels.find(
-												(accessLevel) =>
-													accessLevel.id ===
-													modal.attributeTemplate?.accessLevelId,
-											)?.name ?? modal.attributeTemplate.accessLevelId}
-										</strong>
-									</div>
+									<label>
+										<span>value type</span>
+										<span className="attribute-template-select-wrap">
+											<select
+												disabled
+												value={modal.attributeTemplate.valueType}
+											>
+												<option value={modal.attributeTemplate.valueType}>
+													{modal.attributeTemplate.valueType}
+												</option>
+											</select>
+										</span>
+									</label>
+									<label>
+										<span>access level</span>
+										<span className="attribute-template-select-wrap">
+											<select
+												disabled
+												value={modal.attributeTemplate.accessLevelId}
+											>
+												<option value={modal.attributeTemplate.accessLevelId}>
+													{accessLevels.find(
+														(accessLevel) =>
+															accessLevel.id ===
+															modal.attributeTemplate?.accessLevelId,
+													)?.name ?? modal.attributeTemplate.accessLevelId}
+												</option>
+											</select>
+										</span>
+									</label>
 								</div>
-								<div>
-									<p>default value</p>
-									<strong className="empty-value-space">
-										{modal.attributeTemplate.defaultValue ?? ''}
-									</strong>
-								</div>
+								<label>
+									<span>default value</span>
+									<input
+										readOnly
+										type="text"
+										value={modal.attributeTemplate.defaultValue ?? ''}
+									/>
+								</label>
 								<label className="attribute-template-checkbox-label attribute-template-readonly-checkbox">
 									<input
 										checked={modal.attributeTemplate.isRequired}

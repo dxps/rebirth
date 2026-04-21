@@ -269,7 +269,7 @@ button svg,
 	color: var(--fg);
 	cursor: pointer;
 	display: inline-flex;
-	font-size: 0.90rem;
+	font-size: 0.9rem;
 	font-weight: 400;
 	gap: 0.5rem;
 	min-height: 2.35rem;
@@ -369,7 +369,7 @@ button svg,
 	color: var(--fg);
 	display: inline-flex;
 	font: inherit;
-	font-size: 0.90rem;
+	font-size: 0.9rem;
 	font-weight: 400;
 	gap: 0.5rem;
 	min-height: 2.35rem;
@@ -445,7 +445,7 @@ button.section-action-button {
 	background-color: transparent;
 	border-radius: 999px;
 	color: color-mix(in srgb, var(--fg) 62%, transparent);
-	font-size: 0.90rem;
+	font-size: 0.9rem;
 	height: 1.45rem;
 	justify-content: center;
 	min-height: 1.45rem;
@@ -516,7 +516,7 @@ button.section-action-button:disabled {
 
 .access-level-unavailable p {
 	color: var(--muted);
-	font-size: 0.90rem;
+	font-size: 0.9rem;
 	line-height: 1.4;
 	margin: 0;
 }
@@ -982,7 +982,7 @@ button.draggable-modal-resize:hover {
 .access-level-details strong {
 	color: var(--fg);
 	display: block;
-	font-size: 0.90rem;
+	font-size: 0.9rem;
 	font-weight: 400;
 	line-height: 1.45;
 }
@@ -1002,6 +1002,7 @@ button.draggable-modal-resize:hover {
 	align-items: baseline;
 	display: flex;
 	gap: 0.35rem;
+	padding-left: 0.36rem;
 }
 
 .access-level-details .attribute-template-id-row p {
@@ -1066,6 +1067,11 @@ button.draggable-modal-resize:hover {
 	line-height: 1.2;
 }
 
+.access-level-edit-form label > span:first-child,
+.entity-template-edit-form label > span:first-child {
+	padding-left: 0.36rem;
+}
+
 .access-level-edit-form input,
 .access-level-edit-form select,
 .access-level-edit-form textarea,
@@ -1077,7 +1083,7 @@ button.draggable-modal-resize:hover {
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
-	font-size: 0.90rem;
+	font-size: 0.9rem;
 	line-height: 1.35;
 	padding: 0.16rem 0.36rem;
 }
@@ -1095,8 +1101,8 @@ button.draggable-modal-resize:hover {
 }
 
 .attribute-template-select-wrap::after {
-	border-bottom: 1.5px solid var(--fg);
-	border-right: 1.5px solid var(--fg);
+	border-bottom: 1.5px solid var(--select-chevron-color, var(--fg));
+	border-right: 1.5px solid var(--select-chevron-color, var(--fg));
 	content: '';
 	height: 0.48rem;
 	pointer-events: none;
@@ -1105,6 +1111,10 @@ button.draggable-modal-resize:hover {
 	top: 50%;
 	transform: translateY(-65%) rotate(45deg);
 	width: 0.48rem;
+}
+
+.attribute-template-select-wrap:has(select:disabled)::after {
+	--select-chevron-color: var(--muted);
 }
 
 .attribute-template-select-row {
@@ -1163,8 +1173,8 @@ button.draggable-modal-resize:hover {
 
 .access-level-edit-form textarea,
 .entity-template-edit-form textarea {
-	height: calc((0.90rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.90rem * 1.35 * 2) + 0.32rem + 2px);
+	height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
 	resize: none;
 }
 
@@ -1229,7 +1239,8 @@ button.draggable-modal-resize:hover {
 	padding-bottom: 0.18rem;
 }
 
-.entity-template-edit-form:not(.entity-template-view-form) .entity-template-tab-row {
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-tab-row {
 	border-bottom: 0;
 }
 
@@ -1293,12 +1304,16 @@ button.entity-template-tab[aria-selected='true']:hover {
 }
 
 .entity-template-edit-form:not(.entity-template-view-form)
-	.entity-template-attributes-table td:first-child {
+	.entity-template-attributes-table
+	td:first-child {
 	padding-left: 0;
 }
 
 .entity-template-edit-form:not(.entity-template-view-form)
-	.entity-template-attributes-table tbody tr:last-child td {
+	.entity-template-attributes-table
+	tbody
+	tr:last-child
+	td {
 	border-bottom: 0;
 }
 
@@ -1307,31 +1322,33 @@ button.entity-template-tab[aria-selected='true']:hover {
 }
 
 .entity-template-attribute-name-column {
-	width: 42%;
+	width: 49%;
 }
 
 .entity-template-attribute-value-type-column {
-	width: 5.5rem;
+	width: 5.6rem;
 }
 
 .entity-template-attribute-access-level-column {
-	width: 6.9rem;
+	width: 7rem;
 }
 
 .entity-template-attribute-action-column {
-	width: 3.2rem;
+	width: 3.25rem;
 }
 
 .entity-template-attributes-table th:nth-child(2),
 .entity-template-attributes-table td:nth-child(2) {
 	white-space: nowrap;
+	padding-left: 0;
 }
 
 .entity-template-attributes-table th:nth-child(3),
 .entity-template-attributes-table td:nth-child(3) {
 	color: var(--muted);
-	padding-right: 0.15rem;
+	padding-right: 0.55rem;
 	white-space: nowrap;
+	padding-left: 0;
 }
 
 .entity-template-attributes-table th:last-child,
@@ -1342,6 +1359,10 @@ button.entity-template-tab[aria-selected='true']:hover {
 .entity-template-view-attributes-table th:last-child,
 .entity-template-view-attributes-table td:last-child {
 	text-align: left;
+}
+
+.entity-template-view-attributes-table td:first-child {
+	padding-left: 6px;
 }
 
 .entity-template-view-attributes-table tbody tr:last-child td {
@@ -1475,6 +1496,10 @@ button.include-attribute-close-button {
 	gap: 0.2rem;
 }
 
+.include-attribute-fields label > span:first-child {
+	padding-left: 0.32rem;
+}
+
 .include-attribute-fields input,
 .include-attribute-fields select,
 .include-attribute-fields textarea {
@@ -1591,16 +1616,17 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-edit-form .entity-template-value-type-wrap select {
-	background: transparent;
-	background-color: transparent;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
+	border-radius: 6px;
 	border: 0;
 	color: inherit;
 	font: inherit;
 	font-size: 0.78rem;
-	height: 1.2rem;
-	line-height: 1.2;
-	min-height: 1.2rem;
-	padding: 0;
+	height: 1.72rem;
+	line-height: 1.35;
+	min-height: 1.72rem;
+	padding: 0.16rem 0.36rem;
 }
 
 .entity-template-edit-form .entity-template-attribute-name-input {
@@ -1621,12 +1647,12 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 
 .entity-template-value-type-wrap {
 	display: inline-block;
-	width: 5.2rem;
+	width: 5.3rem;
 }
 
 .entity-template-edit-form .entity-template-value-type-wrap select {
 	cursor: pointer;
-	padding-left: 0.18rem;
+	padding-left: 0.36rem;
 	padding-right: 1.25rem;
 	width: 100%;
 }
@@ -1640,12 +1666,13 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 
 .entity-template-value-type-wrap::after {
 	height: 0.34rem;
-	right: 0.28rem;
+	right: 0.45rem;
 	width: 0.34rem;
 }
 
 .entity-template-value-type-cell[data-tooltip],
 .entity-template-access-level-wrap[data-tooltip],
+.entity-template-link-target-wrap[data-tooltip],
 .icon-only-button[data-tooltip] {
 	position: relative;
 }
@@ -1676,7 +1703,8 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	z-index: 2;
 }
 
-.entity-template-access-level-wrap[data-tooltip]::before {
+.entity-template-access-level-wrap[data-tooltip]::before,
+.entity-template-link-target-wrap[data-tooltip]::before {
 	background: var(--tooltip-bg);
 	border-radius: 6px;
 	color: var(--tooltip-fg);
@@ -1705,7 +1733,8 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	transform: translateY(0);
 }
 
-.entity-template-access-level-wrap[data-tooltip]:hover::before {
+.entity-template-access-level-wrap[data-tooltip]:hover::before,
+.entity-template-link-target-wrap[data-tooltip]:hover::before {
 	opacity: 1;
 	transform: translateY(0);
 }
@@ -1721,14 +1750,16 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	transform: translate(0, -50%);
 }
 
-.entity-template-access-level-wrap[data-tooltip]::before {
+.entity-template-access-level-wrap[data-tooltip]::before,
+.entity-template-link-target-wrap[data-tooltip]::before {
 	left: auto;
 	right: calc(100% + 0.35rem);
 	top: 50%;
 	transform: translate(0.1rem, -50%);
 }
 
-.entity-template-access-level-wrap[data-tooltip]:hover::before {
+.entity-template-access-level-wrap[data-tooltip]:hover::before,
+.entity-template-link-target-wrap[data-tooltip]:hover::before {
 	transform: translate(0, -50%);
 }
 
@@ -1743,7 +1774,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-attribute-actions .icon-only-button + .icon-only-button {
-	margin-left: 0.38rem;
+	margin-left: 0.24rem;
 }
 
 .entity-template-attribute-actions .icon-only-button[data-tooltip]::after {
@@ -1754,26 +1785,30 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-attribute-actions .icon-only-button[data-tooltip]:hover::after,
-.entity-template-attribute-actions .icon-only-button[data-tooltip]:focus-visible::after {
+.entity-template-attribute-actions
+	.icon-only-button[data-tooltip]:focus-visible::after {
 	transform: translate(0, -50%);
 }
 
 .entity-template-edit-form .entity-template-access-level-wrap select {
-	background: transparent;
-	background-color: transparent;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
+	border-radius: 6px;
 	border: 0;
 	color: inherit;
 	cursor: pointer;
 	font-size: 0.78rem;
-	height: 1.2rem;
-	padding-bottom: 0;
-	padding-right: 1rem;
-	padding-top: 0;
+	height: 1.72rem;
+	min-height: 1.72rem;
+	padding-bottom: 0.16rem;
+	padding-left: 0.36rem;
+	padding-right: 1.3rem;
+	padding-top: 0.16rem;
 }
 
 .entity-template-access-level-wrap::after {
 	height: 0.34rem;
-	right: 0.18rem;
+	right: 0.42rem;
 	width: 0.34rem;
 }
 
@@ -1788,17 +1823,28 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	vertical-align: middle;
 }
 
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-links-table
+	td {
+	padding-left: 0.28rem;
+	padding-right: 0.28rem;
+}
+
 .entity-template-links-table .data-table-empty-cell span {
 	display: block;
 }
 
 .entity-template-edit-form:not(.entity-template-view-form)
-	.entity-template-links-table td:first-child {
-	padding-left: 0;
+	.entity-template-links-table
+	td:first-child {
+	padding-left: 2px;
 }
 
 .entity-template-edit-form:not(.entity-template-view-form)
-	.entity-template-links-table tbody tr:last-child td {
+	.entity-template-links-table
+	tbody
+	tr:last-child
+	td {
 	border-bottom: 0;
 }
 
@@ -1807,15 +1853,23 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-link-name-column {
-	width: 28%;
+	width: 24%;
 }
 
 .entity-template-link-description-column {
-	width: auto;
+	width: 38%;
 }
 
 .entity-template-link-target-column {
-	width: 6.5rem;
+	width: 5.8rem;
+}
+
+.entity-template-view-links-table .entity-template-link-description-column {
+	width: auto;
+}
+
+.entity-template-view-links-table .entity-template-link-target-column {
+	width: 8.5rem;
 }
 
 .entity-template-link-action-column {
@@ -1878,25 +1932,31 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-edit-form .entity-template-link-target-wrap select {
-	background: transparent;
-	background-color: transparent;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
+	border-radius: 6px;
 	border: 0;
 	color: inherit;
 	cursor: pointer;
 	font-size: 0.78rem;
-	height: 1.2rem;
-	padding: 0 1.25rem 0 0.18rem;
+	height: 1.72rem;
+	min-height: 1.72rem;
+	padding: 0.16rem 1.45rem 0.16rem 0.36rem;
 	width: 100%;
 }
 
 .entity-template-link-target-wrap::after {
 	height: 0.34rem;
-	right: 0.28rem;
+	right: 0.45rem;
 	width: 0.34rem;
 }
 
 .entity-template-view-links-table td {
 	overflow: visible;
+}
+
+.entity-template-view-links-table td:first-child {
+	padding-left: 6px;
 }
 
 .entity-template-view-links-table td:not(.data-table-empty-cell):last-child {
@@ -1965,7 +2025,8 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-link-actions .icon-only-button[data-tooltip]:hover::after,
-.entity-template-link-actions .icon-only-button[data-tooltip]:focus-visible::after {
+.entity-template-link-actions
+	.icon-only-button[data-tooltip]:focus-visible::after {
 	transform: translate(0, -50%);
 }
 
@@ -2048,6 +2109,7 @@ button.icon-only-button:hover {
 
 .access-level-edit-form .attribute-template-checkbox-label span {
 	cursor: pointer;
+	padding-left: 0;
 }
 
 .access-level-details .attribute-template-checkbox-label {
