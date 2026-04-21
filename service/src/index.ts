@@ -7,22 +7,32 @@ import {
   isCreateAccessLevelInput,
   isCreateAttributeTemplateInput,
   isCreateEntityTemplateInput,
+  isCreateUserInput,
   isEntityTemplateId,
+  isUserId,
   isUpdateAccessLevelInput,
   isUpdateAttributeTemplateInput,
   isUpdateEntityTemplateInput,
+  isUpdateUserInput,
   jsonHeaders,
+  PermissionName,
   type AccessLevelResponse,
   type AccessLevelsResponse,
   type AttributeTemplateResponse,
   type AttributeTemplatesResponse,
   type EntityTemplateResponse,
   type EntityTemplatesResponse,
-  type ApiErrorResponse
+  type ApiErrorResponse,
+  type PermissionsResponse,
+  type User,
+  type UserResponse,
+  type UsersResponse
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
+import { listPermissions } from "./db/permissions";
+import { authenticateUser, countUsers, createUser, deleteUser, listUsers, updateUser } from "./db/users";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -115,6 +125,111 @@ function normalizeDefaultValue(value: string | null | undefined): string | null 
   return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
+function hasPermission(user: User, permission: PermissionName): boolean {
+  return user.permissions.some((userPermission) => userPermission.name === permission);
+}
+
+function canManageData(user: User): boolean {
+  return hasPermission(user, PermissionName.Admin) || hasPermission(user, PermissionName.Manager);
+}
+
+function canManageSecurity(user: User): boolean {
+  return hasPermission(user, PermissionName.Admin);
+}
+
+async function getAuthenticatedUser(request: Request): Promise<User | undefined> {
+  const authorization = request.headers.get("authorization");
+
+  if (!authorization?.startsWith("Basic ")) {
+    return undefined;
+  }
+
+  try {
+    const credentials = atob(authorization.slice("Basic ".length));
+    const separatorIndex = credentials.indexOf(":");
+
+    if (separatorIndex < 1) {
+      return undefined;
+    }
+
+    const identifier = credentials.slice(0, separatorIndex);
+    const password = credentials.slice(separatorIndex + 1);
+
+    if (!password) {
+      return undefined;
+    }
+
+    return await authenticateUser(identifier, password);
+  } catch {
+    return undefined;
+  }
+}
+
+function authenticationRequiredResponse(): Response {
+  return Response.json(
+    {
+      error: "Authentication required"
+    },
+    {
+      headers: {
+        ...jsonHeaders,
+        "WWW-Authenticate": "Basic realm=\"Rebirth\""
+      },
+      status: 401
+    }
+  );
+}
+
+function authorizationRequiredResponse(): Response {
+  return Response.json(
+    {
+      error: "Insufficient permissions"
+    },
+    {
+      headers: jsonHeaders,
+      status: 403
+    }
+  );
+}
+
+async function requireAuthenticatedUser(request: Request): Promise<Response | User> {
+  const user = await getAuthenticatedUser(request);
+
+  if (!user) {
+    return authenticationRequiredResponse();
+  }
+
+  return user;
+}
+
+async function requireDataManager(request: Request): Promise<Response | User> {
+  const user = await requireAuthenticatedUser(request);
+
+  if (user instanceof Response) {
+    return user;
+  }
+
+  if (!canManageData(user)) {
+    return authorizationRequiredResponse();
+  }
+
+  return user;
+}
+
+async function requireSecurityManager(request: Request): Promise<Response | User> {
+  const user = await requireAuthenticatedUser(request);
+
+  if (user instanceof Response) {
+    return user;
+  }
+
+  if (!canManageSecurity(user)) {
+    return authorizationRequiredResponse();
+  }
+
+  return user;
+}
+
 await runMigrations();
 
 const server = Bun.serve({
@@ -133,6 +248,145 @@ const server = Bun.serve({
       return Response.json(createHealthResponse("ok"), {
         headers: jsonHeaders
       });
+    }
+
+    if (request.method === "GET" && url.pathname === apiRoutes.authMe) {
+      const authenticatedUser = await requireAuthenticatedUser(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      const response: UserResponse = {
+        data: authenticatedUser
+      };
+
+      return Response.json(response, {
+        headers: jsonHeaders
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === apiRoutes.permissions) {
+      try {
+        const response: PermissionsResponse = {
+          data: await listPermissions()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load permissions"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === apiRoutes.users) {
+      const authenticatedUser = await requireSecurityManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const response: UsersResponse = {
+          data: await listUsers()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load users"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.users) {
+      try {
+        const existingUserCount = await countUsers();
+
+        if (existingUserCount > 0) {
+          const authenticatedUser = await requireSecurityManager(request);
+
+          if (authenticatedUser instanceof Response) {
+            return authenticatedUser;
+          }
+        }
+
+        const input = await request.json();
+
+        if (!isCreateUserInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid user"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const createdUser = await createUser({
+          email: input.email.trim(),
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          password: input.password,
+          permissionIds: input.permissionIds,
+          username: input.username.trim()
+        });
+
+        if (!createdUser) {
+          throw new Error("User was not created.");
+        }
+
+        const response: UserResponse = {
+          data: createdUser
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders,
+          status: 201
+        });
+      } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to create user"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
     }
 
     if (request.method === "GET" && url.pathname === apiRoutes.accessLevels) {
@@ -160,6 +414,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "POST" && url.pathname === apiRoutes.accessLevels) {
+      const authenticatedUser = await requireSecurityManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const input = await request.json();
 
@@ -239,6 +499,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "POST" && url.pathname === apiRoutes.attributeTemplates) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const input = await request.json();
 
@@ -329,6 +595,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "POST" && url.pathname === apiRoutes.entityTemplates) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const input = await request.json();
 
@@ -389,8 +661,15 @@ const server = Bun.serve({
     const accessLevelMatch = /^\/access-levels\/(\d+)$/.exec(url.pathname);
     const attributeTemplateMatch = /^\/attribute-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
     const entityTemplateMatch = /^\/entity-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
+    const userMatch = /^\/users\/([0-9a-f-]+)$/i.exec(url.pathname);
 
     if (request.method === "PATCH" && accessLevelMatch) {
+      const authenticatedUser = await requireSecurityManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = Number.parseInt(accessLevelMatch[1] ?? "", 10);
         const input = await request.json();
@@ -454,6 +733,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "DELETE" && accessLevelMatch) {
+      const authenticatedUser = await requireSecurityManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = Number.parseInt(accessLevelMatch[1] ?? "", 10);
 
@@ -506,6 +791,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "PATCH" && attributeTemplateMatch) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = attributeTemplateMatch[1] ?? "";
         const input = await request.json();
@@ -580,6 +871,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "DELETE" && attributeTemplateMatch) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = attributeTemplateMatch[1] ?? "";
 
@@ -632,6 +929,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "PATCH" && entityTemplateMatch) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = entityTemplateMatch[1] ?? "";
         const input = await request.json();
@@ -698,6 +1001,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "DELETE" && entityTemplateMatch) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = entityTemplateMatch[1] ?? "";
 
@@ -740,6 +1049,137 @@ const server = Bun.serve({
         return Response.json(
           {
             error: "Unable to delete entity template"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "PATCH" && userMatch) {
+      const authenticatedUser = await requireSecurityManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const id = userMatch[1] ?? "";
+        const input = await request.json();
+
+        if (!isUserId(id) || !isUpdateUserInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid user update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const updatedUser = await updateUser(id, {
+          email: input.email?.trim(),
+          firstName: input.firstName?.trim(),
+          lastName: input.lastName?.trim(),
+          password: input.password,
+          permissionIds: input.permissionIds,
+          username: input.username?.trim()
+        });
+
+        if (!updatedUser) {
+          return Response.json(
+            {
+              error: "User not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: UserResponse = {
+          data: updatedUser
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to update user"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "DELETE" && userMatch) {
+      const authenticatedUser = await requireSecurityManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const id = userMatch[1] ?? "";
+
+        if (!isUserId(id)) {
+          return Response.json(
+            {
+              error: "Invalid user id"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const deletedUser = await deleteUser(id);
+
+        if (!deletedUser) {
+          return Response.json(
+            {
+              error: "User not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: UserResponse = {
+          data: deletedUser
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to delete user"
           },
           {
             headers: jsonHeaders,

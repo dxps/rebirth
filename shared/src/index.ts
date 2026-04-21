@@ -4,6 +4,14 @@ import {
 	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
 } from './security/access-level'
+import { type Permission } from './security/permission'
+import {
+	hasValidPermissionIds,
+	isUserId,
+	type CreateUserInput,
+	type UpdateUserInput,
+	type User,
+} from './security/user'
 import {
 	isValueType,
 	type AttributeTemplate,
@@ -53,6 +61,18 @@ export interface EntityTemplateResponse {
 	data: EntityTemplate
 }
 
+export interface PermissionsResponse {
+	data: Permission[]
+}
+
+export interface UserResponse {
+	data: User
+}
+
+export interface UsersResponse {
+	data: User[]
+}
+
 export type ApiErrorCode = 'unique_conflict'
 
 export interface ApiErrorResponse {
@@ -71,15 +91,20 @@ export const appInfo = {
 export const apiRoutes = {
 	accessLevel: (id: number) => `/access-levels/${id}`,
 	accessLevels: '/access-levels',
+	authMe: '/auth/me',
 	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
 	attributeTemplates: '/attribute-templates',
 	entityTemplate: (id: string) => `/entity-templates/${id}`,
 	entityTemplates: '/entity-templates',
 	health: '/health',
+	permission: (id: number) => `/permissions/${id}`,
+	permissions: '/permissions',
+	user: (id: string) => `/users/${id}`,
+	users: '/users',
 } as const
 
 export const jsonHeaders = {
-	'Access-Control-Allow-Headers': 'Content-Type',
+	'Access-Control-Allow-Headers': 'Authorization, Content-Type',
 	'Access-Control-Allow-Methods': 'DELETE, GET, PATCH, OPTIONS, POST',
 	'Access-Control-Allow-Origin': '*',
 	'Content-Type': 'application/json',
@@ -121,6 +146,47 @@ export function isCreateAccessLevelInput(
 	return (
 		typeof input.name === 'string' &&
 		typeof input.description === 'string'
+	)
+}
+
+export function isCreateUserInput(value: unknown): value is CreateUserInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.email === 'string' &&
+		typeof input.firstName === 'string' &&
+		typeof input.lastName === 'string' &&
+		typeof input.username === 'string' &&
+		typeof input.password === 'string' &&
+		input.password.length >= 8 &&
+		hasValidPermissionIds(input.permissionIds)
+	)
+}
+
+export function isUpdateUserInput(value: unknown): value is UpdateUserInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		(input.email === undefined || typeof input.email === 'string') &&
+		(input.firstName === undefined ||
+			typeof input.firstName === 'string') &&
+		(input.lastName === undefined ||
+			typeof input.lastName === 'string') &&
+		(input.username === undefined ||
+			typeof input.username === 'string') &&
+		(input.password === undefined ||
+			(typeof input.password === 'string' &&
+				input.password.length >= 8)) &&
+		(input.permissionIds === undefined ||
+			hasValidPermissionIds(input.permissionIds))
 	)
 }
 
@@ -249,6 +315,26 @@ export type {
 	CreateAccessLevelInput,
 	UpdateAccessLevelInput,
 } from './security/access-level'
+export {
+	isPermissionId,
+	isPermissionName,
+	permissionModel,
+	PermissionName,
+	permissionNames,
+} from './security/permission'
+export type { Permission, PermissionId } from './security/permission'
+export {
+	hasValidPermissionIds,
+	isUserId,
+	userModel,
+	userPermissionModel,
+} from './security/user'
+export type {
+	CreateUserInput,
+	UpdateUserInput,
+	User,
+	UserId,
+} from './security/user'
 export {
 	attributeTemplateModel,
 	isAttributeTemplateId,

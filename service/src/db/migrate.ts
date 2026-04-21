@@ -3,11 +3,13 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { createDatabase, getDatabaseUrl } from './client'
 import { loadEnvFiles } from '../env'
+import { createDatabase, getDatabaseUrl } from './client'
 
 function getMigrationsFolder(): string {
-	const defaultFolder = fileURLToPath(new URL('../../drizzle', import.meta.url))
+	const defaultFolder = fileURLToPath(
+		new URL('../../drizzle', import.meta.url),
+	)
 	const candidates = [
 		Bun.env.DRIZZLE_MIGRATIONS_FOLDER,
 		defaultFolder,
@@ -15,7 +17,9 @@ function getMigrationsFolder(): string {
 		resolve(process.cwd(), 'service/drizzle'),
 	].filter((candidate): candidate is string => Boolean(candidate))
 
-	return candidates.find((candidate) => existsSync(candidate)) ?? defaultFolder
+	return (
+		candidates.find((candidate) => existsSync(candidate)) ?? defaultFolder
+	)
 }
 
 async function seedAccessLevels(
@@ -41,6 +45,64 @@ async function seedAccessLevels(
 	`
 }
 
+async function seedPermissions(
+	client: ReturnType<typeof createDatabase>['client'],
+): Promise<void> {
+	await client`
+		INSERT INTO permissions (id, name, description)
+		VALUES
+			(1, 'Admin', 'Can manage users, security (access levels, permissions), templates and data.'),
+			(2, 'Manager', 'Can create, update, and delete templates and data.'),
+			(3, 'Viewer', 'Can view managed data with public access (level).')
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			description = EXCLUDED.description
+	`
+
+	await client`
+		SELECT setval(
+			pg_get_serial_sequence('permissions', 'id'),
+			GREATEST((SELECT MAX(id) FROM permissions), 1),
+			true
+		)
+	`
+}
+
+async function seedInitialAdminUser(
+	client: ReturnType<typeof createDatabase>['client'],
+): Promise<void> {
+	const initialAdminUserId = '0196626d-7d6f-7a12-9f64-1c4f7a1f7a01'
+	const initialAdminPasswordHash = await Bun.password.hash('admin')
+
+	await client`
+		INSERT INTO users (
+			id,
+			email,
+			first_name,
+			last_name,
+			username,
+			password_hash
+		)
+		VALUES (
+			${initialAdminUserId},
+			'admin@rebirth.localhost',
+			'Admin',
+			'User',
+			'admin',
+			${initialAdminPasswordHash}
+		)
+		ON CONFLICT (username) DO NOTHING
+	`
+
+	await client`
+		INSERT INTO user_permissions (user_id, permission_id)
+		SELECT users.id, 1
+		FROM users
+		WHERE users.username = 'admin'
+		ON CONFLICT (user_id, permission_id) DO NOTHING
+	`
+}
+
 export async function runMigrations(): Promise<void> {
 	loadEnvFiles()
 
@@ -56,6 +118,8 @@ export async function runMigrations(): Promise<void> {
 	try {
 		await migrate(db, { migrationsFolder: getMigrationsFolder() })
 		await seedAccessLevels(client)
+		await seedPermissions(client)
+		await seedInitialAdminUser(client)
 	} finally {
 		await client.end()
 	}

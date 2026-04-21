@@ -1,0 +1,343 @@
+import type {
+	CreateUserInput,
+	Permission,
+	PermissionName,
+	UpdateUserInput,
+	User,
+} from '@rebirth/shared'
+import type postgres from 'postgres'
+
+import { createDatabase, getDatabaseUrl } from './client'
+import { createUuidV7 } from './uuid'
+
+interface UserRow {
+	id: string
+	email: string
+	first_name: string
+	last_name: string
+	username: string
+}
+
+interface UserWithPasswordRow extends UserRow {
+	password_hash: string
+}
+
+interface UserPermissionRow {
+	user_id: string
+	permission_id: number
+	permission_name: PermissionName
+	permission_description: string
+}
+
+function normalizeCreateInput(input: CreateUserInput): CreateUserInput {
+	return {
+		email: input.email.trim().toLowerCase(),
+		firstName: input.firstName.trim(),
+		lastName: input.lastName.trim(),
+		password: input.password,
+		permissionIds: input.permissionIds,
+		username: input.username.trim(),
+	}
+}
+
+function normalizeUpdateInput(input: UpdateUserInput): UpdateUserInput {
+	return {
+		email: input.email?.trim().toLowerCase(),
+		firstName: input.firstName?.trim(),
+		lastName: input.lastName?.trim(),
+		password: input.password,
+		permissionIds: input.permissionIds,
+		username: input.username?.trim(),
+	}
+}
+
+function toUser(row: UserRow, permissionRows: UserPermissionRow[]): User {
+	return {
+		email: row.email,
+		firstName: row.first_name,
+		id: row.id,
+		lastName: row.last_name,
+		permissions: permissionRows
+			.filter((permissionRow) => permissionRow.user_id === row.id)
+			.map((permissionRow): Permission => ({
+				description: permissionRow.permission_description,
+				id: permissionRow.permission_id,
+				name: permissionRow.permission_name,
+			})),
+		username: row.username,
+	}
+}
+
+function toUsers(
+	rows: UserRow[],
+	permissionRows: UserPermissionRow[],
+): User[] {
+	return rows.map((row) => toUser(row, permissionRows))
+}
+
+async function readUserRows(
+	client: ReturnType<typeof createDatabase>['client'],
+	id?: string,
+): Promise<User[]> {
+	const rows = id
+		? await client<UserRow[]>`
+			SELECT id, email, first_name, last_name, username
+			FROM users
+			WHERE id = ${id}
+			ORDER BY username
+		`
+		: await client<UserRow[]>`
+			SELECT id, email, first_name, last_name, username
+			FROM users
+			ORDER BY username
+		`
+
+	if (rows.length === 0) {
+		return []
+	}
+
+	const ids = rows.map((row) => row.id)
+	const permissionRows = await client<UserPermissionRow[]>`
+		SELECT
+			user_permissions.user_id,
+			permissions.id AS permission_id,
+			permissions.name AS permission_name,
+			permissions.description AS permission_description
+		FROM user_permissions
+		INNER JOIN permissions ON permissions.id = user_permissions.permission_id
+		WHERE user_permissions.user_id = ANY(${ids})
+		ORDER BY permissions.id
+	`
+
+	return toUsers(rows, permissionRows)
+}
+
+async function replaceUserPermissions(
+	sql: postgres.TransactionSql,
+	userId: string,
+	permissionIds: number[],
+): Promise<void> {
+	await sql`
+		DELETE FROM user_permissions
+		WHERE user_id = ${userId}
+	`
+
+	for (const permissionId of permissionIds) {
+		await sql`
+			INSERT INTO user_permissions (user_id, permission_id)
+			VALUES (${userId}, ${permissionId})
+		`
+	}
+}
+
+export async function countUsers(): Promise<number> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [row] = await client<Array<{ count: string }>>`
+			SELECT COUNT(*) AS count
+			FROM users
+		`
+
+		return Number.parseInt(row?.count ?? '0', 10)
+	} finally {
+		await client.end()
+	}
+}
+
+export async function listUsers(): Promise<User[]> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		return await readUserRows(client)
+	} finally {
+		await client.end()
+	}
+}
+
+export async function createUser(input: CreateUserInput): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const normalizedInput = normalizeCreateInput(input)
+	const { client } = createDatabase(databaseUrl)
+	const id = createUuidV7()
+	const passwordHash = await Bun.password.hash(normalizedInput.password)
+
+	try {
+		await client.begin(async (sql) => {
+			await sql`
+				INSERT INTO users (
+					id,
+					email,
+					first_name,
+					last_name,
+					username,
+					password_hash
+				)
+				VALUES (
+					${id},
+					${normalizedInput.email},
+					${normalizedInput.firstName},
+					${normalizedInput.lastName},
+					${normalizedInput.username},
+					${passwordHash}
+				)
+			`
+			await replaceUserPermissions(sql, id, normalizedInput.permissionIds)
+		})
+
+		const [createdUser] = await readUserRows(client, id)
+
+		return createdUser
+	} finally {
+		await client.end()
+	}
+}
+
+export async function updateUser(
+	id: string,
+	input: UpdateUserInput,
+): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const normalizedInput = normalizeUpdateInput(input)
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [existingUser] = await readUserRows(client, id)
+
+		if (!existingUser) {
+			return undefined
+		}
+
+		const passwordHash =
+			normalizedInput.password === undefined
+				? undefined
+				: await Bun.password.hash(normalizedInput.password)
+
+		await client.begin(async (sql) => {
+			if (passwordHash === undefined) {
+				await sql`
+					UPDATE users
+					SET
+						email = ${normalizedInput.email ?? existingUser.email},
+						first_name = ${normalizedInput.firstName ?? existingUser.firstName},
+						last_name = ${normalizedInput.lastName ?? existingUser.lastName},
+						username = ${normalizedInput.username ?? existingUser.username}
+					WHERE id = ${id}
+				`
+			} else {
+				await sql`
+					UPDATE users
+					SET
+						email = ${normalizedInput.email ?? existingUser.email},
+						first_name = ${normalizedInput.firstName ?? existingUser.firstName},
+						last_name = ${normalizedInput.lastName ?? existingUser.lastName},
+						username = ${normalizedInput.username ?? existingUser.username},
+						password_hash = ${passwordHash}
+					WHERE id = ${id}
+				`
+			}
+
+			if (normalizedInput.permissionIds !== undefined) {
+				await replaceUserPermissions(sql, id, normalizedInput.permissionIds)
+			}
+		})
+
+		const [updatedUser] = await readUserRows(client, id)
+
+		return updatedUser
+	} finally {
+		await client.end()
+	}
+}
+
+export async function deleteUser(id: string): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [user] = await readUserRows(client, id)
+
+		if (!user) {
+			return undefined
+		}
+
+		await client`
+			DELETE FROM users
+			WHERE id = ${id}
+		`
+
+		return user
+	} finally {
+		await client.end()
+	}
+}
+
+export async function authenticateUser(
+	identifier: string,
+	password: string,
+): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const normalizedIdentifier = identifier.trim().toLowerCase()
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [row] = await client<UserWithPasswordRow[]>`
+			SELECT id, email, first_name, last_name, username, password_hash
+			FROM users
+			WHERE email = ${normalizedIdentifier}
+				OR lower(username) = ${normalizedIdentifier}
+			LIMIT 1
+		`
+
+		if (!row) {
+			return undefined
+		}
+
+		const isPasswordValid = await Bun.password.verify(
+			password,
+			row.password_hash,
+		)
+
+		if (!isPasswordValid) {
+			return undefined
+		}
+
+		const [user] = await readUserRows(client, row.id)
+
+		return user
+	} finally {
+		await client.end()
+	}
+}

@@ -1,0 +1,3 @@
+-- Drizzle schema snapshot marker.
+-- The users and permissions DDL lives in 0003_users_permissions.sql so that
+-- seeded permission rows can be created in the same migration.
