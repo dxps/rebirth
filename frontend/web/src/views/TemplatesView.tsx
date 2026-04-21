@@ -3127,7 +3127,7 @@ export function TemplatesView() {
 								className="access-level-details"
 								data-selectable="true"
 							>
-								<div>
+								<div className="attribute-template-id-row">
 									<p>id</p>
 									<strong className="attribute-template-id-value">
 										{modal.attributeTemplate.id}
@@ -3143,18 +3143,21 @@ export function TemplatesView() {
 										{modal.attributeTemplate.description}
 									</strong>
 								</div>
-								<div>
-									<p>value type</p>
-									<strong>{modal.attributeTemplate.valueType}</strong>
-								</div>
-								<div>
-									<p>access level</p>
-									<strong>
-										{accessLevels.find(
-											(accessLevel) =>
-												accessLevel.id === modal.attributeTemplate?.accessLevelId,
-										)?.name ?? modal.attributeTemplate.accessLevelId}
-									</strong>
+								<div className="attribute-template-detail-pair-row">
+									<div>
+										<p>value type</p>
+										<strong>{modal.attributeTemplate.valueType}</strong>
+									</div>
+									<div>
+										<p>access level</p>
+										<strong>
+											{accessLevels.find(
+												(accessLevel) =>
+													accessLevel.id ===
+													modal.attributeTemplate?.accessLevelId,
+											)?.name ?? modal.attributeTemplate.accessLevelId}
+										</strong>
+									</div>
 								</div>
 								<div>
 									<p>default value</p>

@@ -998,6 +998,26 @@ button.draggable-modal-resize:hover {
 	overflow-wrap: anywhere;
 }
 
+.access-level-details .attribute-template-id-row {
+	align-items: baseline;
+	display: flex;
+	gap: 0.35rem;
+}
+
+.access-level-details .attribute-template-id-row p {
+	margin: 0;
+}
+
+.access-level-details .attribute-template-id-row p::after {
+	content: ':';
+}
+
+.access-level-details .attribute-template-detail-pair-row {
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .entity-template-details-attributes {
 	display: grid;
 	gap: 0.25rem;
@@ -1053,7 +1073,7 @@ button.draggable-modal-resize:hover {
 .entity-template-edit-form select,
 .entity-template-edit-form textarea {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
-	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border: 0;
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
@@ -1154,7 +1174,6 @@ button.draggable-modal-resize:hover {
 .entity-template-edit-form input:focus,
 .entity-template-edit-form select:focus,
 .entity-template-edit-form textarea:focus {
-	border-color: var(--focus-ring);
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
 	outline: 0;
 }
@@ -1460,7 +1479,7 @@ button.include-attribute-close-button {
 .include-attribute-fields select,
 .include-attribute-fields textarea {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
-	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border: 0;
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
@@ -1587,7 +1606,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .entity-template-edit-form .entity-template-attribute-name-input {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
 	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
-	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border: 0;
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
@@ -1840,7 +1859,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .entity-template-edit-form .entity-template-link-input {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
 	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
-	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border: 0;
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
