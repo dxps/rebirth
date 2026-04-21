@@ -96,8 +96,17 @@ export const entityTemplateLinks = pgTable(
 		targetEntityTemplateId: uuid('target_entity_template_id').notNull(),
 		name: text('name').notNull(),
 		description: text('description'),
+		listingIndex: integer('listing_index').notNull(),
 	},
 	(table) => [
+		unique('entity_tmpl_links_entity_tmpl_id_listing_idx_unique').on(
+			table.entityTemplateId,
+			table.listingIndex,
+		),
+		check(
+			'entity_tmpl_links_listing_idx_check',
+			sql`${table.listingIndex} >= 0`,
+		),
 		check(
 			'entity_tmpl_links_name_trimmed_check',
 			sql`${table.name} = btrim(${table.name})`,

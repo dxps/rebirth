@@ -1032,6 +1032,11 @@ button.draggable-modal-resize:hover {
 	min-height: 0;
 }
 
+.entity-template-view-form {
+	grid-template-rows: auto auto;
+	height: auto;
+}
+
 .access-level-edit-form label,
 .entity-template-edit-form label {
 	color: var(--muted);
@@ -1167,6 +1172,10 @@ button.draggable-modal-resize:hover {
 	min-width: 0;
 }
 
+.entity-template-view-form .entity-template-tabs {
+	grid-template-rows: auto auto;
+}
+
 .entity-template-tabs > [role='tabpanel'] {
 	min-height: 0;
 	overflow-y: hidden;
@@ -1202,6 +1211,10 @@ button.draggable-modal-resize:hover {
 }
 
 .entity-template-edit-form:not(.entity-template-view-form) .entity-template-tab-row {
+	border-bottom: 0;
+}
+
+.entity-template-view-form .entity-template-tab-row {
 	border-bottom: 0;
 }
 
@@ -1312,6 +1325,10 @@ button.entity-template-tab[aria-selected='true']:hover {
 	text-align: left;
 }
 
+.entity-template-view-attributes-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
 .entity-template-attributes-table td.data-table-empty-cell {
 	text-align: center;
 }
@@ -1330,6 +1347,46 @@ button.entity-template-tab[aria-selected='true']:hover {
 	grid-column: 3;
 	justify-self: end;
 	position: relative;
+}
+
+.include-link-action {
+	align-items: center;
+	display: inline-flex;
+	grid-column: 3;
+	justify-self: end;
+}
+
+.include-link-action .section-action-button:disabled,
+.include-link-action button.section-action-button:disabled {
+	opacity: 1;
+}
+
+.include-link-action .section-action-button:disabled svg,
+.include-link-action button.section-action-button:disabled svg {
+	opacity: 0.35;
+}
+
+.include-link-action .section-action-button[data-tooltip]::after {
+	line-height: 1.2;
+	opacity: 0;
+	right: calc(100% + 0.35rem);
+	text-align: right;
+	top: 50%;
+	transform: translate(0.1rem, -50%);
+	white-space: pre-line;
+	width: max-content;
+}
+
+.include-link-action .section-action-button[data-tooltip]:hover::after,
+.include-link-action .section-action-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translate(0, -50%);
+}
+
+.include-link-action .section-action-button:disabled[data-tooltip]:hover::after,
+.include-link-action
+	button.section-action-button:disabled[data-tooltip]:hover::after {
+	opacity: 1;
 }
 
 .include-attribute-popover {
@@ -1699,6 +1756,198 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	height: 0.34rem;
 	right: 0.18rem;
 	width: 0.34rem;
+}
+
+.entity-template-links-table {
+	table-layout: fixed;
+	width: 100%;
+}
+
+.entity-template-links-table td {
+	padding-bottom: 0.24rem;
+	padding-top: 0.24rem;
+	vertical-align: middle;
+}
+
+.entity-template-links-table .data-table-empty-cell span {
+	display: block;
+}
+
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-links-table td:first-child {
+	padding-left: 0;
+}
+
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-links-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.entity-template-links-table tr[data-dragging='true'] {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.entity-template-link-name-column {
+	width: 28%;
+}
+
+.entity-template-link-description-column {
+	width: auto;
+}
+
+.entity-template-link-target-column {
+	width: 6.5rem;
+}
+
+.entity-template-link-action-column {
+	width: 3.2rem;
+}
+
+.entity-template-link-name-cell,
+.entity-template-link-description-cell {
+	position: relative;
+}
+
+.entity-template-link-name-cell[data-tooltip]::after,
+.entity-template-link-description-cell[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	bottom: calc(100% + 0.35rem);
+	transform: translateY(0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.entity-template-link-name-cell[data-tooltip]:hover::after,
+.entity-template-link-description-cell[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.entity-template-edit-form .entity-template-link-input {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 500;
+	height: 1.72rem;
+	line-height: 1.35;
+	min-height: 1.72rem;
+	padding: 0.16rem 0.36rem;
+	width: 100%;
+}
+
+.entity-template-link-target-wrap {
+	display: inline-block;
+	width: 100%;
+}
+
+.entity-template-edit-form .entity-template-link-target-wrap select {
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	color: inherit;
+	cursor: pointer;
+	font-size: 0.78rem;
+	height: 1.2rem;
+	padding: 0 1.25rem 0 0.18rem;
+	width: 100%;
+}
+
+.entity-template-link-target-wrap::after {
+	height: 0.34rem;
+	right: 0.28rem;
+	width: 0.34rem;
+}
+
+.entity-template-view-links-table td {
+	overflow: visible;
+}
+
+.entity-template-view-links-table td:last-child {
+	text-align: right;
+}
+
+.entity-template-view-links-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.entity-template-link-description-value {
+	position: relative;
+}
+
+.entity-template-link-description-value span {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.entity-template-link-description-value[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1.2;
+	max-width: 250px;
+	opacity: 0;
+	overflow-wrap: anywhere;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: normal;
+	width: max-content;
+	z-index: 2;
+}
+
+.entity-template-link-description-value[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.entity-template-link-actions {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.entity-template-link-actions .icon-only-button + .icon-only-button {
+	margin-left: 0.38rem;
+}
+
+.entity-template-link-actions .icon-only-button[data-tooltip]::after {
+	bottom: auto;
+	right: calc(100% + 0.35rem);
+	top: 50%;
+	transform: translate(0.1rem, -50%);
+}
+
+.entity-template-link-actions .icon-only-button[data-tooltip]:hover::after,
+.entity-template-link-actions .icon-only-button[data-tooltip]:focus-visible::after {
+	transform: translate(0, -50%);
 }
 
 .icon-only-button,

@@ -186,7 +186,10 @@ function isCreateEntityTemplateLinkInput(
 		typeof input.name === 'string' &&
 		(input.description === undefined ||
 			input.description === null ||
-			typeof input.description === 'string')
+			typeof input.description === 'string') &&
+		typeof input.listingIndex === 'number' &&
+		Number.isInteger(input.listingIndex) &&
+		input.listingIndex >= 0
 	)
 }
 

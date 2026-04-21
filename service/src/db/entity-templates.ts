@@ -44,6 +44,7 @@ interface EntityTemplateLinkRow {
 	target_entity_template_id: string
 	name: string
 	description: string | null
+	listing_index: number
 }
 
 function normalizeNullableText(value: string | null | undefined): string | null {
@@ -59,11 +60,14 @@ function normalizeNullableText(value: string | null | undefined): string | null 
 function normalizeLinks(
 	links: CreateEntityTemplateLinkInput[] | undefined,
 ): CreateEntityTemplateLinkInput[] {
-	return (links ?? []).map((link) => ({
-		description: normalizeNullableText(link.description),
-		name: link.name.trim(),
-		targetEntityTemplateId: link.targetEntityTemplateId,
-	}))
+	return (links ?? [])
+		.map((link, index) => ({
+			description: normalizeNullableText(link.description),
+			listingIndex: link.listingIndex ?? index,
+			name: link.name.trim(),
+			targetEntityTemplateId: link.targetEntityTemplateId,
+		}))
+		.sort((left, right) => left.listingIndex - right.listingIndex)
 }
 
 function normalizeCreateInput(
@@ -108,6 +112,7 @@ function toEntityTemplateLink(row: EntityTemplateLinkRow): EntityTemplateLink {
 		description: row.description,
 		entityTemplateId: row.entity_template_id,
 		id: row.id,
+		listingIndex: row.listing_index,
 		name: row.name,
 		targetEntityTemplateId: row.target_entity_template_id,
 	}
@@ -178,10 +183,10 @@ async function readEntityTemplateRows(
 		ORDER BY entity_template_id, listing_index
 	`
 	const linkRows = await client<EntityTemplateLinkRow[]>`
-		SELECT id, entity_template_id, target_entity_template_id, name, description
+		SELECT id, entity_template_id, target_entity_template_id, name, description, listing_index
 		FROM entity_template_links
 		WHERE entity_template_id = ANY(${ids})
-		ORDER BY entity_template_id, name
+		ORDER BY entity_template_id, listing_index
 	`
 
 	return toEntityTemplates(rows, attributeRows, linkRows)
@@ -240,14 +245,16 @@ async function replaceEntityTemplateLinks(
 				entity_template_id,
 				target_entity_template_id,
 				name,
-				description
+				description,
+				listing_index
 			)
 			VALUES (
 				${createUuidV7()},
 				${entityTemplateId},
 				${link.targetEntityTemplateId},
 				${link.name.trim()},
-				${normalizeNullableText(link.description)}
+				${normalizeNullableText(link.description)},
+				${link.listingIndex}
 			)
 		`
 	}

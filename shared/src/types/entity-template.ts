@@ -36,6 +36,7 @@ export interface EntityTemplateLink {
 	targetEntityTemplateId: EntityTemplateId
 	name: string
 	description: string | null
+	listingIndex: number
 }
 
 export interface EntityTemplate {
@@ -51,6 +52,7 @@ export interface CreateEntityTemplateLinkInput {
 	targetEntityTemplateId: EntityTemplateId
 	name: string
 	description?: string | null
+	listingIndex: number
 }
 
 export interface CreateEntityTemplateInput {

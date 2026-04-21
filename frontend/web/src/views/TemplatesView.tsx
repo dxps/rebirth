@@ -638,6 +638,7 @@ interface EntityTemplateEditFormProps {
 	attributeTemplates: AttributeTemplate[]
 	autoFocusName?: boolean
 	entityTemplate?: EntityTemplate
+	entityTemplates: EntityTemplate[]
 	formId: string
 	modalKey: string
 	onCreateAttributeTemplate: (
@@ -657,11 +658,20 @@ interface IncludedEntityAttribute {
 	valueType: ValueType
 }
 
+interface IncludedEntityLink {
+	id: string
+	description: string
+	listingIndex: number
+	name: string
+	targetEntityTemplateId: string
+}
+
 function EntityTemplateEditForm({
 	accessLevels,
 	attributeTemplates,
 	autoFocusName = false,
 	entityTemplate,
+	entityTemplates,
 	formId,
 	modalKey,
 	onCreateAttributeTemplate,
@@ -696,6 +706,21 @@ function EntityTemplateEditForm({
 					}))
 			: [],
 	)
+	const [includedLinks, setIncludedLinks] = useState<IncludedEntityLink[]>(
+		() =>
+			entityTemplate
+				? entityTemplate.links
+						.slice()
+						.sort((left, right) => left.listingIndex - right.listingIndex)
+						.map((link, index) => ({
+							description: link.description ?? '',
+							id: link.id,
+							listingIndex: index,
+							name: link.name,
+							targetEntityTemplateId: link.targetEntityTemplateId,
+						}))
+				: [],
+	)
 	const availableAttributeTemplates = attributeTemplates.filter(
 		(attributeTemplate) =>
 			!includedAttributes.some(
@@ -706,6 +731,9 @@ function EntityTemplateEditForm({
 					attribute.valueType === attributeTemplate.valueType,
 			),
 	)
+	const availableLinkTargets = entityTemplates.filter(
+		(candidate) => candidate.id !== entityTemplate?.id,
+	)
 	const [includeAttributeMode, setIncludeAttributeMode] = useState<
 		'existing' | 'new'
 	>('existing')
@@ -713,6 +741,8 @@ function EntityTemplateEditForm({
 		useState(false)
 	const [isIncludeAttributeOpen, setIsIncludeAttributeOpen] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
+	const [draggedLinkId, setDraggedLinkId] = useState<string | null>(null)
+	const draggedLinkIdRef = useRef<string | null>(null)
 	const [newAttributeDescription, setNewAttributeDescription] = useState('')
 	const [newAttributeName, setNewAttributeName] = useState('')
 	const [newAttributeSaveAsTemplate, setNewAttributeSaveAsTemplate] =
@@ -731,12 +761,21 @@ function EntityTemplateEditForm({
 	const nameInputRef = useRef<HTMLInputElement>(null)
 	const newAttributeNameInputRef = useRef<HTMLInputElement>(null)
 	const previousAttributeRowTopsRef = useRef<Map<string, number>>(new Map())
+	const previousLinkRowTopsRef = useRef<Map<string, number>>(new Map())
 	const shouldAnimateAttributeRowsRef = useRef(false)
+	const shouldAnimateLinkRowsRef = useRef(false)
 	const isValid =
 		name.trim().length > 0 &&
 		includedAttributes.length > 0 &&
 		listingAttributeId.length > 0 &&
-		includedAttributes.every((attribute) => attribute.name.trim().length > 0)
+		includedAttributes.every((attribute) => attribute.name.trim().length > 0) &&
+		includedLinks.every(
+			(link) =>
+				link.name.trim().length > 0 &&
+				availableLinkTargets.some(
+					(target) => target.id === link.targetEntityTemplateId,
+				),
+		)
 
 	useEffect(() => {
 		onValidityChange(modalKey, isValid)
@@ -820,6 +859,23 @@ function EntityTemplateEditForm({
 		return rowTops
 	}
 
+	function getLinkRowTops(): Map<string, number> {
+		const rows = formRef.current?.querySelectorAll<HTMLTableRowElement>(
+			'[data-entity-template-link-id]',
+		)
+		const rowTops = new Map<string, number>()
+
+		rows?.forEach((row) => {
+			const linkId = row.dataset.entityTemplateLinkId
+
+			if (linkId) {
+				rowTops.set(linkId, row.getBoundingClientRect().top)
+			}
+		})
+
+		return rowTops
+	}
+
 	useLayoutEffect(() => {
 		const previousRowTops = previousAttributeRowTopsRef.current
 		const nextRowTops = getAttributeRowTops()
@@ -863,6 +919,48 @@ function EntityTemplateEditForm({
 		shouldAnimateAttributeRowsRef.current = false
 		previousAttributeRowTopsRef.current = nextRowTops
 	}, [includedAttributes])
+
+	useLayoutEffect(() => {
+		const previousRowTops = previousLinkRowTopsRef.current
+		const nextRowTops = getLinkRowTops()
+
+		if (shouldAnimateLinkRowsRef.current) {
+			formRef.current
+				?.querySelectorAll<HTMLTableRowElement>(
+					'[data-entity-template-link-id]',
+				)
+				.forEach((row) => {
+					const linkId = row.dataset.entityTemplateLinkId
+					const previousTop = linkId ? previousRowTops.get(linkId) : undefined
+					const nextTop = linkId ? nextRowTops.get(linkId) : undefined
+
+					if (previousTop === undefined || nextTop === undefined) {
+						return
+					}
+
+					const deltaY = previousTop - nextTop
+
+					if (deltaY === 0) {
+						return
+					}
+
+					row.getAnimations().forEach((animation) => animation.cancel())
+					row.animate(
+						[
+							{ transform: `translateY(${deltaY}px)` },
+							{ transform: 'translateY(0)' },
+						],
+						{
+							duration: 160,
+							easing: 'cubic-bezier(0.2, 0, 0, 1)',
+						},
+					)
+				})
+		}
+
+		shouldAnimateLinkRowsRef.current = false
+		previousLinkRowTopsRef.current = nextRowTops
+	}, [includedLinks])
 
 	useLayoutEffect(() => {
 		const panel = attributesPanelRef.current
@@ -991,6 +1089,90 @@ function EntityTemplateEditForm({
 		)
 	}
 
+	function addLink(): void {
+		const targetEntityTemplateId = availableLinkTargets[0]?.id
+
+		if (!targetEntityTemplateId) {
+			return
+		}
+
+		setIncludedLinks((current) => [
+			...current,
+			{
+				description: '',
+				id: crypto.randomUUID(),
+				listingIndex: current.length,
+				name: '',
+				targetEntityTemplateId,
+			},
+		])
+	}
+
+	function removeLink(linkId: string): void {
+		setIncludedLinks((current) => current.filter((link) => link.id !== linkId))
+	}
+
+	function updateLinkDescription(linkId: string, description: string): void {
+		setIncludedLinks((current) =>
+			current.map((link) =>
+				link.id === linkId ? { ...link, description } : link,
+			),
+		)
+	}
+
+	function updateLinkName(linkId: string, name: string): void {
+		setIncludedLinks((current) =>
+			current.map((link) => (link.id === linkId ? { ...link, name } : link)),
+		)
+	}
+
+	function updateLinkTarget(
+		linkId: string,
+		targetEntityTemplateId: string,
+	): void {
+		setIncludedLinks((current) =>
+			current.map((link) =>
+				link.id === linkId ? { ...link, targetEntityTemplateId } : link,
+			),
+		)
+	}
+
+	function reorderLink(draggedLinkId: string, targetLinkId: string): void {
+		if (draggedLinkId === targetLinkId) {
+			return
+		}
+
+		previousLinkRowTopsRef.current = getLinkRowTops()
+		shouldAnimateLinkRowsRef.current = true
+
+		setIncludedLinks((current) => {
+			const draggedIndex = current.findIndex((link) => link.id === draggedLinkId)
+			const targetIndex = current.findIndex((link) => link.id === targetLinkId)
+
+			if (draggedIndex < 0 || targetIndex < 0) {
+				return current
+			}
+
+			const next = current.slice()
+			const [draggedLink] = next.splice(draggedIndex, 1)
+			if (!draggedLink) {
+				return current
+			}
+
+			next.splice(targetIndex, 0, draggedLink)
+
+			return next.map((link, index) => ({
+				...link,
+				listingIndex: index,
+			}))
+		})
+	}
+
+	function setActiveDraggedLink(linkId: string | null): void {
+		draggedLinkIdRef.current = linkId
+		setDraggedLinkId(linkId)
+	}
+
 	function updateAttributeAccessLevel(
 		attributeId: string,
 		accessLevelId: number,
@@ -1093,6 +1275,18 @@ function EntityTemplateEditForm({
 		}
 	}
 
+	function getTableRowLayoutBounds(row: HTMLTableRowElement): {
+		height: number
+		top: number
+	} {
+		const tableTop = row.closest('table')?.getBoundingClientRect().top ?? 0
+
+		return {
+			height: row.offsetHeight,
+			top: tableTop + row.offsetTop,
+		}
+	}
+
 	function startAttributePointerDrag(
 		event: ReactPointerEvent<HTMLButtonElement>,
 		attributeId: string,
@@ -1165,6 +1359,77 @@ function EntityTemplateEditForm({
 		window.addEventListener('pointercancel', stop)
 	}
 
+	function startLinkPointerDrag(
+		event: ReactPointerEvent<HTMLButtonElement>,
+		linkId: string,
+	): void {
+		event.preventDefault()
+		event.stopPropagation()
+		setActiveDraggedLink(linkId)
+
+		function move(pointerEvent: PointerEvent): void {
+			const rows = Array.from(
+				formRef.current?.querySelectorAll<HTMLTableRowElement>(
+					'[data-entity-template-link-id]',
+				) ?? [],
+			)
+			const draggedId = draggedLinkIdRef.current
+			const draggedIndex = rows.findIndex(
+				(row) => row.dataset.entityTemplateLinkId === draggedId,
+			)
+
+			if (!draggedId || draggedIndex < 0) {
+				return
+			}
+
+			const previousRow = rows[draggedIndex - 1]
+			const nextRow = rows[draggedIndex + 1]
+
+			if (previousRow) {
+				const previousRect = getTableRowLayoutBounds(previousRow)
+				const previousTriggerY =
+					previousRect.top +
+					previousRect.height * (1 - entityTemplateAttributeReorderThreshold)
+
+				if (pointerEvent.clientY < previousTriggerY) {
+					const previousLinkId = previousRow.dataset.entityTemplateLinkId
+
+					if (previousLinkId) {
+						reorderLink(draggedId, previousLinkId)
+					}
+
+					return
+				}
+			}
+
+			if (nextRow) {
+				const nextRect = getTableRowLayoutBounds(nextRow)
+				const nextTriggerY =
+					nextRect.top +
+					nextRect.height * entityTemplateAttributeReorderThreshold
+
+				if (pointerEvent.clientY > nextTriggerY) {
+					const nextLinkId = nextRow.dataset.entityTemplateLinkId
+
+					if (nextLinkId) {
+						reorderLink(draggedId, nextLinkId)
+					}
+				}
+			}
+		}
+
+		function stop(): void {
+			window.removeEventListener('pointermove', move)
+			window.removeEventListener('pointerup', stop)
+			window.removeEventListener('pointercancel', stop)
+			setActiveDraggedLink(null)
+		}
+
+		window.addEventListener('pointermove', move)
+		window.addEventListener('pointerup', stop)
+		window.addEventListener('pointercancel', stop)
+	}
+
 	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
 		event.preventDefault()
 
@@ -1177,6 +1442,8 @@ function EntityTemplateEditForm({
 									(attribute) => attribute.name.trim().length === 0,
 								)
 							? 'Included attributes must have names'
+						: includedLinks.some((link) => link.name.trim().length === 0)
+							? 'Links must have names'
 						: 'Name is required',
 			})
 			return
@@ -1197,7 +1464,15 @@ function EntityTemplateEditForm({
 					valueType: attribute.valueType,
 				})),
 				description,
-				links: [],
+				links: includedLinks.map((link, index) => ({
+					description:
+						link.description.trim().length > 0
+							? link.description.trim()
+							: null,
+					listingIndex: index,
+					name: link.name.trim(),
+					targetEntityTemplateId: link.targetEntityTemplateId,
+				})),
 				listingAttributeId,
 				name,
 			})
@@ -1451,7 +1726,24 @@ function EntityTemplateEditForm({
 								</div>
 							) : null}
 						</span>
-					) : null}
+					) : (
+						<span className="include-link-action">
+							<button
+								aria-label="Add link"
+								className="section-action-button"
+								data-tooltip={
+									availableLinkTargets.length === 0
+										? 'There are no entity templates\nto refer to in a link.'
+										: 'Add link'
+								}
+								disabled={availableLinkTargets.length === 0}
+								type="button"
+								onClick={addLink}
+							>
+								<Plus aria-hidden="true" />
+							</button>
+						</span>
+					)}
 				</div>
 
 				{activeTab === 'attributes' ? (
@@ -1601,12 +1893,123 @@ function EntityTemplateEditForm({
 						</table>
 					</div>
 				) : (
-					<div
-						className="entity-template-empty-panel"
-						role="tabpanel"
-					>
-						<span>There are no links</span>
-						<span>(from this to other entity templates)</span>
+					<div role="tabpanel">
+						<table className="data-table entity-template-modal-table entity-template-links-table">
+							<colgroup>
+								<col className="entity-template-link-name-column" />
+								<col className="entity-template-link-description-column" />
+								<col className="entity-template-link-target-column" />
+								<col className="entity-template-link-action-column" />
+							</colgroup>
+							<tbody>
+								{includedLinks.length === 0 ? (
+									<tr>
+										<td
+											className="data-table-empty-cell"
+											colSpan={4}
+										>
+											<span>There are no links</span>
+											<span>(from this to other entity templates)</span>
+										</td>
+									</tr>
+								) : (
+									includedLinks.map((includedLink) => (
+										<tr
+											key={includedLink.id}
+											data-dragging={
+												draggedLinkId === includedLink.id || undefined
+											}
+											data-entity-template-link-id={includedLink.id}
+										>
+											<td
+												className="entity-template-link-name-cell"
+												data-tooltip="Name"
+											>
+												<input
+													aria-label="Link name"
+													className="entity-template-link-input"
+													data-no-drag="true"
+													type="text"
+													value={includedLink.name}
+													onChange={(event) =>
+														updateLinkName(
+															includedLink.id,
+															event.target.value,
+														)
+													}
+												/>
+											</td>
+											<td
+												className="entity-template-link-description-cell"
+												data-tooltip="Description"
+											>
+												<input
+													aria-label="Link description"
+													className="entity-template-link-input"
+													data-no-drag="true"
+													type="text"
+													value={includedLink.description}
+													onChange={(event) =>
+														updateLinkDescription(
+															includedLink.id,
+															event.target.value,
+														)
+													}
+												/>
+											</td>
+											<td>
+												<span className="attribute-template-select-wrap entity-template-link-target-wrap">
+													<select
+														aria-label={`${includedLink.name || 'Link'} target entity template`}
+														data-no-drag="true"
+														value={includedLink.targetEntityTemplateId}
+														onChange={(event) =>
+															updateLinkTarget(
+																includedLink.id,
+																event.target.value,
+															)
+														}
+													>
+														{availableLinkTargets.map((target) => (
+															<option
+																key={target.id}
+																value={target.id}
+															>
+																{target.name}
+															</option>
+														))}
+													</select>
+												</span>
+											</td>
+											<td className="entity-template-link-actions">
+												<button
+													aria-label={`Remove ${includedLink.name || 'link'}`}
+													className="icon-only-button"
+													data-no-drag="true"
+													data-tooltip="Exclude"
+													type="button"
+													onClick={() => removeLink(includedLink.id)}
+												>
+													<Trash2 aria-hidden="true" />
+												</button>
+												<button
+													aria-label={`Drag ${includedLink.name || 'link'}`}
+													className="icon-only-button entity-template-drag-handle"
+													data-no-drag="true"
+													data-tooltip={'Drag up or down\nto reorder'}
+													type="button"
+													onPointerDown={(event) =>
+														startLinkPointerDrag(event, includedLink.id)
+													}
+												>
+													<GripVertical aria-hidden="true" />
+												</button>
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
 					</div>
 				)}
 			</div>
@@ -1627,14 +2030,64 @@ function EntityTemplateEditForm({
 interface EntityTemplateDetailsViewProps {
 	accessLevels: AccessLevel[]
 	entityTemplate: EntityTemplate
+	entityTemplates: EntityTemplate[]
+}
+
+function LinkDescriptionValue({
+	description,
+}: {
+	description: string | null
+}) {
+	const descriptionRef = useRef<HTMLSpanElement>(null)
+	const [isTrimmed, setIsTrimmed] = useState(false)
+	const descriptionValue = description ?? ''
+
+	useLayoutEffect(() => {
+		const element = descriptionRef.current
+
+		if (!element) {
+			setIsTrimmed(false)
+			return
+		}
+
+		const measuredElement = element
+
+		function updateTrimmedState(): void {
+			setIsTrimmed(
+				measuredElement.scrollWidth > measuredElement.clientWidth,
+			)
+		}
+
+		updateTrimmedState()
+
+		const resizeObserver = new ResizeObserver(updateTrimmedState)
+		resizeObserver.observe(measuredElement)
+
+		return () => {
+			resizeObserver.disconnect()
+		}
+	}, [descriptionValue])
+
+	return (
+		<td
+			className="entity-template-link-description-value"
+			data-tooltip={isTrimmed ? descriptionValue : undefined}
+		>
+			<span ref={descriptionRef}>{descriptionValue}</span>
+		</td>
+	)
 }
 
 function EntityTemplateDetailsView({
 	accessLevels,
 	entityTemplate,
+	entityTemplates,
 }: EntityTemplateDetailsViewProps) {
 	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>('attributes')
 	const orderedAttributes = entityTemplate.attributes
+		.slice()
+		.sort((left, right) => left.listingIndex - right.listingIndex)
+	const orderedLinks = entityTemplate.links
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
 
@@ -1756,18 +2209,40 @@ function EntityTemplateDetailsView({
 						</table>
 					</div>
 				) : (
-					<div
-						className="entity-template-empty-panel"
-						role="tabpanel"
-					>
-						{entityTemplate.links.length === 0 ? (
-							<>
-								<span>There are no links</span>
-								<span>(from this to other entity templates)</span>
-							</>
-						) : (
-							entityTemplate.links.map((link) => link.name).join(', ')
-						)}
+					<div role="tabpanel">
+						<table className="data-table entity-template-modal-table entity-template-links-table entity-template-view-links-table">
+							<colgroup>
+								<col className="entity-template-link-name-column" />
+								<col className="entity-template-link-description-column" />
+								<col className="entity-template-link-target-column" />
+							</colgroup>
+							<tbody>
+								{orderedLinks.length === 0 ? (
+									<tr>
+										<td
+											className="data-table-empty-cell"
+											colSpan={3}
+										>
+											<span>There are no links</span>
+											<span>(from this to other entity templates)</span>
+										</td>
+									</tr>
+								) : (
+									orderedLinks.map((link) => (
+										<tr key={link.id}>
+											<td>{link.name}</td>
+											<LinkDescriptionValue description={link.description} />
+											<td>
+												{entityTemplates.find(
+													(candidate) =>
+														candidate.id === link.targetEntityTemplateId,
+												)?.name ?? link.targetEntityTemplateId}
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
 					</div>
 				)}
 			</div>
@@ -2584,6 +3059,7 @@ export function TemplatesView() {
 									accessLevels={accessLevels}
 									attributeTemplates={attributeTemplates}
 									autoFocusName
+									entityTemplates={entityTemplates}
 									formId={`${modal.key}-edit-form`}
 									modalKey={modal.key}
 									onCreateAttributeTemplate={createAttributeTemplate}
@@ -2598,6 +3074,7 @@ export function TemplatesView() {
 									attributeTemplates={attributeTemplates}
 									autoFocusName
 									entityTemplate={modal.entityTemplate}
+									entityTemplates={entityTemplates}
 									formId={`${modal.key}-edit-form`}
 									modalKey={modal.key}
 									onCreateAttributeTemplate={createAttributeTemplate}
@@ -2643,6 +3120,7 @@ export function TemplatesView() {
 							<EntityTemplateDetailsView
 								accessLevels={accessLevels}
 								entityTemplate={modal.entityTemplate}
+								entityTemplates={entityTemplates}
 							/>
 						) : modal.attributeTemplate ? (
 							<div

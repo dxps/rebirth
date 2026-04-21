@@ -290,6 +290,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "listing_index": {
+          "name": "listing_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -323,6 +329,14 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "entity_tmpl_links_entity_tmpl_id_listing_idx_unique": {
+          "name": "entity_tmpl_links_entity_tmpl_id_listing_idx_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "entity_template_id",
+            "listing_index"
+          ]
+        },
         "entity_tmpl_links_source_target_name_unique": {
           "name": "entity_tmpl_links_source_target_name_unique",
           "nullsNotDistinct": false,
@@ -335,6 +349,10 @@
       },
       "policies": {},
       "checkConstraints": {
+        "entity_tmpl_links_listing_idx_check": {
+          "name": "entity_tmpl_links_listing_idx_check",
+          "value": "\"entity_template_links\".\"listing_index\" >= 0"
+        },
         "entity_tmpl_links_name_trimmed_check": {
           "name": "entity_tmpl_links_name_trimmed_check",
           "value": "\"entity_template_links\".\"name\" = btrim(\"entity_template_links\".\"name\")"

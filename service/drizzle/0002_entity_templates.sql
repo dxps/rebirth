@@ -19,6 +19,9 @@ CREATE TABLE "entity_template_links" (
 	"target_entity_template_id" uuid NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
+	"listing_index" integer NOT NULL,
+	CONSTRAINT "entity_tmpl_links_entity_tmpl_id_listing_idx_unique" UNIQUE("entity_template_id","listing_index"),
+	CONSTRAINT "entity_tmpl_links_listing_idx_check" CHECK ("entity_template_links"."listing_index" >= 0),
 	CONSTRAINT "entity_tmpl_links_source_target_name_unique" UNIQUE("entity_template_id","target_entity_template_id","name"),
 	CONSTRAINT "entity_tmpl_links_name_trimmed_check" CHECK ("entity_template_links"."name" = btrim("entity_template_links"."name")),
 	CONSTRAINT "entity_tmpl_links_desc_trimmed_check" CHECK ("entity_template_links"."description" IS NULL OR "entity_template_links"."description" = btrim("entity_template_links"."description"))
