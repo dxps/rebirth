@@ -1,5 +1,5 @@
 import { apiRoutes, type LoginResponse } from '@rebirth/shared'
-import { LogIn } from 'lucide-react'
+import { Eye, EyeOff, LogIn } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { setStoredAuth } from '../auth'
@@ -9,6 +9,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 export function LoginView() {
 	const [identifier, setIdentifier] = useState('')
 	const [password, setPassword] = useState('')
+	const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -47,7 +48,7 @@ export function LoginView() {
 				sessionKey: data.data.sessionKey,
 				user: data.data.user,
 			})
-			window.history.pushState(null, '', '/profile')
+			window.history.pushState(null, '', '/')
 			window.dispatchEvent(new PopStateEvent('popstate'))
 		} catch (loginError) {
 			setError(
@@ -80,13 +81,27 @@ export function LoginView() {
 				</label>
 				<label>
 					<span>Password</span>
-					<input
-						autoComplete="current-password"
-						name="password"
-						type="password"
-						value={password}
-						onChange={(event) => setPassword(event.target.value)}
-					/>
+					<span className="security-user-password-wrap login-password-wrap">
+						<input
+							autoComplete="current-password"
+							name="password"
+							type={isPasswordVisible ? 'text' : 'password'}
+							value={password}
+							onChange={(event) => setPassword(event.target.value)}
+						/>
+						<button
+							aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+							className="security-user-password-toggle"
+							type="button"
+							onClick={() => setIsPasswordVisible((current) => !current)}
+						>
+							{isPasswordVisible ? (
+								<Eye aria-hidden="true" />
+							) : (
+								<EyeOff aria-hidden="true" />
+							)}
+						</button>
+					</span>
 				</label>
 				{error ? <p className="form-error">{error}</p> : null}
 				<button type="submit" disabled={isSubmitting}>

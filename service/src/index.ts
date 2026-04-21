@@ -456,7 +456,9 @@ const server = Bun.serve({
 
         const updatedUser = await updateUserEmail(
           authenticatedUser.id,
-          input.email
+          input.email,
+          input.firstName,
+          input.lastName
         );
 
         if (!updatedUser) {

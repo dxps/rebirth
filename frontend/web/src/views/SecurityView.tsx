@@ -36,7 +36,11 @@ import {
 	type ReactNode,
 	type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { getStoredAuth } from '../auth'
+import {
+	authChangedEventName,
+	getStoredAuth,
+	hasStoredPermission,
+} from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 220
@@ -817,6 +821,7 @@ function UserEditForm({
 }
 
 export function SecurityView() {
+	const [storedAuth, setStoredAuth] = useState(getStoredAuth)
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
 	const [error, setError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
@@ -835,6 +840,8 @@ export function SecurityView() {
 	const loadRequestId = useRef(0)
 	const usersLoadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
+	const isAuthenticated = storedAuth !== null
+	const isAuthorized = hasStoredPermission(storedAuth, PermissionName.Admin)
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
 		const requestId = loadRequestId.current + 1
@@ -930,7 +937,27 @@ export function SecurityView() {
 	}, [])
 
 	useEffect(() => {
+		function syncAuthState(): void {
+			setStoredAuth(getStoredAuth())
+		}
+
+		window.addEventListener(authChangedEventName, syncAuthState)
+		window.addEventListener('storage', syncAuthState)
+
+		return () => {
+			window.removeEventListener(authChangedEventName, syncAuthState)
+			window.removeEventListener('storage', syncAuthState)
+		}
+	}, [])
+
+	useEffect(() => {
 		isMountedRef.current = true
+
+		if (!isAuthorized) {
+			return () => {
+				isMountedRef.current = false
+			}
+		}
 
 		void loadAccessLevels()
 		void loadUsersAndPermissions()
@@ -938,7 +965,7 @@ export function SecurityView() {
 		return () => {
 			isMountedRef.current = false
 		}
-	}, [loadAccessLevels, loadUsersAndPermissions])
+	}, [isAuthorized, loadAccessLevels, loadUsersAndPermissions])
 
 	const bringToFront = useCallback((key: string) => {
 		nextZIndex.current += 1
@@ -1426,6 +1453,20 @@ export function SecurityView() {
 		},
 		[],
 	)
+
+	if (!isAuthorized) {
+		return (
+			<section className="security-view">
+				<div className="access-level-unavailable" role="status">
+					<p>
+						{isAuthenticated
+							? 'You are not authorized to access this section.'
+							: 'You must be authenticated to access this section.'}
+					</p>
+				</div>
+			</section>
+		)
+	}
 
 	return (
 		<section className="security-view">

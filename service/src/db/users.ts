@@ -289,6 +289,8 @@ export async function updateUser(
 export async function updateUserEmail(
 	id: string,
 	email: string,
+	firstName: string,
+	lastName: string,
 ): Promise<User | undefined> {
 	const databaseUrl = getDatabaseUrl()
 
@@ -297,12 +299,17 @@ export async function updateUserEmail(
 	}
 
 	const normalizedEmail = email.trim().toLowerCase()
+	const normalizedFirstName = firstName.trim()
+	const normalizedLastName = lastName.trim()
 	const { client } = createDatabase(databaseUrl)
 
 	try {
 		await client`
 			UPDATE users
-			SET email = ${normalizedEmail}
+			SET
+				email = ${normalizedEmail},
+				first_name = ${normalizedFirstName},
+				last_name = ${normalizedLastName}
 			WHERE id = ${id}
 		`
 

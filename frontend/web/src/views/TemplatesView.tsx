@@ -1,5 +1,6 @@
 import {
 	apiRoutes,
+	PermissionName,
 	ValueType,
 	valueTypes,
 	type AccessLevel,
@@ -37,6 +38,7 @@ import {
 	type ReactNode,
 	type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { authChangedEventName, getStoredAuth, hasStoredPermission } from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 362
@@ -51,6 +53,16 @@ const draggableModalDefaultWidth = 360
 const entityTemplateModalHeight = 440
 const entityTemplateModalWidth = 520
 const entityTemplateAttributeReorderThreshold = 0.5
+
+function getAuthHeaders(): Record<string, string> {
+	const storedAuth = getStoredAuth()
+
+	return storedAuth
+		? {
+				Authorization: `Bearer ${storedAuth.sessionKey}`,
+			}
+		: {}
+}
 
 async function getResponseErrorMessage(
 	response: Response,
@@ -2512,6 +2524,7 @@ function EntityTemplateDetailsView({
 }
 
 export function TemplatesView() {
+	const [storedAuth, setStoredAuth] = useState(getStoredAuth)
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
 	const [attributeTemplates, setAttributeTemplates] = useState<
 		AttributeTemplate[]
@@ -2533,6 +2546,10 @@ export function TemplatesView() {
 	const accessLevelsLoadRequestId = useRef(0)
 	const loadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
+	const isAuthenticated = storedAuth !== null
+	const isAuthorized =
+		hasStoredPermission(storedAuth, PermissionName.Admin) ||
+		hasStoredPermission(storedAuth, PermissionName.Manager)
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
 		const requestId = accessLevelsLoadRequestId.current + 1
@@ -2639,7 +2656,27 @@ export function TemplatesView() {
 	}, [])
 
 	useEffect(() => {
+		function syncAuthState(): void {
+			setStoredAuth(getStoredAuth())
+		}
+
+		window.addEventListener(authChangedEventName, syncAuthState)
+		window.addEventListener('storage', syncAuthState)
+
+		return () => {
+			window.removeEventListener(authChangedEventName, syncAuthState)
+			window.removeEventListener('storage', syncAuthState)
+		}
+	}, [])
+
+	useEffect(() => {
 		isMountedRef.current = true
+
+		if (!isAuthorized) {
+			return () => {
+				isMountedRef.current = false
+			}
+		}
 
 		void loadAccessLevels()
 		void loadAttributeTemplates()
@@ -2648,7 +2685,12 @@ export function TemplatesView() {
 		return () => {
 			isMountedRef.current = false
 		}
-	}, [loadAccessLevels, loadAttributeTemplates, loadEntityTemplates])
+	}, [
+		isAuthorized,
+		loadAccessLevels,
+		loadAttributeTemplates,
+		loadEntityTemplates,
+	])
 
 	const bringToFront = useCallback((key: string) => {
 		nextZIndex.current += 1
@@ -2722,6 +2764,7 @@ export function TemplatesView() {
 				{
 					body: JSON.stringify(input),
 					headers: {
+						...getAuthHeaders(),
 						'Content-Type': 'application/json',
 					},
 					method: 'PATCH',
@@ -2752,6 +2795,7 @@ export function TemplatesView() {
 				{
 					body: JSON.stringify(input),
 					headers: {
+						...getAuthHeaders(),
 						'Content-Type': 'application/json',
 					},
 					method: 'POST',
@@ -2786,6 +2830,7 @@ export function TemplatesView() {
 				{
 					body: JSON.stringify(input),
 					headers: {
+						...getAuthHeaders(),
 						'Content-Type': 'application/json',
 					},
 					method: 'POST',
@@ -2837,6 +2882,7 @@ export function TemplatesView() {
 				{
 					body: JSON.stringify(input),
 					headers: {
+						...getAuthHeaders(),
 						'Content-Type': 'application/json',
 					},
 					method: 'PATCH',
@@ -2863,6 +2909,7 @@ export function TemplatesView() {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.attributeTemplate(attributeTemplate.id)}`,
 				{
+					headers: getAuthHeaders(),
 					method: 'DELETE',
 				},
 			)
@@ -2889,6 +2936,7 @@ export function TemplatesView() {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.entityTemplate(entityTemplate.id)}`,
 				{
+					headers: getAuthHeaders(),
 					method: 'DELETE',
 				},
 			)
@@ -3113,6 +3161,20 @@ export function TemplatesView() {
 		},
 		[],
 	)
+
+	if (!isAuthorized) {
+		return (
+			<section className="types-mgmt-view">
+				<div className="access-level-unavailable" role="status">
+					<p>
+						{isAuthenticated
+							? 'You are not authorized to access this section.'
+							: 'You must be authenticated to access this section.'}
+					</p>
+				</div>
+			</section>
+		)
+	}
 
 	return (
 		<section className="types-mgmt-view">

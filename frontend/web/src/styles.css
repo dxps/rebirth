@@ -491,6 +491,10 @@ button svg,
 	min-width: 0;
 }
 
+.profile-permissions-section {
+	margin-top: 1.25rem;
+}
+
 .login-heading {
 	align-items: center;
 	display: flex;
@@ -539,6 +543,12 @@ button svg,
 	gap: 0.35rem;
 }
 
+.profile-name-row {
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .login-form label > span {
 	color: var(--muted);
 	font-size: 0.78rem;
@@ -581,6 +591,10 @@ button svg,
 .profile-form input:focus {
 	outline: 1px solid var(--focus-ring);
 	outline-offset: 1px;
+}
+
+.profile-form input:read-only {
+	cursor: default;
 }
 
 .login-form button {
@@ -1415,6 +1429,10 @@ button.draggable-modal-resize:hover {
 	width: 100%;
 }
 
+.login-password-wrap input {
+	padding-right: 2.35rem;
+}
+
 .security-user-password-toggle,
 button.security-user-password-toggle {
 	background: transparent;
@@ -1430,6 +1448,10 @@ button.security-user-password-toggle {
 	top: 50%;
 	transform: translateY(-50%);
 	width: 1.45rem;
+}
+
+.login-password-wrap .security-user-password-toggle {
+	right: 0.35rem;
 }
 
 .security-user-password-toggle:hover,

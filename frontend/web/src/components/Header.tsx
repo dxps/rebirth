@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Database, House, LogIn, LogOut, Moon, Shapes, Shield, Sun, User } from "lucide-react";
-import { apiRoutes } from "@rebirth/shared";
+import { apiRoutes, PermissionName } from "@rebirth/shared";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { authChangedEventName, clearStoredAuth, getStoredAuth } from "../auth";
+import { authChangedEventName, clearStoredAuth, getStoredAuth, hasStoredPermission } from "../auth";
 import { SpaLink, type AppPath } from "../routing";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:9908";
@@ -16,7 +16,12 @@ interface HeaderProps {
 export function Header({ onToggleTheme, theme }: HeaderProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => getStoredAuth() !== null);
+  const [storedAuth, setStoredAuth] = useState(getStoredAuth);
+  const isLoggedIn = storedAuth !== null;
+  const canAccessData =
+    hasStoredPermission(storedAuth, PermissionName.Admin) ||
+    hasStoredPermission(storedAuth, PermissionName.Manager);
+  const canAccessSecurity = hasStoredPermission(storedAuth, PermissionName.Admin);
 
   useEffect(() => {
     function closeUserMenuOnOutsideClick(event: PointerEvent): void {
@@ -34,7 +39,7 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
 
   useEffect(() => {
     function syncAuthState(): void {
-      setIsLoggedIn(getStoredAuth() !== null);
+      setStoredAuth(getStoredAuth());
     }
 
     window.addEventListener(authChangedEventName, syncAuthState);
@@ -52,13 +57,13 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
   }
 
   async function logout(): Promise<void> {
-    const storedAuth = getStoredAuth();
+    const currentAuth = getStoredAuth();
 
-    if (storedAuth) {
+    if (currentAuth) {
       try {
         await fetch(`${apiBaseUrl}${apiRoutes.authLogout}`, {
           headers: {
-            Authorization: `Bearer ${storedAuth.sessionKey}`
+            Authorization: `Bearer ${currentAuth.sessionKey}`
           },
           method: "POST"
         });
@@ -69,11 +74,8 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
 
     clearStoredAuth();
     setIsUserMenuOpen(false);
-
-    if (window.location.pathname === "/profile") {
-      window.history.pushState(null, "", "/login");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    }
+    window.history.pushState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
   return (
@@ -86,42 +88,41 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
           <HeaderNavLink label="Home" to="/">
             <House aria-hidden="true" />
           </HeaderNavLink>
-          <HeaderNavLink label="Data Explorer" to="/data-explorer">
-            <Database aria-hidden="true" />
-          </HeaderNavLink>
-          <HeaderNavLink label="Templates" to="/templates">
-            <Shapes aria-hidden="true" />
-          </HeaderNavLink>
-          <HeaderNavLink label="Security" to="/security">
-            <Shield aria-hidden="true" />
-          </HeaderNavLink>
+          {canAccessData ? (
+            <>
+              <HeaderNavLink label="Data Explorer" to="/data-explorer">
+                <Database aria-hidden="true" />
+              </HeaderNavLink>
+              <HeaderNavLink label="Templates" to="/templates">
+                <Shapes aria-hidden="true" />
+              </HeaderNavLink>
+            </>
+          ) : null}
+          {canAccessSecurity ? (
+            <HeaderNavLink label="Security" to="/security">
+              <Shield aria-hidden="true" />
+            </HeaderNavLink>
+          ) : null}
         </nav>
       </TooltipProvider>
       <div className="header-actions" ref={userMenuRef}>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-expanded={isUserMenuOpen}
-                aria-haspopup="menu"
-                aria-label="Open user menu"
-                className="icon-button header-user-button"
-                size="icon"
-                type="button"
-                variant="ghost"
-                onClick={() => setIsUserMenuOpen((current) => !current)}
-              >
-                <User aria-hidden="true" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>User profile</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button
+          aria-expanded={isUserMenuOpen}
+          aria-haspopup="menu"
+          aria-label="Open user menu"
+          className="icon-button header-user-button"
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={() => setIsUserMenuOpen((current) => !current)}
+        >
+          <User aria-hidden="true" />
+        </Button>
         {isUserMenuOpen ? (
           <div className="user-menu" role="menu">
             {isLoggedIn ? (
               <>
-                <SpaLink role="menuitem" to="/profile" onNavigate={() => setIsUserMenuOpen(false)}>
+                <SpaLink role="menuitem" to="/user-profile" onNavigate={() => setIsUserMenuOpen(false)}>
                   <User aria-hidden="true" />
                   Profile
                 </SpaLink>

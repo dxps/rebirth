@@ -1,4 +1,4 @@
-import type { User } from '@rebirth/shared'
+import { PermissionName, type User } from '@rebirth/shared'
 
 const authStorageKey = 'rebirth.auth'
 export const authChangedEventName = 'rebirth:auth-changed'
@@ -40,4 +40,13 @@ export function setStoredAuth(auth: StoredAuth): void {
 export function clearStoredAuth(): void {
 	window.localStorage.removeItem(authStorageKey)
 	window.dispatchEvent(new CustomEvent(authChangedEventName))
+}
+
+export function hasStoredPermission(
+	auth: StoredAuth | null,
+	permissionName: PermissionName,
+): boolean {
+	return Boolean(
+		auth?.user.permissions.some((permission) => permission.name === permissionName),
+	)
 }

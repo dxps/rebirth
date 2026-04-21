@@ -45,7 +45,7 @@ function App() {
         return <TemplatesView />;
       case "/security":
         return <SecurityView />;
-      case "/profile":
+      case "/user-profile":
         return <UserProfileView />;
       case "/login":
         return <LoginView />;

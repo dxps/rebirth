@@ -87,6 +87,8 @@ export interface LoginResponse {
 
 export interface UpdateEmailInput {
 	email: string
+	firstName: string
+	lastName: string
 }
 
 export interface UpdatePasswordInput {
@@ -219,7 +221,11 @@ export function isUpdateEmailInput(
 	return (
 		typeof input.email === 'string' &&
 		input.email.trim().length > 0 &&
-		input.email.includes('@')
+		input.email.includes('@') &&
+		typeof input.firstName === 'string' &&
+		input.firstName.trim().length > 0 &&
+		typeof input.lastName === 'string' &&
+		input.lastName.trim().length > 0
 	)
 }
 
