@@ -255,6 +255,7 @@ const server = Bun.serve({
         }
 
         const createdAttributeTemplate = await createAttributeTemplate({
+          accessLevelId: input.accessLevelId,
           defaultValue: normalizeDefaultValue(input.defaultValue) ?? null,
           description: input.description.trim(),
           isRequired: input.isRequired,
@@ -522,6 +523,7 @@ const server = Bun.serve({
         }
 
         const updatedAttributeTemplate = await updateAttributeTemplate(id, {
+          accessLevelId: input.accessLevelId,
           defaultValue: normalizeDefaultValue(input.defaultValue),
           description: input.description?.trim(),
           isRequired: input.isRequired,

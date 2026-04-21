@@ -1,4 +1,5 @@
 import {
+	isAccessLevelId,
 	type AccessLevel,
 	type CreateAccessLevelInput,
 	type UpdateAccessLevelInput,
@@ -141,7 +142,10 @@ export function isUpdateAttributeTemplateInput(
 			input.defaultValue === null ||
 			typeof input.defaultValue === 'string') &&
 		(input.isRequired === undefined ||
-			typeof input.isRequired === 'boolean')
+			typeof input.isRequired === 'boolean') &&
+		(input.accessLevelId === undefined ||
+			(typeof input.accessLevelId === 'number' &&
+				isAccessLevelId(input.accessLevelId)))
 	)
 }
 
@@ -161,7 +165,9 @@ export function isCreateAttributeTemplateInput(
 		(input.defaultValue === undefined ||
 			input.defaultValue === null ||
 			typeof input.defaultValue === 'string') &&
-		typeof input.isRequired === 'boolean'
+		typeof input.isRequired === 'boolean' &&
+		typeof input.accessLevelId === 'number' &&
+		isAccessLevelId(input.accessLevelId)
 	)
 }
 

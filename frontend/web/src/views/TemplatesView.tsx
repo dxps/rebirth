@@ -30,16 +30,16 @@ import {
 } from 'react'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
-const draggableModalHeight = 372
+const draggableModalHeight = 362
 const draggableModalMargin = 16
 const draggableModalMinHeights: Record<OpenTemplateModal['mode'], number> = {
-	create: 372,
+	create: 362,
 	details: 300,
-	edit: 372,
+	edit: 362,
 }
 const draggableModalMinWidth = 320
 const draggableModalDefaultWidth = 360
-const entityTemplateModalHeight = 480
+const entityTemplateModalHeight = 440
 const entityTemplateModalWidth = 520
 const entityTemplateAttributeReorderThreshold = 0.5
 
@@ -389,7 +389,7 @@ function DraggableModal({
 								aria-label={`Back to ${title} details`}
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
-								data-tooltip="Back"
+								data-tooltip="Back to view"
 								type="button"
 								onPointerDown={(event) => event.stopPropagation()}
 								onClick={() => onBack(id)}
@@ -448,6 +448,7 @@ function DraggableModal({
 }
 
 interface AttributeTemplateEditFormProps {
+	accessLevels: AccessLevel[]
 	attributeTemplate?: AttributeTemplate
 	autoFocusName?: boolean
 	formId: string
@@ -459,6 +460,7 @@ interface AttributeTemplateEditFormProps {
 }
 
 function AttributeTemplateEditForm({
+	accessLevels,
 	attributeTemplate,
 	autoFocusName = false,
 	formId,
@@ -478,6 +480,9 @@ function AttributeTemplateEditForm({
 	)
 	const [isSaving, setIsSaving] = useState(false)
 	const [name, setName] = useState(attributeTemplate?.name ?? '')
+	const [accessLevelId, setAccessLevelId] = useState(
+		attributeTemplate?.accessLevelId ?? accessLevels[0]?.id ?? 1,
+	)
 	const [valueType, setValueType] = useState<ValueType>(
 		attributeTemplate?.valueType ?? ValueType.Text,
 	)
@@ -506,6 +511,7 @@ function AttributeTemplateEditForm({
 
 		try {
 			await onSave({
+				accessLevelId,
 				defaultValue: defaultValue.trim().length > 0 ? defaultValue : null,
 				description,
 				isRequired,
@@ -549,24 +555,52 @@ function AttributeTemplateEditForm({
 					onChange={(event) => setDescription(event.target.value)}
 				/>
 			</label>
-			<label data-selectable="true">
-				<span>value type</span>
-				<span className="attribute-template-select-wrap">
-					<select
-						value={valueType}
-						onChange={(event) => setValueType(event.target.value as ValueType)}
-					>
-						{valueTypes.map((type) => (
-							<option
-								key={type}
-								value={type}
-							>
-								{type}
-							</option>
-						))}
-					</select>
-				</span>
-			</label>
+			<div className="attribute-template-select-row">
+				<label data-selectable="true">
+					<span>value type</span>
+					<span className="attribute-template-select-wrap">
+						<select
+							value={valueType}
+							onChange={(event) =>
+								setValueType(event.target.value as ValueType)
+							}
+						>
+							{valueTypes.map((type) => (
+								<option
+									key={type}
+									value={type}
+								>
+									{type}
+								</option>
+							))}
+						</select>
+					</span>
+				</label>
+				<label data-selectable="true">
+					<span>access level</span>
+					<span className="attribute-template-select-wrap">
+						<select
+							value={accessLevelId}
+							onChange={(event) =>
+								setAccessLevelId(Number(event.target.value))
+							}
+						>
+							{accessLevels.length === 0 ? (
+								<option value={accessLevelId}>{accessLevelId}</option>
+							) : (
+								accessLevels.map((accessLevel) => (
+									<option
+										key={accessLevel.id}
+										value={accessLevel.id}
+									>
+										{accessLevel.name}
+									</option>
+								))
+							)}
+						</select>
+					</span>
+				</label>
+			</div>
 			<label data-selectable="true">
 				<span>default value</span>
 				<input
@@ -886,7 +920,7 @@ function EntityTemplateEditForm({
 			...current,
 			{
 				id: crypto.randomUUID(),
-				accessLevelId: defaultAccessLevelId,
+				accessLevelId: attributeTemplate.accessLevelId,
 				attributeTemplateId: attributeTemplate.id,
 				description: attributeTemplate.description,
 				listingIndex: current.length,
@@ -908,6 +942,7 @@ function EntityTemplateEditForm({
 		try {
 			const savedAttributeTemplate = newAttributeSaveAsTemplate
 				? await onCreateAttributeTemplate({
+						accessLevelId: defaultAccessLevelId,
 						defaultValue: null,
 						description: newAttributeDescription.trim(),
 						isRequired: false,
@@ -2420,6 +2455,7 @@ export function TemplatesView() {
 								<tr>
 									<th>name</th>
 									<th>value type</th>
+									<th>access level</th>
 									<th>description</th>
 									<th className="data-table-action-heading">
 										<button
@@ -2437,13 +2473,13 @@ export function TemplatesView() {
 							<tbody>
 								{isLoading ? (
 									<tr>
-										<td colSpan={4}>Loading attribute templates</td>
+										<td colSpan={5}>Loading attribute templates</td>
 									</tr>
 									) : attributeTemplates.length === 0 ? (
 										<tr>
 											<td
 												className="data-table-empty-cell"
-												colSpan={4}
+												colSpan={5}
 											>
 												<span>No entries found</span>
 											</td>
@@ -2470,6 +2506,12 @@ export function TemplatesView() {
 										>
 											<td>{attributeTemplate.name}</td>
 											<td>{attributeTemplate.valueType}</td>
+											<td>
+												{accessLevels.find(
+													(accessLevel) =>
+														accessLevel.id === attributeTemplate.accessLevelId,
+												)?.name ?? attributeTemplate.accessLevelId}
+											</td>
 											<td>
 												<span className="empty-value-space">
 													{attributeTemplate.description}
@@ -2572,30 +2614,32 @@ export function TemplatesView() {
 								/>
 							) : modal.mode === 'create' ? (
 								<AttributeTemplateEditForm
-								autoFocusName
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onSave={createAttributeTemplate}
-								onValidityChange={setModalFormValidity}
-							/>
-						) : modal.mode === 'edit' && modal.attributeTemplate ? (
-							<AttributeTemplateEditForm
-								attributeTemplate={modal.attributeTemplate}
-								autoFocusName
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onSave={(input) => {
-									const attributeTemplate = modal.attributeTemplate
+									accessLevels={accessLevels}
+									autoFocusName
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onSave={createAttributeTemplate}
+									onValidityChange={setModalFormValidity}
+								/>
+							) : modal.mode === 'edit' && modal.attributeTemplate ? (
+								<AttributeTemplateEditForm
+									accessLevels={accessLevels}
+									attributeTemplate={modal.attributeTemplate}
+									autoFocusName
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onSave={(input) => {
+										const attributeTemplate = modal.attributeTemplate
 
-									if (!attributeTemplate) {
-										return Promise.resolve()
-									}
+										if (!attributeTemplate) {
+											return Promise.resolve()
+										}
 
-									return saveAttributeTemplate(attributeTemplate.id, input)
-								}}
-								onValidityChange={setModalFormValidity}
-							/>
-						) : modal.entityTemplate ? (
+										return saveAttributeTemplate(attributeTemplate.id, input)
+									}}
+									onValidityChange={setModalFormValidity}
+								/>
+							) : modal.entityTemplate ? (
 							<EntityTemplateDetailsView
 								accessLevels={accessLevels}
 								entityTemplate={modal.entityTemplate}
@@ -2624,6 +2668,15 @@ export function TemplatesView() {
 								<div>
 									<p>value type</p>
 									<strong>{modal.attributeTemplate.valueType}</strong>
+								</div>
+								<div>
+									<p>access level</p>
+									<strong>
+										{accessLevels.find(
+											(accessLevel) =>
+												accessLevel.id === modal.attributeTemplate?.accessLevelId,
+										)?.name ?? modal.attributeTemplate.accessLevelId}
+									</strong>
 								</div>
 								<div>
 									<p>default value</p>

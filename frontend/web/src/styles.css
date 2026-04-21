@@ -1082,6 +1082,12 @@ button.draggable-modal-resize:hover {
 	width: 0.48rem;
 }
 
+.attribute-template-select-row {
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .access-level-edit-form input,
 .access-level-edit-form select,
 .entity-template-edit-form input,
@@ -1252,6 +1258,11 @@ button.entity-template-tab[aria-selected='true']:hover {
 	padding-bottom: 0.24rem;
 	padding-top: 0.24rem;
 	vertical-align: middle;
+}
+
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-attributes-table td:first-child {
+	padding-left: 0;
 }
 
 .entity-template-edit-form:not(.entity-template-view-form)

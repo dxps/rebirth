@@ -360,7 +360,7 @@ function DraggableModal({
 								aria-label={`Back to ${title} details`}
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
-								data-tooltip="Back"
+								data-tooltip="Back to view"
 								type="button"
 								onPointerDown={(event) => event.stopPropagation()}
 								onClick={() => onBack(id)}

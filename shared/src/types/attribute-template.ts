@@ -1,3 +1,5 @@
+import { type AccessLevelId } from '../security/access-level'
+
 export type AttributeTemplateId = string
 
 export enum ValueType {
@@ -23,6 +25,7 @@ export interface AttributeTemplate {
 	valueType: ValueType
 	defaultValue: string | null
 	isRequired: boolean
+	accessLevelId: AccessLevelId
 }
 
 export type CreateAttributeTemplateInput = Omit<

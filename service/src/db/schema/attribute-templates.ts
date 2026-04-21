@@ -7,12 +7,15 @@ import { sql } from 'drizzle-orm'
 import {
 	boolean,
 	check,
+	foreignKey,
+	integer,
 	pgEnum,
 	pgTable,
 	text,
 	unique,
 	uuid,
 } from 'drizzle-orm/pg-core'
+import { accessLevels } from './access-levels'
 
 export const attributeTemplateValueType = pgEnum(
 	'attribute_template_value_type',
@@ -30,6 +33,7 @@ export const attributeTemplates = pgTable(
 			.default(ValueType.Text),
 		defaultValue: text('default_value'),
 		isRequired: boolean('is_required').notNull().default(false),
+		accessLevelId: integer('access_level_id').notNull(),
 	},
 	(table) => [
 		check(
@@ -44,5 +48,10 @@ export const attributeTemplates = pgTable(
 			table.name,
 			table.description,
 		),
+		foreignKey({
+			columns: [table.accessLevelId],
+			foreignColumns: [accessLevels.id],
+			name: 'attribute_templates_access_level_id_access_levels_id_fk',
+		}),
 	],
 )

@@ -85,10 +85,30 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "access_level_id": {
+          "name": "access_level_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "attribute_templates_access_level_id_access_levels_id_fk": {
+          "name": "attribute_templates_access_level_id_access_levels_id_fk",
+          "tableFrom": "attribute_templates",
+          "tableTo": "access_levels",
+          "columnsFrom": [
+            "access_level_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "attribute_templates_name_description_unique": {
