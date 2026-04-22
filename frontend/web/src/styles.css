@@ -678,13 +678,26 @@ button svg,
 	grid-column: 1 / -1;
 }
 
+.security-access-levels-table,
 .security-users-table {
 	table-layout: fixed;
 }
 
-.security-users-table th:nth-child(3),
+.security-access-levels-table th:first-child,
+.security-access-levels-table td:first-child,
+.security-users-table .security-users-username-column,
+.security-users-table td:first-child {
+	width: 24%;
+}
+
+.security-users-table .security-users-email-column,
+.security-users-table td:nth-child(2) {
+	width: 36%;
+}
+
+.security-users-table .security-users-permissions-column,
 .security-users-table td:nth-child(3) {
-	width: 8rem;
+	width: 38%;
 }
 
 .security-users-table th.data-table-action-heading,
@@ -1293,7 +1306,8 @@ button.delete-confirm-danger:hover {
 	user-select: none;
 }
 
-.draggable-modal:has(.include-attribute-popover) .draggable-modal-content {
+.draggable-modal:has(.include-attribute-popover) .draggable-modal-content,
+.draggable-modal:has(.security-user-permissions-menu) .draggable-modal-content {
 	overflow: visible;
 }
 
@@ -1523,6 +1537,118 @@ button.security-user-password-toggle:hover {
 .security-user-details-form select:disabled {
 	cursor: default;
 	opacity: 1;
+}
+
+.security-user-permissions-picker {
+	display: block;
+	position: relative;
+}
+
+.security-user-permissions-trigger,
+button.security-user-permissions-trigger {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	display: flex;
+	font: inherit;
+	font-size: 14px;
+	line-height: 1.35;
+	min-height: 1.9rem;
+	padding: 0.16rem 1.75rem 0.16rem 0.36rem;
+	position: relative;
+	text-align: left;
+	width: 100%;
+}
+
+.security-user-permissions-trigger::after,
+button.security-user-permissions-trigger::after {
+	border-bottom: 1.5px solid var(--fg);
+	border-right: 1.5px solid var(--fg);
+	content: '';
+	height: 0.46rem;
+	position: absolute;
+	right: 0.62rem;
+	top: 50%;
+	transform: translateY(-65%) rotate(45deg);
+	width: 0.46rem;
+}
+
+.security-user-permissions-trigger[data-empty='true'] {
+	color: color-mix(in srgb, var(--fg) 48%, transparent);
+}
+
+.security-user-permissions-trigger:hover,
+button.security-user-permissions-trigger:hover {
+	background: color-mix(in srgb, var(--fg) 9%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 9%, transparent);
+	color: var(--fg);
+}
+
+.security-user-permissions-trigger:focus-visible,
+button.security-user-permissions-trigger:focus-visible {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.security-user-permissions-trigger span {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.security-user-permissions-menu {
+	background: var(--menu-bg);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 6px;
+	box-shadow: 0 12px 26px color-mix(in srgb, #000000 24%, transparent);
+	display: grid;
+	gap: 0.12rem;
+	left: 0;
+	min-width: 100%;
+	padding: 0.28rem;
+	position: absolute;
+	top: calc(100% + 0.28rem);
+	z-index: 5;
+}
+
+.access-level-edit-form .security-user-permission-option {
+	align-items: center;
+	border-radius: 5px;
+	color: var(--fg);
+	cursor: pointer;
+	display: flex;
+	font-size: 0.82rem;
+	gap: 0.42rem;
+	line-height: 1.2;
+	padding: 0.26rem 0.32rem;
+}
+
+.access-level-edit-form .security-user-permission-option:hover {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.access-level-edit-form .security-user-permission-option input {
+	border-radius: 999px;
+	flex: 0 0 auto;
+	height: 1.05rem;
+	width: 1.05rem;
+}
+
+.access-level-edit-form
+	.security-user-permission-option
+	input[type='checkbox']:checked::after {
+	border: solid var(--bg);
+	border-width: 0 2px 2px 0;
+	content: '';
+	height: 46%;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -58%) rotate(45deg);
+	width: 24%;
 }
 
 .security-user-id-row {

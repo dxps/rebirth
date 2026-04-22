@@ -611,7 +611,7 @@ function AccessLevelEditForm({
 }
 
 interface UserEditFormProps {
-	autoFocusEmail?: boolean
+	autoFocusFirstName?: boolean
 	formId: string
 	modalKey: string
 	permissions: Permission[]
@@ -621,7 +621,7 @@ interface UserEditFormProps {
 }
 
 function UserEditForm({
-	autoFocusEmail = false,
+	autoFocusFirstName = false,
 	formId,
 	modalKey,
 	permissions,
@@ -636,25 +636,42 @@ function UserEditForm({
 	const [username, setUsername] = useState(user?.username ?? '')
 	const [password, setPassword] = useState('')
 	const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-	const [permissionId, setPermissionId] = useState(
-		() =>
-			user?.permissions[0]?.id ??
+	const [isPermissionMenuOpen, setIsPermissionMenuOpen] = useState(false)
+	const [permissionIds, setPermissionIds] = useState<number[]>(() => {
+		const existingPermissionIds =
+			user?.permissions.map((permission) => permission.id) ?? []
+
+		if (existingPermissionIds.length > 0) {
+			return existingPermissionIds
+		}
+
+		return [
 			permissions.find(
 				(permission) => permission.name === PermissionName.Viewer,
 			)?.id ??
-			permissions[0]?.id ??
-			1,
-	)
+				permissions[0]?.id ??
+				1,
+		]
+	})
 	const [error, setError] = useState<string | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
-	const emailInputRef = useRef<HTMLInputElement>(null)
+	const firstNameInputRef = useRef<HTMLInputElement>(null)
+	const permissionPickerRef = useRef<HTMLSpanElement>(null)
+	const selectedPermissionNames = permissions
+		.filter((permission) => permissionIds.includes(permission.id))
+		.map((permission) => permission.name)
+	const permissionSummary = selectedPermissionNames.join(', ')
 	const hasEmptyRequiredField =
 		email.trim().length === 0 ||
 		firstName.trim().length === 0 ||
 		lastName.trim().length === 0 ||
 		username.trim().length === 0 ||
 		(isCreate && password.length === 0) ||
-		!permissions.some((permission) => permission.id === permissionId)
+		permissionIds.length === 0 ||
+		permissionIds.some(
+			(permissionId) =>
+				!permissions.some((permission) => permission.id === permissionId),
+		)
 	const hasInvalidPassword = password.length > 0 && password.length < 8
 	const isValid = !hasEmptyRequiredField && !hasInvalidPassword
 	const invalidReason = hasInvalidPassword
@@ -666,16 +683,52 @@ function UserEditForm({
 	}, [invalidReason, isValid, modalKey, onValidityChange])
 
 	useEffect(() => {
-		if (autoFocusEmail) {
-			emailInputRef.current?.focus()
+		if (autoFocusFirstName) {
+			firstNameInputRef.current?.focus()
 		}
-	}, [autoFocusEmail])
+	}, [autoFocusFirstName])
 
 	useEffect(() => {
-		if (!permissions.some((permission) => permission.id === permissionId)) {
-			setPermissionId(permissions[0]?.id ?? 1)
+		const validPermissionIds = permissionIds.filter((permissionId) =>
+			permissions.some((permission) => permission.id === permissionId),
+		)
+
+		if (validPermissionIds.length !== permissionIds.length) {
+			setPermissionIds(validPermissionIds)
+			return
 		}
-	}, [permissionId, permissions])
+
+		if (validPermissionIds.length === 0 && permissions[0]) {
+			setPermissionIds([permissions[0].id])
+		}
+	}, [permissionIds, permissions])
+
+	useEffect(() => {
+		function closePermissionMenu(event: PointerEvent): void {
+			const target = event.target
+
+			if (
+				target instanceof Node &&
+				!permissionPickerRef.current?.contains(target)
+			) {
+				setIsPermissionMenuOpen(false)
+			}
+		}
+
+		document.addEventListener('pointerdown', closePermissionMenu)
+
+		return () => {
+			document.removeEventListener('pointerdown', closePermissionMenu)
+		}
+	}, [])
+
+	function togglePermission(permissionId: number): void {
+		setPermissionIds((current) =>
+			current.includes(permissionId)
+				? current.filter((currentId) => currentId !== permissionId)
+				: [...current, permissionId],
+		)
+	}
 
 	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
 		event.preventDefault()
@@ -693,7 +746,7 @@ function UserEditForm({
 				email,
 				firstName,
 				lastName,
-				permissionIds: [permissionId],
+				permissionIds,
 				username,
 				...(password ? { password } : {}),
 			}
@@ -726,6 +779,7 @@ function UserEditForm({
 				<label>
 					<span>first name</span>
 					<input
+						ref={firstNameInputRef}
 						autoComplete="given-name"
 						type="text"
 						value={firstName}
@@ -745,7 +799,6 @@ function UserEditForm({
 			<label>
 				<span>email</span>
 				<input
-					ref={emailInputRef}
 					autoComplete="email"
 					type="email"
 					value={email}
@@ -763,23 +816,54 @@ function UserEditForm({
 					/>
 				</label>
 				<label>
-					<span>permission</span>
-					<span className="security-user-select-wrap">
-						<select
-							value={permissionId}
-							onChange={(event) =>
-								setPermissionId(Number(event.target.value))
+					<span>permissions</span>
+					<span
+						ref={permissionPickerRef}
+						className="security-user-permissions-picker"
+					>
+						<button
+							aria-expanded={isPermissionMenuOpen}
+							aria-haspopup="listbox"
+							className="security-user-permissions-trigger"
+							data-empty={
+								permissionSummary.length === 0
+									? 'true'
+									: undefined
+							}
+							type="button"
+							onClick={() =>
+								setIsPermissionMenuOpen((current) => !current)
 							}
 						>
-							{permissions.map((permission) => (
-								<option
-									key={permission.id}
-									value={permission.id}
-								>
-									{permission.name}
-								</option>
-							))}
-						</select>
+							<span>
+								{permissionSummary || 'Select permissions'}
+							</span>
+						</button>
+						{isPermissionMenuOpen ? (
+							<div
+								className="security-user-permissions-menu"
+								role="listbox"
+								aria-multiselectable="true"
+							>
+								{permissions.map((permission) => (
+									<label
+										key={permission.id}
+										className="security-user-permission-option"
+									>
+										<input
+											checked={permissionIds.includes(
+												permission.id,
+											)}
+											type="checkbox"
+											onChange={() =>
+												togglePermission(permission.id)
+											}
+										/>
+										<span>{permission.name}</span>
+									</label>
+								))}
+							</div>
+						) : null}
 					</span>
 				</label>
 			</div>
@@ -1490,7 +1574,7 @@ export function SecurityView() {
 				</div>
 			) : (
 				<div className="data-table-wrap security-table-wrap">
-					<table className="data-table">
+					<table className="data-table security-access-levels-table">
 						<thead>
 							<tr>
 								<th>name</th>
@@ -1576,10 +1660,16 @@ export function SecurityView() {
 					<div className="data-table-wrap security-table-wrap">
 						<table className="data-table security-users-table">
 							<thead>
-								<tr>
-									<th>username</th>
-									<th>email</th>
-									<th>permissions</th>
+							<tr>
+								<th className="security-users-username-column">
+									username
+								</th>
+								<th className="security-users-email-column">
+									email
+								</th>
+								<th className="security-users-permissions-column">
+									permissions
+								</th>
 									<th className="data-table-action-heading">
 										<button
 											aria-label="Create user"
@@ -1636,8 +1726,12 @@ export function SecurityView() {
 											<td>{user.username}</td>
 											<td>{user.email}</td>
 											<td>
-												{user.permissions[0]?.name ??
-													''}
+												{user.permissions
+													.map(
+														(permission) =>
+															permission.name,
+													)
+													.join(', ')}
 											</td>
 											<td aria-hidden="true" />
 										</tr>
@@ -1770,7 +1864,7 @@ export function SecurityView() {
 							</div>
 						) : modal.kind === 'user' && modal.mode === 'create' ? (
 							<UserEditForm
-								autoFocusEmail
+								autoFocusFirstName
 								formId={`${modal.key}-edit-form`}
 								modalKey={modal.key}
 								permissions={permissions}
@@ -1783,7 +1877,7 @@ export function SecurityView() {
 						  modal.mode === 'edit' &&
 						  modal.user ? (
 							<UserEditForm
-								autoFocusEmail
+								autoFocusFirstName
 								formId={`${modal.key}-edit-form`}
 								modalKey={modal.key}
 								permissions={permissions}
@@ -1849,34 +1943,17 @@ export function SecurityView() {
 										/>
 									</label>
 									<label>
-										<span>permission</span>
-										<span className="security-user-select-wrap">
-											<select
-												disabled
-												value={
-													modal.user.permissions[0]
-														?.id ?? ''
-												}
-											>
-												{modal.user.permissions[0] ? (
-													<option
-														value={
-															modal.user
-																.permissions[0]
-																.id
-														}
-													>
-														{
-															modal.user
-																.permissions[0]
-																.name
-														}
-													</option>
-												) : (
-													<option value="" />
-												)}
-											</select>
-										</span>
+										<span>permissions</span>
+										<input
+											readOnly
+											type="text"
+											value={modal.user.permissions
+												.map(
+													(permission) =>
+														permission.name,
+												)
+												.join(', ')}
+										/>
 									</label>
 								</div>
 							</div>
