@@ -1001,6 +1001,13 @@ button.access-level-refresh-button:hover {
 	text-align: center;
 }
 
+.data-table td.data-table-empty-cell:last-child {
+	padding-left: 0.7rem;
+	padding-right: 0.7rem;
+	text-align: center;
+	width: auto;
+}
+
 .data-table .data-table-empty-cell span {
 	font-style: italic;
 }
@@ -1023,6 +1030,10 @@ button.access-level-refresh-button:hover {
 
 .entity-templates-table tbody tr:last-child td,
 .attribute-templates-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.security-table-wrap .data-table tbody tr:last-child td {
 	border-bottom: 0;
 }
 
@@ -1870,7 +1881,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 }
 
 .entity-template-view-attributes-table td:first-child {
-	padding-left: 6px;
+	padding-left: 0.7rem;
 }
 
 .entity-template-view-attributes-table tbody tr:last-child td {
@@ -2482,8 +2493,14 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	overflow: visible;
 }
 
+.entity-template-view-links-table td:last-child {
+	padding-left: 0.7rem;
+	padding-right: 0.7rem;
+	width: auto;
+}
+
 .entity-template-view-links-table td:first-child {
-	padding-left: 6px;
+	padding-left: 0.7rem;
 }
 
 .entity-template-view-links-table td:not(.data-table-empty-cell):last-child {

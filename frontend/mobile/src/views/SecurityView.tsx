@@ -153,7 +153,7 @@ export function SecurityView({ colors }: SecurityViewProps) {
 		}
 
 		if (accessLevels.length === 0) {
-			return <Text style={styles.status}>No access levels found</Text>
+			return <Text style={styles.status}>There are no entries</Text>
 		}
 
 		return accessLevels.map((accessLevel) => (

@@ -1906,7 +1906,7 @@ function EntityTemplateEditForm({
 											className="data-table-empty-cell"
 											colSpan={4}
 										>
-											<span>No attributes included</span>
+											<span>There are no entries</span>
 										</td>
 									</tr>
 								) : (
@@ -2099,11 +2099,7 @@ function EntityTemplateEditForm({
 											className="data-table-empty-cell"
 											colSpan={4}
 										>
-											<span>There are no links</span>
-											<span>
-												(from this to other entity
-												templates)
-											</span>
+											<span>There are no entries</span>
 										</td>
 									</tr>
 								) : (
@@ -2432,6 +2428,13 @@ function EntityTemplateDetailsView({
 								<col className="entity-template-attribute-value-type-column" />
 								<col className="entity-template-attribute-access-level-column" />
 							</colgroup>
+							<thead>
+								<tr>
+									<th>name</th>
+									<th>value type</th>
+									<th>access level</th>
+								</tr>
+							</thead>
 							<tbody>
 								{orderedAttributes.length === 0 ? (
 									<tr>
@@ -2439,7 +2442,7 @@ function EntityTemplateDetailsView({
 											className="data-table-empty-cell"
 											colSpan={3}
 										>
-											<span>No attributes included</span>
+											<span>There are no entries</span>
 										</td>
 									</tr>
 								) : (
@@ -2482,6 +2485,13 @@ function EntityTemplateDetailsView({
 								<col className="entity-template-link-description-column" />
 								<col className="entity-template-link-target-column" />
 							</colgroup>
+							<thead>
+								<tr>
+									<th>name</th>
+									<th>description</th>
+									<th>target</th>
+								</tr>
+							</thead>
 							<tbody>
 								{orderedLinks.length === 0 ? (
 									<tr>
@@ -2489,11 +2499,7 @@ function EntityTemplateDetailsView({
 											className="data-table-empty-cell"
 											colSpan={3}
 										>
-											<span>There are no links</span>
-											<span>
-												(from this to other entity
-												templates)
-											</span>
+											<span>There are no entries</span>
 										</td>
 									</tr>
 								) : (
@@ -3231,7 +3237,7 @@ export function TemplatesView() {
 											className="data-table-empty-cell"
 											colSpan={3}
 										>
-											<span>No entries found</span>
+											<span>There are no entries</span>
 										</td>
 									</tr>
 								) : (
@@ -3338,7 +3344,7 @@ export function TemplatesView() {
 											className="data-table-empty-cell"
 											colSpan={4}
 										>
-											<span>No entries found</span>
+											<span>There are no entries</span>
 										</td>
 									</tr>
 								) : (

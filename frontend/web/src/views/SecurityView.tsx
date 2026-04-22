@@ -1516,7 +1516,7 @@ export function SecurityView() {
 								</tr>
 							) : accessLevels.length === 0 ? (
 								<tr>
-									<td colSpan={3}>No access levels found</td>
+									<td colSpan={3}>There are no entries</td>
 								</tr>
 							) : (
 								accessLevels.map((accessLevel) => (
@@ -1578,7 +1578,7 @@ export function SecurityView() {
 								<tr>
 									<th>username</th>
 									<th>email</th>
-									<th>permission</th>
+									<th>permissions</th>
 									<th className="data-table-action-heading">
 										<button
 											aria-label="Create user"
@@ -1601,7 +1601,12 @@ export function SecurityView() {
 									</tr>
 								) : users.length === 0 ? (
 									<tr>
-										<td colSpan={4}>No users found</td>
+										<td
+											className="data-table-empty-cell"
+											colSpan={4}
+										>
+											<span>There are no entries</span>
+										</td>
 									</tr>
 								) : (
 									users.map((user) => (
