@@ -1665,6 +1665,23 @@ button.security-user-password-toggle:hover {
 	resize: none;
 }
 
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-description-input {
+	height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	resize: vertical;
+}
+
+.entity-template-view-form .entity-template-description-input {
+	field-sizing: content;
+	height: auto;
+	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	overflow-y: auto;
+	resize: none;
+}
+
 .access-level-edit-form input:focus,
 .access-level-edit-form select:focus,
 .access-level-edit-form textarea:focus,

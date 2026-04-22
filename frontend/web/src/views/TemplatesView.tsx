@@ -1597,7 +1597,8 @@ function EntityTemplateEditForm({
 				<label data-selectable="true">
 					<span>description</span>
 					<textarea
-						rows={2}
+						className="entity-template-description-input"
+						rows={1}
 						value={description}
 						onChange={(event) => setDescription(event.target.value)}
 					/>
@@ -2398,8 +2399,9 @@ function EntityTemplateDetailsView({
 				<label>
 					<span>description</span>
 					<textarea
+						className="entity-template-description-input"
 						readOnly
-						rows={2}
+						rows={1}
 						value={entityTemplate.description}
 					/>
 				</label>
