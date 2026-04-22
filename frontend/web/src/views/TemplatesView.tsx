@@ -588,7 +588,8 @@ function AttributeTemplateEditForm({
 			<label data-selectable="true">
 				<span>description</span>
 				<textarea
-					rows={2}
+					className="attribute-template-description-input"
+					rows={1}
 					value={description}
 					onChange={(event) => setDescription(event.target.value)}
 				/>
@@ -3625,7 +3626,7 @@ export function TemplatesView() {
 							/>
 						) : modal.attributeTemplate ? (
 							<div
-								className="access-level-details access-level-edit-form"
+								className="access-level-details access-level-edit-form attribute-template-view-form"
 							>
 								<div className="attribute-template-id-row">
 									<p>id</p>
@@ -3644,8 +3645,9 @@ export function TemplatesView() {
 								<label data-selectable="true">
 									<span>description</span>
 									<textarea
+										className="attribute-template-description-input"
 										readOnly
-										rows={2}
+										rows={1}
 										value={
 											modal.attributeTemplate.description
 										}
