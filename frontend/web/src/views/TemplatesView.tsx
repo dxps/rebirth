@@ -1636,7 +1636,10 @@ function EntityTemplateEditForm({
 							type="button"
 							onClick={() => setActiveTab('attributes')}
 						>
-							Attributes
+							<span>Attributes</span>
+							<span className="entity-template-tab-badge">
+								{includedAttributes.length}
+							</span>
 						</button>
 						<button
 							aria-selected={activeTab === 'links'}
@@ -1646,7 +1649,10 @@ function EntityTemplateEditForm({
 							type="button"
 							onClick={() => setActiveTab('links')}
 						>
-							Outlinks
+							<span>Outlinks</span>
+							<span className="entity-template-tab-badge">
+								{includedLinks.length}
+							</span>
 						</button>
 					</div>
 					{activeTab === 'attributes' ? (
@@ -2428,7 +2434,10 @@ function EntityTemplateDetailsView({
 							type="button"
 							onClick={() => setActiveTab('attributes')}
 						>
-							Attributes
+							<span>Attributes</span>
+							<span className="entity-template-tab-badge">
+								{orderedAttributes.length}
+							</span>
 						</button>
 						<button
 							aria-selected={activeTab === 'links'}
@@ -2438,7 +2447,10 @@ function EntityTemplateDetailsView({
 							type="button"
 							onClick={() => setActiveTab('links')}
 						>
-							Outlinks
+							<span>Outlinks</span>
+							<span className="entity-template-tab-badge">
+								{orderedLinks.length}
+							</span>
 						</button>
 						{incomingLinks.length > 0 ? (
 							<button
@@ -2449,7 +2461,10 @@ function EntityTemplateDetailsView({
 								type="button"
 								onClick={() => setActiveTab('inlinks')}
 							>
-								Inlinks
+								<span>Inlinks</span>
+								<span className="entity-template-tab-badge">
+									{incomingLinks.length}
+								</span>
 							</button>
 						) : null}
 					</div>
