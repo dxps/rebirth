@@ -2410,6 +2410,18 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	width: 10.25rem;
 }
 
+.entity-template-inlink-source-column {
+	width: 32%;
+}
+
+.entity-template-inlink-name-column {
+	width: 24%;
+}
+
+.entity-template-inlink-description-column {
+	width: auto;
+}
+
 .entity-template-link-action-column {
 	width: 3.2rem;
 }
@@ -2499,7 +2511,17 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	width: auto;
 }
 
+.entity-template-view-inlinks-table td:last-child {
+	padding-left: 0.7rem;
+	padding-right: 0.7rem;
+	width: auto;
+}
+
 .entity-template-view-links-table td:first-child {
+	padding-left: 0.7rem;
+}
+
+.entity-template-view-inlinks-table td:first-child {
 	padding-left: 0.7rem;
 }
 
@@ -2507,7 +2529,15 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	text-align: left;
 }
 
+.entity-template-view-inlinks-table td:not(.data-table-empty-cell):last-child {
+	text-align: left;
+}
+
 .entity-template-view-links-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.entity-template-view-inlinks-table tbody tr:last-child td {
 	border-bottom: 0;
 }
 

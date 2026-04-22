@@ -2340,15 +2340,38 @@ function EntityTemplateDetailsView({
 	entityTemplate,
 	entityTemplates,
 }: EntityTemplateDetailsViewProps) {
-	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
-		'attributes',
-	)
+	const [activeTab, setActiveTab] = useState<
+		'attributes' | 'links' | 'inlinks'
+	>('attributes')
 	const orderedAttributes = entityTemplate.attributes
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
 	const orderedLinks = entityTemplate.links
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
+	const incomingLinks = entityTemplates
+		.flatMap((sourceTemplate) =>
+			sourceTemplate.links
+				.filter(
+					(link) =>
+						link.targetEntityTemplateId === entityTemplate.id,
+				)
+				.map((link) => ({
+					link,
+					sourceTemplate,
+				})),
+		)
+		.sort((left, right) => {
+			const sourceNameComparison = left.sourceTemplate.name.localeCompare(
+				right.sourceTemplate.name,
+			)
+
+			if (sourceNameComparison !== 0) {
+				return sourceNameComparison
+			}
+
+			return left.link.listingIndex - right.link.listingIndex
+		})
 
 	return (
 		<div
@@ -2417,6 +2440,18 @@ function EntityTemplateDetailsView({
 						>
 							Outlinks
 						</button>
+						{incomingLinks.length > 0 ? (
+							<button
+								aria-selected={activeTab === 'inlinks'}
+								className="entity-template-tab"
+								data-tooltip="Incoming links"
+								role="tab"
+								type="button"
+								onClick={() => setActiveTab('inlinks')}
+							>
+								Inlinks
+							</button>
+						) : null}
 					</div>
 				</div>
 
@@ -2477,7 +2512,7 @@ function EntityTemplateDetailsView({
 							</tbody>
 						</table>
 					</div>
-				) : (
+				) : activeTab === 'links' ? (
 					<div role="tabpanel">
 						<table className="data-table entity-template-modal-table entity-template-links-table entity-template-view-links-table">
 							<colgroup>
@@ -2520,6 +2555,34 @@ function EntityTemplateDetailsView({
 										</tr>
 									))
 								)}
+							</tbody>
+						</table>
+					</div>
+				) : (
+					<div role="tabpanel">
+						<table className="data-table entity-template-modal-table entity-template-links-table entity-template-view-inlinks-table">
+							<colgroup>
+								<col className="entity-template-inlink-source-column" />
+								<col className="entity-template-inlink-name-column" />
+								<col className="entity-template-inlink-description-column" />
+							</colgroup>
+							<thead>
+								<tr>
+									<th>source</th>
+									<th>name</th>
+									<th>description</th>
+								</tr>
+							</thead>
+							<tbody>
+								{incomingLinks.map(({ link, sourceTemplate }) => (
+									<tr key={`${sourceTemplate.id}:${link.id}`}>
+										<td>{sourceTemplate.name}</td>
+										<td>{link.name}</td>
+										<LinkDescriptionValue
+											description={link.description}
+										/>
+									</tr>
+								))}
 							</tbody>
 						</table>
 					</div>
