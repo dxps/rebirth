@@ -275,7 +275,7 @@ button svg,
 	color: var(--fg);
 	cursor: pointer;
 	display: inline-flex;
-	font-size: 0.9rem;
+	font-size: 14px;
 	font-weight: 400;
 	gap: 0.5rem;
 	min-height: 2.35rem;
@@ -376,7 +376,7 @@ button svg,
 	color: var(--fg);
 	display: inline-flex;
 	font: inherit;
-	font-size: 0.9rem;
+	font-size: 14px;
 	font-weight: 400;
 	gap: 0.5rem;
 	min-height: 2.35rem;
@@ -732,7 +732,7 @@ button.section-action-button {
 	background-color: transparent;
 	border-radius: 999px;
 	color: color-mix(in srgb, var(--fg) 62%, transparent);
-	font-size: 0.9rem;
+	font-size: 14px;
 	height: 1.45rem;
 	justify-content: center;
 	min-height: 1.45rem;
@@ -803,7 +803,7 @@ button.section-action-button:disabled {
 
 .access-level-unavailable p {
 	color: var(--muted);
-	font-size: 0.9rem;
+	font-size: 14px;
 	line-height: 1.4;
 	margin: 0;
 }
@@ -1383,7 +1383,7 @@ button.draggable-modal-resize:hover {
 .access-level-details strong {
 	color: var(--fg);
 	display: block;
-	font-size: 0.9rem;
+	font-size: 14px;
 	font-weight: 400;
 	line-height: 1.45;
 }
@@ -1570,7 +1570,7 @@ button.security-user-password-toggle:hover {
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
-	font-size: 0.9rem;
+	font-size: 14px;
 	line-height: 1.35;
 	padding: 0.16rem 0.36rem;
 }
@@ -1660,58 +1660,58 @@ button.security-user-password-toggle:hover {
 
 .access-level-edit-form textarea,
 .entity-template-edit-form textarea {
-	height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
+	height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
 	resize: none;
 }
 
 .entity-template-edit-form:not(.entity-template-view-form)
 	.entity-template-description-input {
-	height: calc((0.9rem * 1.35) + 0.32rem + 2px);
-	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	height: calc((14px * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
 	resize: vertical;
 }
 
 .entity-template-view-form .entity-template-description-input {
 	field-sizing: content;
 	height: auto;
-	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
 	overflow-y: auto;
 	resize: none;
 }
 
 .access-level-edit-form:not(.attribute-template-view-form)
 	.attribute-template-description-input {
-	height: calc((0.9rem * 1.35) + 0.32rem + 2px);
-	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	height: calc((14px * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
 	resize: vertical;
 }
 
 .attribute-template-view-form .attribute-template-description-input {
 	field-sizing: content;
 	height: auto;
-	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
 	overflow-y: auto;
 	resize: none;
 }
 
 .access-level-edit-form:not(.access-level-view-form)
 	.access-level-description-input {
-	height: calc((0.9rem * 1.35) + 0.32rem + 2px);
-	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	height: calc((14px * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
 	resize: vertical;
 }
 
 .access-level-view-form .access-level-description-input {
 	field-sizing: content;
 	height: auto;
-	max-height: calc((0.9rem * 1.35 * 2) + 0.32rem + 2px);
-	min-height: calc((0.9rem * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
 	overflow-y: auto;
 	resize: none;
 }
