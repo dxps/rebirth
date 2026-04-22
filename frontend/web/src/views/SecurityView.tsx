@@ -598,7 +598,8 @@ function AccessLevelEditForm({
 			<label>
 				<span>description</span>
 				<textarea
-					rows={2}
+					className="access-level-description-input"
+					rows={1}
 					value={description}
 					onChange={(event) => setDescription(event.target.value)}
 				/>
@@ -1738,7 +1739,7 @@ export function SecurityView() {
 						) : modal.kind === 'access-level' &&
 						  modal.accessLevel ? (
 							<div
-								className="access-level-edit-form access-level-details-form"
+								className="access-level-edit-form access-level-details-form access-level-view-form"
 								data-selectable="true"
 							>
 								<div className="access-level-details access-level-id-row">
@@ -1760,8 +1761,9 @@ export function SecurityView() {
 								<label>
 									<span>description</span>
 									<textarea
+										className="access-level-description-input"
 										readOnly
-										rows={2}
+										rows={1}
 										value={modal.accessLevel.description}
 									/>
 								</label>
