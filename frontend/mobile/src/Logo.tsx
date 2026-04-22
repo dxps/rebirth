@@ -5,9 +5,9 @@ interface LogoProps {
 	width?: number
 }
 
-const logoImage = require('../assets/logo.png') as number
+const logoImage = require('../assets/logo1.png') as number
 
-export function Logo({ height = 86, width = 134 }: LogoProps) {
+export function Logo({ height = 86, width = 100 }: LogoProps) {
 	return (
 		<Image
 			accessibilityLabel="Rebirth logo"
@@ -21,6 +21,6 @@ export function Logo({ height = 86, width = 134 }: LogoProps) {
 const styles = StyleSheet.create({
 	logo: {
 		height: 86,
-		width: 134,
+		width: 100,
 	},
 })

@@ -33,6 +33,7 @@
 :root {
 	--bg: #e2e0d7;
 	--fg: #504945;
+	--brand-logo-filter: saturate(0.01) contrast(5) brightness(0.45);
 	--striped-title-fg: #1d2021;
 	--striped-title-fill: color-mix(
 		in srgb,
@@ -92,6 +93,7 @@
 :root[data-theme='dark'] {
 	--bg: #3c3c3c;
 	--fg: #e0e0e0;
+	--brand-logo-filter: saturate(0.01) contrast(5) brightness(1.25);
 	--striped-title-fg: var(--fg);
 	--striped-title-fill: transparent;
 	--striped-title-line: 0.018em;
@@ -247,15 +249,19 @@ button svg,
 	z-index: 10;
 }
 
+.brand,
+.brand img {
+	height: 1.7rem;
+}
+
 .brand {
 	align-items: center;
 	display: inline-flex;
-	height: 2.25rem;
 }
 
 .brand img {
 	display: block;
-	height: 2.25rem;
+	filter: var(--brand-logo-filter);
 	width: auto;
 }
 
@@ -402,7 +408,27 @@ button svg,
 }
 
 .intro {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	margin-inline: auto;
 	max-width: 44rem;
+	min-height: calc(100vh - 7.5rem);
+	text-align: center;
+	width: 100%;
+}
+
+.home-logo {
+	display: block;
+	height: 5rem;
+	margin-bottom: 0.85rem;
+	opacity: 0.65;
+	width: auto;
+}
+
+.intro p {
+	font-weight: 300;
 }
 
 .page-label {
@@ -2978,6 +3004,7 @@ h1 {
 	);
 	background-clip: text;
 	color: transparent;
+	font-size: clamp(0.55rem, 5vw, 4.8rem);
 	text-shadow: 0 0 0 var(--striped-title-fill);
 	-webkit-background-clip: text;
 }
@@ -3032,6 +3059,10 @@ p {
 		padding: 6rem 1.25rem 2rem;
 	}
 
+	.intro {
+		align-self: center;
+	}
+
 	.app-header {
 		height: 3.5rem;
 		padding: 0.3rem 0.75rem;
@@ -3073,6 +3104,7 @@ p {
 
 	.brand,
 	.brand img {
-		height: 2rem;
+		height: 0.2rem;
+		width: 0.2rem;
 	}
 }

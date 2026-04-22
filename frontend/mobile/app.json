@@ -1,27 +1,25 @@
 {
-  "expo": {
-    "name": "Rebirth",
-    "slug": "rebirth",
-    "version": "0.1.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "transparent"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "transparent"
-      }
-    }
-  }
+	"expo": {
+		"name": "Rebirth",
+		"slug": "rebirth",
+		"version": "0.1.0",
+		"orientation": "portrait",
+		"icon": "./assets/icon1.png",
+		"userInterfaceStyle": "automatic",
+		"assetBundlePatterns": ["**/*"],
+		"splash": {
+			"image": "./assets/splash.png",
+			"resizeMode": "contain",
+			"backgroundColor": "transparent"
+		},
+		"ios": {
+			"supportsTablet": true
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/icon1.png",
+				"backgroundColor": "transparent"
+			}
+		}
+	}
 }

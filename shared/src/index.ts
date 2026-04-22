@@ -7,7 +7,6 @@ import {
 import { type Permission } from './security/permission'
 import {
 	hasValidPermissionIds,
-	isUserId,
 	type CreateUserInput,
 	type UpdateUserInput,
 	type User,
@@ -20,9 +19,7 @@ import {
 } from './types/attribute-template'
 import {
 	hasValidEntityTemplateAttributes,
-	isEntityTemplateAttributeId,
 	isEntityTemplateId,
-	type CreateEntityTemplateAttributeInput,
 	type CreateEntityTemplateInput,
 	type CreateEntityTemplateLinkInput,
 	type EntityTemplate,
@@ -108,7 +105,7 @@ export interface ApiErrorResponse {
 
 export const appInfo = {
 	name: 'Rebirth',
-	description: 'An ontology simplified knowledge management system',
+	description: 'An ontology simplified knowledge system',
 } as const
 
 export const apiRoutes = {
@@ -171,8 +168,7 @@ export function isCreateAccessLevelInput(
 	const input = value as Record<string, unknown>
 
 	return (
-		typeof input.name === 'string' &&
-		typeof input.description === 'string'
+		typeof input.name === 'string' && typeof input.description === 'string'
 	)
 }
 
@@ -209,9 +205,7 @@ export function isLoginInput(value: unknown): value is LoginInput {
 	)
 }
 
-export function isUpdateEmailInput(
-	value: unknown,
-): value is UpdateEmailInput {
+export function isUpdateEmailInput(value: unknown): value is UpdateEmailInput {
 	if (!value || typeof value !== 'object') {
 		return false
 	}
@@ -257,10 +251,8 @@ export function isUpdateUserInput(value: unknown): value is UpdateUserInput {
 		(input.email === undefined || typeof input.email === 'string') &&
 		(input.firstName === undefined ||
 			typeof input.firstName === 'string') &&
-		(input.lastName === undefined ||
-			typeof input.lastName === 'string') &&
-		(input.username === undefined ||
-			typeof input.username === 'string') &&
+		(input.lastName === undefined || typeof input.lastName === 'string') &&
+		(input.username === undefined || typeof input.username === 'string') &&
 		(input.password === undefined ||
 			(typeof input.password === 'string' &&
 				input.password.length >= 8)) &&
@@ -369,8 +361,7 @@ export function isUpdateEntityTemplateInput(
 
 	const input = value as Record<string, unknown>
 	const hasAttributeUpdate =
-		input.attributes !== undefined ||
-		input.listingAttributeId !== undefined
+		input.attributes !== undefined || input.listingAttributeId !== undefined
 
 	return (
 		(input.name === undefined || typeof input.name === 'string') &&
