@@ -1068,8 +1068,34 @@ button.access-level-refresh-button:hover {
 	right: 0.35rem;
 }
 
+.entities-table th.data-table-action-heading {
+	width: 100%;
+}
+
+.entities-table td:first-child,
+.entities-table td:last-child {
+	padding-left: 0.7rem;
+	padding-right: 0.7rem;
+	width: auto;
+}
+
+.entity-listing-cell {
+	align-items: baseline;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+}
+
+.entity-listing-cell strong {
+	color: var(--fg);
+	font-weight: 400;
+	overflow-wrap: anywhere;
+	text-align: right;
+}
+
 .entity-templates-table tbody tr:last-child td,
-.attribute-templates-table tbody tr:last-child td {
+.attribute-templates-table tbody tr:last-child td,
+.entities-table tbody tr:last-child td {
 	border-bottom: 0;
 }
 
