@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Database, House, LogIn, LogOut, Moon, Shapes, Shield, Sun, User } from "lucide-react";
+import { Database, House, LogIn, LogOut, Menu, Moon, Shapes, Shield, Sun, User } from "lucide-react";
 import { apiRoutes, PermissionName } from "@rebirth/shared";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -116,7 +116,7 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
           variant="ghost"
           onClick={() => setIsUserMenuOpen((current) => !current)}
         >
-          <User aria-hidden="true" />
+          <Menu aria-hidden="true" />
         </Button>
         {isUserMenuOpen ? (
           <div className="user-menu" role="menu">

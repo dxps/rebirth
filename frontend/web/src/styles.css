@@ -451,9 +451,10 @@ button svg,
 }
 
 .profile-forms {
+	column-gap: 4rem;
 	display: grid;
-	gap: 1.5rem;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
+	row-gap: 4rem;
 }
 
 .profile-empty {
@@ -930,7 +931,7 @@ button.access-level-refresh-button:hover {
 .entity-templates-table td:first-child,
 .attribute-templates-table th:first-child,
 .attribute-templates-table td:first-child {
-	width: 34%;
+	width: 30%;
 }
 
 .data-table td:nth-child(2) {
@@ -1029,7 +1030,7 @@ button.access-level-refresh-button:hover {
 .attribute-templates-table td:nth-child(3) {
 	color: var(--muted);
 	white-space: nowrap;
-	width: 6rem;
+	width: 6.6rem;
 }
 
 .attribute-templates-table th.data-table-action-heading,
