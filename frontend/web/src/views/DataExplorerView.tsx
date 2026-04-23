@@ -17,6 +17,7 @@ import {
 	type UpdateEntityInput,
 } from '@rebirth/shared'
 import {
+	ArrowLeft,
 	GripVertical,
 	Info,
 	Pencil,
@@ -84,6 +85,7 @@ interface EntityDetailsWindowState {
 	entityId: string
 	error: string | null
 	id: string
+	activeTab: 'attributes' | 'links'
 	initialPosition: {
 		x: number
 		y: number
@@ -93,6 +95,7 @@ interface EntityDetailsWindowState {
 
 interface EntityEditWindowState {
 	entity: Entity
+	activeTab: 'attributes' | 'links'
 	id: string
 	initialPosition: {
 		x: number
@@ -109,6 +112,7 @@ interface CreateEntityModalProps {
 	error: string | null
 	mode: 'create' | 'edit'
 	initialEntityTemplateId?: string
+	initialActiveTab?: 'attributes' | 'links'
 	initialPosition?: {
 		x: number
 		y: number
@@ -117,6 +121,7 @@ interface CreateEntityModalProps {
 	isSaving: boolean
 	onClose: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
+	onBack?: () => void
 	onUpdate: (id: string, input: UpdateEntityInput) => Promise<void>
 }
 
@@ -151,11 +156,13 @@ function CreateEntityModal({
 	error,
 	mode,
 	initialEntityTemplateId = '',
+	initialActiveTab = 'attributes',
 	initialPosition,
 	isLoadingOptions,
 	isSaving,
 	onClose,
 	onCreate,
+	onBack,
 	onUpdate,
 }: CreateEntityModalProps) {
 	const formId = mode === 'edit' ? 'entity-edit-form' : 'entity-create-form'
@@ -163,7 +170,7 @@ function CreateEntityModal({
 		initialEntityTemplateId,
 	)
 	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
-		'attributes',
+		initialActiveTab,
 	)
 	const [includedAttributes, setIncludedAttributes] = useState<
 		EntityFormAttribute[]
@@ -265,6 +272,10 @@ function CreateEntityModal({
 		setSelectedAttributeTemplateId('')
 		setIsIdPopoverOpen(false)
 	}, [entity, mode])
+
+	useEffect(() => {
+		setActiveTab(initialActiveTab)
+	}, [initialActiveTab])
 
 	useEffect(() => {
 		if (!isIdPopoverOpen) {
@@ -987,6 +998,19 @@ function CreateEntityModal({
 									</div>
 								) : null}
 							</div>
+						) : null}
+						{mode === 'edit' ? (
+							<button
+								aria-label="Back to view"
+								className="draggable-modal-titlebar-button"
+								data-no-drag="true"
+								data-tooltip="Back to view"
+								type="button"
+								onPointerDown={(event) => event.stopPropagation()}
+								onClick={() => onBack?.()}
+							>
+								<ArrowLeft aria-hidden="true" />
+							</button>
 						) : null}
 						<button
 							aria-label={`Save ${modalTitle}`}
@@ -1779,6 +1803,7 @@ interface EntityDetailsModalProps {
 		x: number
 		y: number
 	}
+	initialActiveTab?: 'attributes' | 'links'
 	windowId: string
 	zIndex?: number
 	onDelete: (entity: Entity) => void
@@ -1786,7 +1811,9 @@ interface EntityDetailsModalProps {
 		entity: Entity,
 		position: { x: number; y: number },
 		windowId: string,
+		activeTab: 'attributes' | 'links',
 	) => void
+	onActivate: (windowId: string) => void
 	onClose: () => void
 }
 
@@ -1797,17 +1824,19 @@ function EntityDetailsModal({
 	entityTemplates,
 	error,
 	isLoading,
+	initialActiveTab = 'attributes',
 	initialPosition,
 	windowId,
 	zIndex = 1,
 	onDelete,
 	onEdit,
+	onActivate,
 	onClose,
 }: EntityDetailsModalProps) {
 	const modalTitle = 'Entity'
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
-		'attributes',
+		initialActiveTab,
 	)
 	const [position, setPosition] = useState(() => ({
 		x:
@@ -1877,6 +1906,10 @@ function EntityDetailsModal({
 
 		return link.targetEntityId ?? ''
 	}
+
+	useEffect(() => {
+		setActiveTab(initialActiveTab)
+	}, [initialActiveTab])
 
 	const startDrag = useCallback(
 		(event: ReactPointerEvent<HTMLElement>) => {
@@ -1974,6 +2007,7 @@ function EntityDetailsModal({
 				aria-modal="false"
 				className="draggable-modal"
 				role="dialog"
+				onPointerDown={() => onActivate(windowId)}
 					style={{
 						height: size.height,
 						transform: `translate(${position.x}px, ${position.y}px)`,
@@ -2092,7 +2126,7 @@ function EntityDetailsModal({
 							onPointerDown={(event) => event.stopPropagation()}
 							onClick={() => {
 								if (entity) {
-									onEdit(entity, position, windowId)
+									onEdit(entity, position, windowId, activeTab)
 								}
 							}}
 						>
@@ -2614,6 +2648,7 @@ export function DataExplorerView() {
 			entity: Entity,
 			position: { x: number; y: number },
 			windowId: string,
+			activeTab: 'attributes' | 'links',
 		) => {
 			setCreateEntityError(null)
 			setEntityDetailsWindows((current) =>
@@ -2634,6 +2669,7 @@ export function DataExplorerView() {
 							? {
 									...window,
 									entity,
+									activeTab,
 									initialPosition: position,
 							  }
 							: window,
@@ -2644,6 +2680,7 @@ export function DataExplorerView() {
 					...current,
 					{
 						entity,
+						activeTab,
 						id: crypto.randomUUID(),
 						initialPosition: position,
 					},
@@ -2811,6 +2848,7 @@ export function DataExplorerView() {
 				{
 					entity: null,
 					entityId,
+					activeTab: 'attributes',
 					error: null,
 					id: windowId,
 					initialPosition,
@@ -2833,6 +2871,26 @@ export function DataExplorerView() {
 		setEntityDetailsWindows((current) =>
 			current.filter((window) => window.id !== windowId),
 		)
+	}, [])
+
+	const activateEntityDetailsWindow = useCallback((windowId: string) => {
+		setEntityDetailsWindows((current) => {
+			const index = current.findIndex((window) => window.id === windowId)
+
+			if (index < 0 || index === current.length - 1) {
+				return current
+			}
+
+			const next = current.slice()
+			const [window] = next.splice(index, 1)
+
+			if (!window) {
+				return current
+			}
+
+			next.push(window)
+			return next
+		})
 	}, [])
 
 	const createEntity = useCallback(
@@ -2882,6 +2940,7 @@ export function DataExplorerView() {
 			input: UpdateEntityInput,
 			editWindowId?: string,
 			editWindowPosition?: { x: number; y: number },
+			editWindowActiveTab?: 'attributes' | 'links',
 		): Promise<void> => {
 			setIsSavingEntity(true)
 			setCreateEntityError(null)
@@ -2916,12 +2975,13 @@ export function DataExplorerView() {
 							current.filter((window) => window.id !== editWindowId),
 						)
 						setEntityDetailsWindows((current) => [
-							...current.filter(
-								(window) => window.entityId !== id,
-							),
+						...current.filter(
+							(window) => window.entityId !== id,
+						),
 							{
 								entity: data.data,
 								entityId: id,
+								activeTab: editWindowActiveTab ?? 'attributes',
 								error: null,
 								id: crypto.randomUUID(),
 								initialPosition:
@@ -3250,6 +3310,7 @@ export function DataExplorerView() {
 					entityTemplates={entityTemplates}
 					error={createEntityError}
 					initialEntityTemplateId={window.entity.entityTemplateId ?? ''}
+					initialActiveTab={window.activeTab}
 					initialPosition={window.initialPosition}
 					isLoadingOptions={isLoadingCreateOptions}
 					isSaving={isSavingEntity}
@@ -3259,9 +3320,34 @@ export function DataExplorerView() {
 							current.filter((item) => item.id !== window.id),
 						)
 					}
+					onBack={() => {
+						setEntityEditWindows((current) =>
+							current.filter((item) => item.id !== window.id),
+						)
+						setEntityDetailsWindows((current) => [
+							...current.filter(
+								(item) => item.entityId !== window.entity.id,
+							),
+							{
+								entity: window.entity,
+								entityId: window.entity.id,
+								activeTab: window.activeTab,
+								error: null,
+								id: crypto.randomUUID(),
+								initialPosition: window.initialPosition,
+								isLoading: false,
+							},
+						])
+					}}
 					onCreate={createEntity}
 					onUpdate={(id, input) =>
-						updateEntityRecord(id, input, window.id, window.initialPosition)
+						updateEntityRecord(
+							id,
+							input,
+							window.id,
+							window.initialPosition,
+							window.activeTab,
+						)
 					}
 				/>
 			))}
@@ -3273,8 +3359,10 @@ export function DataExplorerView() {
 					entities={entities}
 					entityTemplates={entityTemplates}
 					error={window.error}
+					initialActiveTab={window.activeTab}
 					initialPosition={window.initialPosition}
 					isLoading={window.isLoading}
+					onActivate={activateEntityDetailsWindow}
 					onDelete={deleteEntity}
 					onEdit={openEntityEditModal}
 					onClose={() => closeEntityDetails(window.id)}
