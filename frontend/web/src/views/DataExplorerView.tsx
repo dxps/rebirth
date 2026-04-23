@@ -32,9 +32,9 @@ import {
 	useEffect,
 	useRef,
 	useState,
-	type FormEvent,
 	type MouseEvent as ReactMouseEvent,
 	type PointerEvent as ReactPointerEvent,
+	type SyntheticEvent,
 } from 'react'
 import {
 	authChangedEventName,
@@ -203,7 +203,8 @@ function CreateEntityModal({
 					2,
 			),
 		y:
-			initialPosition?.y ?? Math.max(entityModalMargin, window.innerHeight * 0.18),
+			initialPosition?.y ??
+			Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}))
 	const [size, setSize] = useState(() => ({
 		height: Math.min(
@@ -553,7 +554,7 @@ function CreateEntityModal({
 		}
 	}, [])
 
-	async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+	async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
 		event.preventDefault()
 
 		if (isCreateDisabled) {
@@ -609,12 +610,9 @@ function CreateEntityModal({
 						value: attribute.value,
 					})),
 				linkTargets: includedLinks
-					.filter(
-						(link) => link.entityTemplateLinkId !== null,
-					)
+					.filter((link) => link.entityTemplateLinkId !== null)
 					.map((link) => ({
-						entityTemplateLinkId:
-							link.entityTemplateLinkId ?? '',
+						entityTemplateLinkId: link.entityTemplateLinkId ?? '',
 						targetEntityId: link.targetEntityId ?? null,
 					})),
 				entityTemplateId: selectedEntityTemplate.id,
@@ -745,10 +743,7 @@ function CreateEntityModal({
 		])
 	}
 
-	function updateLink(
-		linkId: string,
-		update: Partial<EntityFormLink>,
-	): void {
+	function updateLink(linkId: string, update: Partial<EntityFormLink>): void {
 		setIncludedLinks((current) =>
 			current.map((link) =>
 				link.id === linkId ? { ...link, ...update } : link,
@@ -976,7 +971,9 @@ function CreateEntityModal({
 										event.stopPropagation()
 									}
 									onClick={() =>
-										setIsIdPopoverOpen((current) => !current)
+										setIsIdPopoverOpen(
+											(current) => !current,
+										)
 									}
 								>
 									<Info aria-hidden="true" />
@@ -1006,7 +1003,9 @@ function CreateEntityModal({
 								data-no-drag="true"
 								data-tooltip="Back to view"
 								type="button"
-								onPointerDown={(event) => event.stopPropagation()}
+								onPointerDown={(event) =>
+									event.stopPropagation()
+								}
 								onClick={() => onBack?.()}
 							>
 								<ArrowLeft aria-hidden="true" />
@@ -1077,11 +1076,11 @@ function CreateEntityModal({
 								data-selectable="true"
 							>
 								<div className="entity-template-tab-row">
-								<div
-									className="entity-template-tab-list"
-									role="tablist"
-									aria-label="Entity sections"
-								>
+									<div
+										className="entity-template-tab-list"
+										role="tablist"
+										aria-label="Entity sections"
+									>
 										<button
 											aria-selected={
 												activeTab === 'attributes'
@@ -1559,7 +1558,8 @@ function CreateEntityModal({
 																	'edit' &&
 																	creationMode ===
 																		'template') ||
-																entities.length === 0
+																entities.length ===
+																	0
 															}
 															type="button"
 															onClick={addLink}
@@ -1664,16 +1664,16 @@ function CreateEntityModal({
 																					link.targetEntityId,
 																			)
 																				? getEntityListingLabel(
-																					getLinkTargetEntities(
-																						link,
-																					).find(
-																						(
-																							target,
-																						) =>
-																							target.id ===
-																							link.targetEntityId,
-																					) as Entity,
-																				)
+																						getLinkTargetEntities(
+																							link,
+																						).find(
+																							(
+																								target,
+																							) =>
+																								target.id ===
+																								link.targetEntityId,
+																						) as Entity,
+																					)
 																				: undefined
 																		}
 																	>
@@ -1682,44 +1682,46 @@ function CreateEntityModal({
 																			data-no-drag="true"
 																			disabled={
 																				entities.length ===
-																					0
+																				0
 																			}
-																			value={link.targetEntityId ?? ''}
+																			value={
+																				link.targetEntityId ??
+																				''
+																			}
 																			onChange={(
 																				event,
-																			) =>
-																				{
-																					const targetEntity =
-																						getLinkTargetEntities(
-																							link,
-																						).find(
-																							(
-																								target,
-																							) =>
-																								target.id ===
-																								event
-																									.target
-																									.value,
-																						)
-
-																					updateLink(
-																						link.id,
-																						{
-																							targetEntityId:
-																								event
-																									.target
-																									.value ||
-																								null,
-																							targetEntityTemplateId:
-																								targetEntity?.entityTemplateId ??
-																								null,
-																						},
+																			) => {
+																				const targetEntity =
+																					getLinkTargetEntities(
+																						link,
+																					).find(
+																						(
+																							target,
+																						) =>
+																							target.id ===
+																							event
+																								.target
+																								.value,
 																					)
-																				}
-																			}
+
+																				updateLink(
+																					link.id,
+																					{
+																						targetEntityId:
+																							event
+																								.target
+																								.value ||
+																							null,
+																						targetEntityTemplateId:
+																							targetEntity?.entityTemplateId ??
+																							null,
+																					},
+																				)
+																			}}
 																		>
 																			<option value="">
-																				Select an
+																				Select
+																				an
 																				entity
 																			</option>
 																			{getLinkTargetEntities(
@@ -1729,8 +1731,12 @@ function CreateEntityModal({
 																					target,
 																				) => (
 																					<option
-																						key={target.id}
-																						value={target.id}
+																						key={
+																							target.id
+																						}
+																						value={
+																							target.id
+																						}
 																					>
 																						{getEntityListingLabel(
 																							target,
@@ -1851,7 +1857,8 @@ function EntityDetailsModal({
 					2,
 			),
 		y:
-			initialPosition?.y ?? Math.max(entityModalMargin, window.innerHeight * 0.18),
+			initialPosition?.y ??
+			Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}))
 	const [size, setSize] = useState(() => ({
 		height: Math.min(
@@ -2008,13 +2015,13 @@ function EntityDetailsModal({
 				className="draggable-modal"
 				role="dialog"
 				onPointerDown={() => onActivate(windowId)}
-					style={{
-						height: size.height,
-						transform: `translate(${position.x}px, ${position.y}px)`,
-						width: size.width,
-						zIndex,
-					}}
-				>
+				style={{
+					height: size.height,
+					transform: `translate(${position.x}px, ${position.y}px)`,
+					width: size.width,
+					zIndex,
+				}}
+			>
 				<div className="draggable-modal-body">
 					<div
 						className="draggable-modal-header"
@@ -2037,7 +2044,9 @@ function EntityDetailsModal({
 										event.stopPropagation()
 									}
 									onClick={() =>
-										setIsIdPopoverOpen((current) => !current)
+										setIsIdPopoverOpen(
+											(current) => !current,
+										)
 									}
 								>
 									<Info aria-hidden="true" />
@@ -2060,10 +2069,10 @@ function EntityDetailsModal({
 								) : null}
 							</div>
 						) : null}
-							<div
-								className="draggable-modal-delete-action"
-								data-no-drag="true"
-							>
+						<div
+							className="draggable-modal-delete-action"
+							data-no-drag="true"
+						>
 							<button
 								aria-expanded={isDeleteConfirmOpen}
 								aria-label={`Delete ${modalTitle}`}
@@ -2126,7 +2135,12 @@ function EntityDetailsModal({
 							onPointerDown={(event) => event.stopPropagation()}
 							onClick={() => {
 								if (entity) {
-									onEdit(entity, position, windowId, activeTab)
+									onEdit(
+										entity,
+										position,
+										windowId,
+										activeTab,
+									)
 								}
 							}}
 						>
@@ -2387,7 +2401,8 @@ function EntityDetailsModal({
 														<tr key={link.id}>
 															<td>{link.name}</td>
 															<td>
-																{link.description ?? ''}
+																{link.description ??
+																	''}
 															</td>
 															<td>
 																{getLinkTargetLabel(
@@ -2477,29 +2492,32 @@ export function DataExplorerView() {
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Manager)
 
-	const getEntityDetailsPosition = useCallback((pointerX: number, pointerY: number) => {
-		const modalWidth = Math.min(
-			entityModalWidth,
-			window.innerWidth - entityModalMargin * 2,
-		)
-		const modalHeight = Math.min(
-			entityModalHeight,
-			window.innerHeight - entityModalMargin * 2,
-		)
+	const getEntityDetailsPosition = useCallback(
+		(pointerX: number, pointerY: number) => {
+			const modalWidth = Math.min(
+				entityModalWidth,
+				window.innerWidth - entityModalMargin * 2,
+			)
+			const modalHeight = Math.min(
+				entityModalHeight,
+				window.innerHeight - entityModalMargin * 2,
+			)
 
-		return {
-			x: clampToRange(
-				pointerX - modalWidth * 0.3,
-				entityModalMargin,
-				window.innerWidth - modalWidth - entityModalMargin,
-			),
-			y: clampToRange(
-				pointerY - 48,
-				entityModalMargin,
-				window.innerHeight - modalHeight - entityModalMargin,
-			),
-		}
-	}, [])
+			return {
+				x: clampToRange(
+					pointerX - modalWidth * 0.3,
+					entityModalMargin,
+					window.innerWidth - modalWidth - entityModalMargin,
+				),
+				y: clampToRange(
+					pointerY - 48,
+					entityModalMargin,
+					window.innerHeight - modalHeight - entityModalMargin,
+				),
+			}
+		},
+		[],
+	)
 
 	const loadEntities = useCallback(async (): Promise<void> => {
 		const requestId = loadRequestId.current + 1
@@ -2661,7 +2679,9 @@ export function DataExplorerView() {
 			}
 
 			setEntityEditWindows((current) => {
-				const existing = current.find((window) => window.entity.id === entity.id)
+				const existing = current.find(
+					(window) => window.entity.id === entity.id,
+				)
 
 				if (existing) {
 					return current.map((window) =>
@@ -2671,7 +2691,7 @@ export function DataExplorerView() {
 									entity,
 									activeTab,
 									initialPosition: position,
-							  }
+								}
 							: window,
 					)
 				}
@@ -2697,7 +2717,7 @@ export function DataExplorerView() {
 					? {
 							...window,
 							error: null,
-					  }
+						}
 					: window,
 			),
 		)
@@ -2731,7 +2751,7 @@ export function DataExplorerView() {
 							? {
 									...window,
 									error: 'Unable to delete entity',
-							  }
+								}
 							: window,
 					),
 				)
@@ -2752,7 +2772,7 @@ export function DataExplorerView() {
 								...window,
 								error: null,
 								isLoading: true,
-						  }
+							}
 						: window,
 				),
 			)
@@ -2781,7 +2801,7 @@ export function DataExplorerView() {
 										entity: data.data,
 										error: null,
 										isLoading: false,
-								  }
+									}
 								: window,
 						),
 					)
@@ -2800,7 +2820,7 @@ export function DataExplorerView() {
 										entity: null,
 										error: 'Unable to load entity',
 										isLoading: false,
-								  }
+									}
 								: window,
 						),
 					)
@@ -2817,7 +2837,7 @@ export function DataExplorerView() {
 								? {
 										...window,
 										isLoading: false,
-								  }
+									}
 								: window,
 						),
 					)
@@ -2828,16 +2848,10 @@ export function DataExplorerView() {
 	)
 
 	const openEntityDetails = useCallback(
-		(
-			entityId: string,
-			pointerPosition?: { x: number; y: number },
-		) => {
+		(entityId: string, pointerPosition?: { x: number; y: number }) => {
 			const windowId = crypto.randomUUID()
 			const initialPosition = pointerPosition
-				? getEntityDetailsPosition(
-						pointerPosition.x,
-						pointerPosition.y,
-					)
+				? getEntityDetailsPosition(pointerPosition.x, pointerPosition.y)
 				: getEntityDetailsPosition(
 						window.innerWidth / 2,
 						window.innerHeight * 0.18,
@@ -2863,7 +2877,13 @@ export function DataExplorerView() {
 
 			void loadEntityDetails(windowId, entityId)
 		},
-		[getEntityDetailsPosition, entityTemplates.length, loadAccessLevels, loadEntityDetails, loadEntityTemplates],
+		[
+			getEntityDetailsPosition,
+			entityTemplates.length,
+			loadAccessLevels,
+			loadEntityDetails,
+			loadEntityTemplates,
+		],
 	)
 
 	const closeEntityDetails = useCallback((windowId: string) => {
@@ -2972,35 +2992,36 @@ export function DataExplorerView() {
 					)
 					if (editWindowId) {
 						setEntityEditWindows((current) =>
-							current.filter((window) => window.id !== editWindowId),
+							current.filter(
+								(window) => window.id !== editWindowId,
+							),
 						)
 						setEntityDetailsWindows((current) => [
-						...current.filter(
-							(window) => window.entityId !== id,
-						),
+							...current.filter(
+								(window) => window.entityId !== id,
+							),
 							{
 								entity: data.data,
 								entityId: id,
 								activeTab: editWindowActiveTab ?? 'attributes',
 								error: null,
 								id: crypto.randomUUID(),
-								initialPosition:
-									editWindowPosition ?? {
-										x: Math.max(
-											entityModalMargin,
-											(window.innerWidth -
-												Math.min(
-													entityModalWidth,
-													window.innerWidth -
-														entityModalMargin * 2,
-												)) /
-												2,
-										),
-										y: Math.max(
-											entityModalMargin,
-											window.innerHeight * 0.18,
-										),
-									},
+								initialPosition: editWindowPosition ?? {
+									x: Math.max(
+										entityModalMargin,
+										(window.innerWidth -
+											Math.min(
+												entityModalWidth,
+												window.innerWidth -
+													entityModalMargin * 2,
+											)) /
+											2,
+									),
+									y: Math.max(
+										entityModalMargin,
+										window.innerHeight * 0.18,
+									),
+								},
 								isLoading: false,
 							},
 						])
@@ -3085,7 +3106,10 @@ export function DataExplorerView() {
 							</colgroup>
 							<thead>
 								<tr>
-									<th className="data-table-action-heading" colSpan={2}>
+									<th
+										className="data-table-action-heading"
+										colSpan={2}
+									>
 										<span className="entity-create-action">
 											<button
 												aria-expanded={
@@ -3120,42 +3144,45 @@ export function DataExplorerView() {
 											getEntityListingAttribute(entity)
 
 										return (
-												<tr
-													key={entity.id}
-													className="data-table-row"
-													tabIndex={0}
-													role="button"
-													aria-label={`Open entity ${listingAttribute?.value ?? entity.id}`}
-													onClick={(event) =>
-														openEntityDetails(entity.id, {
+											<tr
+												key={entity.id}
+												className="data-table-row"
+												tabIndex={0}
+												role="button"
+												aria-label={`Open entity ${listingAttribute?.value ?? entity.id}`}
+												onClick={(event) =>
+													openEntityDetails(
+														entity.id,
+														{
 															x: event.clientX,
 															y: event.clientY,
-														})
+														},
+													)
+												}
+												onKeyDown={(event) => {
+													if (
+														event.key === 'Enter' ||
+														event.key === ' '
+													) {
+														event.preventDefault()
+														const rect =
+															event.currentTarget.getBoundingClientRect()
+														openEntityDetails(
+															entity.id,
+															{
+																x:
+																	rect.left +
+																	rect.width /
+																		2,
+																y:
+																	rect.top +
+																	rect.height /
+																		2,
+															},
+														)
 													}
-													onKeyDown={(event) => {
-														if (
-															event.key === 'Enter' ||
-															event.key === ' '
-														) {
-															event.preventDefault()
-															const rect =
-																event.currentTarget.getBoundingClientRect()
-															openEntityDetails(
-																entity.id,
-																{
-																	x:
-																		rect.left +
-																		rect.width /
-																			2,
-																	y:
-																		rect.top +
-																		rect.height /
-																			2,
-																},
-															)
-														}
-													}}
-												>
+												}}
+											>
 												<td className="entity-listing-name-cell">
 													<span>
 														{listingAttribute?.name ??
@@ -3309,7 +3336,9 @@ export function DataExplorerView() {
 					entities={entities}
 					entityTemplates={entityTemplates}
 					error={createEntityError}
-					initialEntityTemplateId={window.entity.entityTemplateId ?? ''}
+					initialEntityTemplateId={
+						window.entity.entityTemplateId ?? ''
+					}
 					initialActiveTab={window.activeTab}
 					initialPosition={window.initialPosition}
 					isLoadingOptions={isLoadingCreateOptions}
