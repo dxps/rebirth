@@ -20,6 +20,7 @@ import {
 import {
 	hasValidEntityTemplateAttributes,
 	isEntityTemplateId,
+	isEntityTemplateLinkId,
 	type CreateEntityTemplateInput,
 	type CreateEntityTemplateLinkInput,
 	type EntityTemplate,
@@ -335,6 +336,8 @@ function isCreateEntityTemplateLinkInput(
 	const input = value as Record<string, unknown>
 
 	return (
+		(input.id === undefined ||
+			(typeof input.id === 'string' && isEntityTemplateLinkId(input.id))) &&
 		typeof input.targetEntityTemplateId === 'string' &&
 		isEntityTemplateId(input.targetEntityTemplateId) &&
 		typeof input.name === 'string' &&

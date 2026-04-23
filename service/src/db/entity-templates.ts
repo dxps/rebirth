@@ -18,6 +18,12 @@ type NormalizedCreateEntityTemplateInput = Omit<
 	'attributes'
 > & {
 	attributes: EntityTemplateAttribute[]
+	links: NormalizedEntityTemplateLinkInput[]
+}
+
+interface NormalizedEntityTemplateLinkInput
+	extends CreateEntityTemplateLinkInput {
+	id: string
 }
 
 interface EntityTemplateRow {
@@ -59,9 +65,10 @@ function normalizeNullableText(value: string | null | undefined): string | null 
 
 function normalizeLinks(
 	links: CreateEntityTemplateLinkInput[] | undefined,
-): CreateEntityTemplateLinkInput[] {
+): NormalizedEntityTemplateLinkInput[] {
 	return (links ?? [])
 		.map((link, index) => ({
+			id: link.id ?? createUuidV7(),
 			description: normalizeNullableText(link.description),
 			listingIndex: link.listingIndex ?? index,
 			name: link.name.trim(),
@@ -197,10 +204,13 @@ async function replaceEntityTemplateAttributes(
 	entityTemplateId: string,
 	attributes: EntityTemplateAttribute[],
 ): Promise<void> {
-	await sql`
-		DELETE FROM entity_template_attributes
+	const existingRows = await sql<{ id: string }[]>`
+		SELECT id
+		FROM entity_template_attributes
 		WHERE entity_template_id = ${entityTemplateId}
 	`
+	const existingIds = new Set(existingRows.map((row) => row.id))
+	const nextIds = new Set(attributes.map((attribute) => attribute.id))
 
 	for (const attribute of attributes) {
 		await sql`
@@ -224,6 +234,36 @@ async function replaceEntityTemplateAttributes(
 				${attribute.accessLevelId},
 				${attribute.listingIndex}
 			)
+			ON CONFLICT (id) DO UPDATE SET
+				entity_template_id = EXCLUDED.entity_template_id,
+				attribute_template_id = EXCLUDED.attribute_template_id,
+				name = EXCLUDED.name,
+				description = EXCLUDED.description,
+				value_type = EXCLUDED.value_type,
+				access_level_id = EXCLUDED.access_level_id,
+				listing_index = EXCLUDED.listing_index
+		`
+	}
+
+	const removedIds = [...existingIds].filter((id) => !nextIds.has(id))
+
+	if (removedIds.length > 0) {
+		const [referencedRow] = await sql<{ id: string }[]>`
+			SELECT id
+			FROM entity_attributes
+			WHERE entity_template_attribute_id = ANY(${removedIds})
+			LIMIT 1
+		`
+
+		if (referencedRow) {
+			throw new Error(
+				'Cannot remove entity template attributes that are used by entities.',
+			)
+		}
+
+		await sql`
+			DELETE FROM entity_template_attributes
+			WHERE id = ANY(${removedIds})
 		`
 	}
 }
@@ -231,12 +271,15 @@ async function replaceEntityTemplateAttributes(
 async function replaceEntityTemplateLinks(
 	sql: postgres.TransactionSql,
 	entityTemplateId: string,
-	links: CreateEntityTemplateLinkInput[],
+	links: NormalizedEntityTemplateLinkInput[],
 ): Promise<void> {
-	await sql`
-		DELETE FROM entity_template_links
+	const existingRows = await sql<{ id: string }[]>`
+		SELECT id
+		FROM entity_template_links
 		WHERE entity_template_id = ${entityTemplateId}
 	`
+	const existingIds = new Set(existingRows.map((row) => row.id))
+	const nextIds = new Set(links.map((link) => link.id))
 
 	for (const link of links) {
 		await sql`
@@ -249,13 +292,41 @@ async function replaceEntityTemplateLinks(
 				listing_index
 			)
 			VALUES (
-				${createUuidV7()},
+				${link.id},
 				${entityTemplateId},
 				${link.targetEntityTemplateId},
 				${link.name.trim()},
 				${normalizeNullableText(link.description)},
 				${link.listingIndex}
 			)
+			ON CONFLICT (id) DO UPDATE SET
+				entity_template_id = EXCLUDED.entity_template_id,
+				target_entity_template_id = EXCLUDED.target_entity_template_id,
+				name = EXCLUDED.name,
+				description = EXCLUDED.description,
+				listing_index = EXCLUDED.listing_index
+		`
+	}
+
+	const removedIds = [...existingIds].filter((id) => !nextIds.has(id))
+
+	if (removedIds.length > 0) {
+		const [referencedRow] = await sql<{ id: string }[]>`
+			SELECT id
+			FROM entity_links
+			WHERE entity_template_link_id = ANY(${removedIds})
+			LIMIT 1
+		`
+
+		if (referencedRow) {
+			throw new Error(
+				'Cannot remove entity template links that are used by entities.',
+			)
+		}
+
+		await sql`
+			DELETE FROM entity_template_links
+			WHERE id = ANY(${removedIds})
 		`
 	}
 }

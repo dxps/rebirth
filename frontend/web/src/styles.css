@@ -1302,6 +1302,10 @@ button.access-level-refresh-button:hover {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 
+.entity-attributes-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
 .entity-attributes-table th:nth-child(1),
 .entity-attributes-table td:nth-child(1),
 .entity-attributes-table th:nth-child(2),
@@ -1470,6 +1474,22 @@ button.draggable-modal-titlebar-button {
 	width: 0.72rem;
 }
 
+.draggable-modal-info-action {
+	align-items: center;
+	display: inline-flex;
+	position: relative;
+}
+
+.draggable-modal-info-button,
+button.draggable-modal-info-button {
+	color: color-mix(in srgb, var(--fg) 44%, transparent);
+}
+
+.draggable-modal-info-button svg {
+	height: 0.68rem;
+	width: 0.68rem;
+}
+
 .draggable-modal-close svg {
 	height: 0.82rem;
 	width: 0.82rem;
@@ -1564,6 +1584,26 @@ button.delete-confirm-danger:hover {
 	background: color-mix(in srgb, var(--destructive) 78%, #000000);
 	background-color: color-mix(in srgb, var(--destructive) 78%, #000000);
 	color: #ffffff;
+}
+
+.entity-id-popover {
+	min-width: 0;
+	padding: 0.42rem 0.5rem;
+	width: auto;
+}
+
+.entity-id-popover-title {
+	color: var(--fg);
+	font-size: 0.78rem;
+	line-height: 1.2;
+	margin: 0;
+	user-select: text;
+	white-space: nowrap;
+}
+
+.entity-id-popover [data-selectable='true'] {
+	cursor: text;
+	user-select: text;
 }
 
 .draggable-modal-delete-action[data-tooltip]::after,
@@ -2881,16 +2921,16 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	padding-left: 2px;
 }
 
-.entity-template-edit-form:not(.entity-template-view-form)
-	.entity-template-links-table
-	tbody
-	tr:last-child
-	td {
+.entity-template-links-table tbody tr:last-child td {
 	border-bottom: 0;
 }
 
 .entity-template-links-table tr[data-dragging='true'] {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.entity-entity-links-table tbody tr:last-child td {
+	border-bottom: 0;
 }
 
 .entity-template-link-name-column {

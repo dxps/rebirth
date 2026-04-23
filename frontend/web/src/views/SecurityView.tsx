@@ -19,6 +19,7 @@ import {
 	ArrowLeft,
 	Eye,
 	EyeOff,
+	Info,
 	Pencil,
 	Plus,
 	RefreshCw,
@@ -130,6 +131,7 @@ type OpenSecurityModal = OpenAccessLevelModal | OpenUserModal
 interface DraggableModalProps {
 	children: ReactNode
 	deleteTooltip?: string
+	infoText?: string
 	isSaveDisabled?: boolean
 	isDeleteDisabled?: boolean
 	saveDisabledTooltip?: string
@@ -185,6 +187,7 @@ function DraggableModal({
 	children,
 	deleteTooltip = 'Delete',
 	id,
+	infoText,
 	isDeleteDisabled = false,
 	initialPosition,
 	isSaveDisabled = false,
@@ -214,10 +217,12 @@ function DraggableModal({
 		),
 	})
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+	const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false)
 	const minHeight = id.startsWith('user')
 		? userModalHeight
 		: draggableModalMinHeights[mode]
 	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
+	const infoPopoverRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		setSize((current) => ({
@@ -231,6 +236,32 @@ function DraggableModal({
 			confirmDeleteButtonRef.current?.focus()
 		}
 	}, [isDeleteConfirmOpen])
+
+	useEffect(() => {
+		if (!isInfoPopoverOpen) {
+			return
+		}
+
+		function closeInfoPopover(event: PointerEvent): void {
+			const target = event.target
+
+			if (
+				infoPopoverRef.current &&
+				target instanceof Node &&
+				infoPopoverRef.current.contains(target)
+			) {
+				return
+			}
+
+			setIsInfoPopoverOpen(false)
+		}
+
+		document.addEventListener('pointerdown', closeInfoPopover)
+
+		return () => {
+			document.removeEventListener('pointerdown', closeInfoPopover)
+		}
+	}, [isInfoPopoverOpen])
 
 	useEffect(() => {
 		setIsDeleteConfirmOpen(false)
@@ -424,6 +455,42 @@ function DraggableModal({
 			<div className="draggable-modal-body" onPointerDown={startDrag}>
 				<div className="draggable-modal-header">
 					<h2>{title}</h2>
+					{infoText ? (
+						<div className="draggable-modal-info-action" ref={infoPopoverRef}>
+							<button
+								aria-expanded={isInfoPopoverOpen}
+								aria-label="Show id"
+								className="draggable-modal-titlebar-button draggable-modal-info-button"
+								data-no-drag="true"
+								data-tooltip="Info"
+								type="button"
+								onPointerDown={(event) =>
+									event.stopPropagation()
+								}
+								onClick={() =>
+									setIsInfoPopoverOpen((current) => !current)
+								}
+							>
+								<Info aria-hidden="true" />
+							</button>
+							{isInfoPopoverOpen ? (
+								<div
+									className="include-attribute-popover entity-id-popover"
+									data-no-drag="true"
+									onPointerDown={(event) =>
+										event.stopPropagation()
+									}
+								>
+									<p
+										className="entity-id-popover-title"
+										data-selectable="true"
+									>
+										id: {infoText}
+									</p>
+								</div>
+							) : null}
+						</div>
+					) : null}
 					{mode === 'details' ? (
 						<>
 							{deleteButton}
@@ -1797,6 +1864,11 @@ export function SecurityView() {
 								? getAccessLevelModalTitle(modal.mode)
 								: getUserModalTitle(modal.mode)
 						}
+						infoText={
+							modal.kind === 'access-level'
+								? modal.accessLevel?.id.toString()
+								: modal.user?.id
+						}
 						zIndex={modal.zIndex}
 					>
 						{modal.kind === 'access-level' &&
@@ -1836,14 +1908,6 @@ export function SecurityView() {
 								className="access-level-edit-form access-level-details-form access-level-view-form"
 								data-selectable="true"
 							>
-								<div className="access-level-details access-level-id-row">
-									<div className="attribute-template-id-row">
-										<p>id</p>
-										<strong className="attribute-template-id-value">
-											{modal.accessLevel.id}
-										</strong>
-									</div>
-								</div>
 								<label>
 									<span>name</span>
 									<input
@@ -1899,14 +1963,6 @@ export function SecurityView() {
 								className="access-level-edit-form security-user-edit-form security-user-details-form"
 								data-selectable="true"
 							>
-								<div className="access-level-details security-user-id-row">
-									<div className="attribute-template-id-row">
-										<p>id</p>
-										<strong className="attribute-template-id-value">
-											{modal.user.id}
-										</strong>
-									</div>
-								</div>
 								<div className="security-user-name-row">
 									<label>
 										<span>first name</span>

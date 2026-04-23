@@ -20,6 +20,7 @@ import {
 import {
 	ArrowLeft,
 	GripVertical,
+	Info,
 	Pencil,
 	Plus,
 	RefreshCw,
@@ -142,6 +143,7 @@ interface DraggableModalProps {
 	onClose: (id: string) => void
 	onDelete: (id: string) => void
 	onEdit: (id: string) => void
+	infoText?: string
 	saveDisabledTooltip?: string
 	title: string
 	zIndex: number
@@ -188,6 +190,7 @@ function DraggableModal({
 	onClose,
 	onDelete,
 	onEdit,
+	infoText,
 	saveDisabledTooltip = 'A template must have a name',
 	title,
 	zIndex,
@@ -203,8 +206,10 @@ function DraggableModal({
 		),
 	})
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+	const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false)
 	const minHeight = minHeightOverride ?? draggableModalMinHeights[mode]
 	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
+	const infoPopoverRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		setSize((current) => ({
@@ -218,6 +223,32 @@ function DraggableModal({
 			confirmDeleteButtonRef.current?.focus()
 		}
 	}, [isDeleteConfirmOpen])
+
+	useEffect(() => {
+		if (!isInfoPopoverOpen) {
+			return
+		}
+
+		function handlePointerDown(event: PointerEvent): void {
+			const target = event.target
+
+			if (
+				infoPopoverRef.current &&
+				target instanceof Node &&
+				infoPopoverRef.current.contains(target)
+			) {
+				return
+			}
+
+			setIsInfoPopoverOpen(false)
+		}
+
+		window.addEventListener('pointerdown', handlePointerDown)
+
+		return () => {
+			window.removeEventListener('pointerdown', handlePointerDown)
+		}
+	}, [isInfoPopoverOpen])
 
 	useEffect(() => {
 		setIsDeleteConfirmOpen(false)
@@ -396,6 +427,42 @@ function DraggableModal({
 			<div className="draggable-modal-body" onPointerDown={startDrag}>
 				<div className="draggable-modal-header">
 					<h2>{title}</h2>
+					{infoText ? (
+						<div className="draggable-modal-info-action" ref={infoPopoverRef}>
+							<button
+								aria-expanded={isInfoPopoverOpen}
+								aria-label="Template id"
+								className="draggable-modal-titlebar-button draggable-modal-info-button"
+								data-no-drag="true"
+								data-tooltip="Info"
+								type="button"
+								onPointerDown={(event) =>
+									event.stopPropagation()
+								}
+								onClick={() =>
+									setIsInfoPopoverOpen((current) => !current)
+								}
+							>
+								<Info aria-hidden="true" />
+							</button>
+							{isInfoPopoverOpen ? (
+								<div
+									className="include-attribute-popover entity-id-popover"
+									data-no-drag="true"
+									onPointerDown={(event) =>
+										event.stopPropagation()
+									}
+								>
+									<p
+										className="entity-id-popover-title"
+										data-selectable="true"
+									>
+										{infoText}
+									</p>
+								</div>
+							) : null}
+						</div>
+					) : null}
 					{mode === 'details' ? (
 						<>
 							{deleteButton}
@@ -775,9 +842,7 @@ function EntityTemplateEditForm({
 					attribute.valueType === attributeTemplate.valueType,
 			),
 	)
-	const availableLinkTargets = entityTemplates.filter(
-		(candidate) => candidate.id !== entityTemplate?.id,
-	)
+	const availableLinkTargets = entityTemplates
 	const [includeAttributeMode, setIncludeAttributeMode] = useState<
 		'existing' | 'new'
 	>('existing')
@@ -1551,6 +1616,7 @@ function EntityTemplateEditForm({
 				})),
 				description,
 				links: includedLinks.map((link, index) => ({
+					id: link.id,
 					description:
 						link.description.trim().length > 0
 							? link.description.trim()
@@ -2386,12 +2452,6 @@ function EntityTemplateDetailsView({
 			className="entity-template-edit-form entity-template-view-form access-level-details"
 			data-selectable="true"
 		>
-			<div className="attribute-template-id-row">
-				<p>id</p>
-				<strong className="attribute-template-id-value">
-					{entityTemplate.id}
-				</strong>
-			</div>
 			<div className="entity-template-fields">
 				<label>
 					<span>name</span>
@@ -3542,6 +3602,11 @@ export function TemplatesView() {
 								? getEntityTemplateModalTitle(modal.mode)
 								: getAttributeTemplateModalTitle(modal.mode)
 						}
+						infoText={
+							modal.entityTemplate?.id ??
+							modal.attributeTemplate?.id ??
+							undefined
+						}
 						zIndex={modal.zIndex}
 					>
 						{modal.templateType === 'entity' &&
@@ -3628,12 +3693,6 @@ export function TemplatesView() {
 							<div
 								className="access-level-details access-level-edit-form attribute-template-view-form"
 							>
-								<div className="attribute-template-id-row">
-									<p>id</p>
-									<strong className="attribute-template-id-value">
-										{modal.attributeTemplate.id}
-									</strong>
-								</div>
 								<label data-selectable="true">
 									<span>name</span>
 									<input

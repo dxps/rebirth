@@ -49,6 +49,7 @@ export interface EntityTemplate {
 }
 
 export interface CreateEntityTemplateLinkInput {
+	id?: EntityTemplateLinkId
 	targetEntityTemplateId: EntityTemplateId
 	name: string
 	description?: string | null

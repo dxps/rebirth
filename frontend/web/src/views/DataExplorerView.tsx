@@ -10,6 +10,7 @@ import {
 	type CreateEntityInput,
 	type EntitiesResponse,
 	type Entity,
+	type EntityLink,
 	type EntityResponse,
 	type EntityTemplate,
 	type EntityTemplatesResponse,
@@ -17,6 +18,7 @@ import {
 } from '@rebirth/shared'
 import {
 	GripVertical,
+	Info,
 	Pencil,
 	Plus,
 	RefreshCw,
@@ -69,14 +71,48 @@ function getEntityListingAttribute(entity: Entity) {
 	)
 }
 
+function getEntityListingLabel(entity: Entity): string {
+	const listingAttribute = getEntityListingAttribute(entity)
+
+	return listingAttribute
+		? `${listingAttribute.name}: ${listingAttribute.value}`
+		: entity.id
+}
+
+interface EntityDetailsWindowState {
+	entity: Entity | null
+	entityId: string
+	error: string | null
+	id: string
+	initialPosition: {
+		x: number
+		y: number
+	}
+	isLoading: boolean
+}
+
+interface EntityEditWindowState {
+	entity: Entity
+	id: string
+	initialPosition: {
+		x: number
+		y: number
+	}
+}
+
 interface CreateEntityModalProps {
 	accessLevels: AccessLevel[]
 	creationMode: 'template' | 'scratch'
 	entity?: Entity | null
+	entities: Entity[]
 	entityTemplates: EntityTemplate[]
 	error: string | null
 	mode: 'create' | 'edit'
 	initialEntityTemplateId?: string
+	initialPosition?: {
+		x: number
+		y: number
+	}
 	isLoadingOptions: boolean
 	isSaving: boolean
 	onClose: () => void
@@ -110,10 +146,12 @@ function CreateEntityModal({
 	accessLevels,
 	creationMode,
 	entity = null,
+	entities,
 	entityTemplates,
 	error,
 	mode,
 	initialEntityTemplateId = '',
+	initialPosition,
 	isLoadingOptions,
 	isSaving,
 	onClose,
@@ -143,17 +181,22 @@ function CreateEntityModal({
 	const [listingAttributeId, setListingAttributeId] = useState('')
 	const [selectedAttributeTemplateId, setSelectedAttributeTemplateId] =
 		useState('')
+	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
+	const idPopoverRef = useRef<HTMLDivElement | null>(null)
 	const [position, setPosition] = useState(() => ({
-		x: Math.max(
-			entityModalMargin,
-			(window.innerWidth -
-				Math.min(
-					entityModalWidth,
-					window.innerWidth - entityModalMargin * 2,
-				)) /
-				2,
-		),
-		y: Math.max(entityModalMargin, window.innerHeight * 0.18),
+		x:
+			initialPosition?.x ??
+			Math.max(
+				entityModalMargin,
+				(window.innerWidth -
+					Math.min(
+						entityModalWidth,
+						window.innerWidth - entityModalMargin * 2,
+					)) /
+					2,
+			),
+		y:
+			initialPosition?.y ?? Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}))
 	const [size, setSize] = useState(() => ({
 		height: Math.min(
@@ -220,7 +263,34 @@ function CreateEntityModal({
 		setIncludeAttributeSource(null)
 		setIsIncludeAttributeOpen(false)
 		setSelectedAttributeTemplateId('')
+		setIsIdPopoverOpen(false)
 	}, [entity, mode])
+
+	useEffect(() => {
+		if (!isIdPopoverOpen) {
+			return
+		}
+
+		function handlePointerDown(event: PointerEvent): void {
+			const target = event.target
+
+			if (
+				idPopoverRef.current &&
+				target instanceof Node &&
+				idPopoverRef.current.contains(target)
+			) {
+				return
+			}
+
+			setIsIdPopoverOpen(false)
+		}
+
+		window.addEventListener('pointerdown', handlePointerDown)
+
+		return () => {
+			window.removeEventListener('pointerdown', handlePointerDown)
+		}
+	}, [isIdPopoverOpen])
 
 	useEffect(() => {
 		if (mode === 'edit') {
@@ -527,6 +597,15 @@ function CreateEntityModal({
 							attribute.entityTemplateAttributeId ?? '',
 						value: attribute.value,
 					})),
+				linkTargets: includedLinks
+					.filter(
+						(link) => link.entityTemplateLinkId !== null,
+					)
+					.map((link) => ({
+						entityTemplateLinkId:
+							link.entityTemplateLinkId ?? '',
+						targetEntityId: link.targetEntityId ?? null,
+					})),
 				entityTemplateId: selectedEntityTemplate.id,
 			})
 			return
@@ -629,6 +708,64 @@ function CreateEntityModal({
 				.filter((attribute) => attribute.id !== attributeId)
 				.map((attribute, index) => ({
 					...attribute,
+					listingIndex: index,
+				})),
+		)
+	}
+
+	function addLink(): void {
+		const targetEntity = entities[0]
+
+		if (!targetEntity) {
+			return
+		}
+
+		setIncludedLinks((current) => [
+			...current,
+			{
+				description: '',
+				entityTemplateLinkId: null,
+				id: crypto.randomUUID(),
+				listingIndex: current.length,
+				name: '',
+				targetEntityId: targetEntity.id,
+				targetEntityTemplateId: targetEntity.entityTemplateId,
+			},
+		])
+	}
+
+	function updateLink(
+		linkId: string,
+		update: Partial<EntityFormLink>,
+	): void {
+		setIncludedLinks((current) =>
+			current.map((link) =>
+				link.id === linkId ? { ...link, ...update } : link,
+			),
+		)
+	}
+
+	function getLinkTargetEntities(link: EntityFormLink): Entity[] {
+		if (creationMode !== 'template') {
+			return entities
+		}
+
+		if (!link.targetEntityTemplateId) {
+			return entities
+		}
+
+		return entities.filter(
+			(candidate) =>
+				candidate.entityTemplateId === link.targetEntityTemplateId,
+		)
+	}
+
+	function removeLink(linkId: string): void {
+		setIncludedLinks((current) =>
+			current
+				.filter((link) => link.id !== linkId)
+				.map((link, index) => ({
+					...link,
 					listingIndex: index,
 				})),
 		)
@@ -812,6 +949,45 @@ function CreateEntityModal({
 						onPointerDown={startDrag}
 					>
 						<h2>{modalTitle}</h2>
+						{mode === 'edit' && entity ? (
+							<div
+								className="draggable-modal-info-action"
+								ref={idPopoverRef}
+							>
+								<button
+									aria-expanded={isIdPopoverOpen}
+									aria-label="Entity id"
+									className="draggable-modal-titlebar-button draggable-modal-info-button"
+									data-no-drag="true"
+									data-tooltip="Info"
+									type="button"
+									onPointerDown={(event) =>
+										event.stopPropagation()
+									}
+									onClick={() =>
+										setIsIdPopoverOpen((current) => !current)
+									}
+								>
+									<Info aria-hidden="true" />
+								</button>
+								{isIdPopoverOpen ? (
+									<div
+										className="include-attribute-popover entity-id-popover"
+										data-no-drag="true"
+										onPointerDown={(event) =>
+											event.stopPropagation()
+										}
+									>
+										<p
+											className="entity-id-popover-title"
+											data-selectable="true"
+										>
+											id: {entity.id}
+										</p>
+									</div>
+								) : null}
+							</div>
+						) : null}
 						<button
 							aria-label={`Save ${modalTitle}`}
 							className="draggable-modal-titlebar-button"
@@ -877,11 +1053,11 @@ function CreateEntityModal({
 								data-selectable="true"
 							>
 								<div className="entity-template-tab-row">
-									<div
-										className="entity-template-tab-list"
-										role="tablist"
-										aria-label="Entity sections"
-									>
+								<div
+									className="entity-template-tab-list"
+									role="tablist"
+									aria-label="Entity sections"
+								>
 										<button
 											aria-selected={
 												activeTab === 'attributes'
@@ -916,19 +1092,6 @@ function CreateEntityModal({
 											</span>
 										</button>
 									</div>
-									{activeTab === 'links' ? (
-										<span className="include-link-action">
-											<button
-												aria-label="Include link"
-												className="section-action-button"
-												data-tooltip="Include link"
-												disabled
-												type="button"
-											>
-												<Plus aria-hidden="true" />
-											</button>
-										</span>
-									) : null}
 								</div>
 
 								{activeTab === 'attributes' ? (
@@ -1350,11 +1513,45 @@ function CreateEntityModal({
 									</div>
 								) : (
 									<div role="tabpanel">
-										<table className="data-table entity-template-modal-table entity-template-links-table">
+										<table className="data-table entity-template-modal-table entity-template-links-table entity-entity-links-table">
+											<colgroup>
+												<col className="entity-template-link-name-column" />
+												<col className="entity-template-link-description-column" />
+												<col className="entity-template-link-target-column" />
+												<col className="entity-template-link-action-column" />
+											</colgroup>
+											<thead>
+												<tr>
+													<th>name</th>
+													<th>description</th>
+													<th>target</th>
+													<th className="data-table-action-heading">
+														<button
+															aria-label="Include link"
+															className="section-action-button"
+															data-tooltip="Include link"
+															disabled={
+																(mode !==
+																	'edit' &&
+																	creationMode ===
+																		'template') ||
+																entities.length === 0
+															}
+															type="button"
+															onClick={addLink}
+														>
+															<Plus aria-hidden="true" />
+														</button>
+													</th>
+												</tr>
+											</thead>
 											<tbody>
 												{includedLinks.length === 0 ? (
 													<tr>
-														<td className="data-table-empty-cell">
+														<td
+															className="data-table-empty-cell"
+															colSpan={4}
+														>
 															<span>
 																There are no
 																entries
@@ -1364,9 +1561,177 @@ function CreateEntityModal({
 												) : (
 													includedLinks.map(
 														(link) => (
-															<tr key={link.id}>
+															<tr
+																key={link.id}
+																data-entity-link-id={
+																	link.id
+																}
+															>
 																<td>
-																	{link.name}
+																	<input
+																		aria-label="Link name"
+																		className="entity-template-link-input"
+																		data-no-drag="true"
+																		disabled={
+																			mode !==
+																				'edit' &&
+																			creationMode ===
+																				'template'
+																		}
+																		type="text"
+																		value={
+																			link.name
+																		}
+																		onChange={(
+																			event,
+																		) =>
+																			updateLink(
+																				link.id,
+																				{
+																					name: event
+																						.target
+																						.value,
+																				},
+																			)
+																		}
+																	/>
+																</td>
+																<td>
+																	<input
+																		aria-label="Link description"
+																		className="entity-template-link-input"
+																		data-no-drag="true"
+																		disabled={
+																			mode !==
+																				'edit' &&
+																			creationMode ===
+																				'template'
+																		}
+																		type="text"
+																		value={
+																			link.description
+																		}
+																		onChange={(
+																			event,
+																		) =>
+																			updateLink(
+																				link.id,
+																				{
+																					description:
+																						event
+																							.target
+																							.value,
+																				},
+																			)
+																		}
+																	/>
+																</td>
+																<td>
+																	<span
+																		className="attribute-template-select-wrap entity-template-link-target-wrap"
+																		data-tooltip={
+																			getLinkTargetEntities(
+																				link,
+																			).find(
+																				(
+																					target,
+																				) =>
+																					target.id ===
+																					link.targetEntityId,
+																			)
+																				? getEntityListingLabel(
+																					getLinkTargetEntities(
+																						link,
+																					).find(
+																						(
+																							target,
+																						) =>
+																							target.id ===
+																							link.targetEntityId,
+																					) as Entity,
+																				)
+																				: undefined
+																		}
+																	>
+																		<select
+																			aria-label={`${link.name || 'Link'} target entity`}
+																			data-no-drag="true"
+																			disabled={
+																				entities.length ===
+																					0
+																			}
+																			value={link.targetEntityId ?? ''}
+																			onChange={(
+																				event,
+																			) =>
+																				{
+																					const targetEntity =
+																						getLinkTargetEntities(
+																							link,
+																						).find(
+																							(
+																								target,
+																							) =>
+																								target.id ===
+																								event
+																									.target
+																									.value,
+																						)
+
+																					updateLink(
+																						link.id,
+																						{
+																							targetEntityId:
+																								event
+																									.target
+																									.value ||
+																								null,
+																							targetEntityTemplateId:
+																								targetEntity?.entityTemplateId ??
+																								null,
+																						},
+																					)
+																				}
+																			}
+																		>
+																			<option value="">
+																				Select an
+																				entity
+																			</option>
+																			{getLinkTargetEntities(
+																				link,
+																			).map(
+																				(
+																					target,
+																				) => (
+																					<option
+																						key={target.id}
+																						value={target.id}
+																					>
+																						{getEntityListingLabel(
+																							target,
+																						)}
+																					</option>
+																				),
+																			)}
+																		</select>
+																	</span>
+																</td>
+																<td className="entity-template-link-actions">
+																	<button
+																		aria-label={`Remove ${link.name || 'link'}`}
+																		className="icon-only-button"
+																		data-no-drag="true"
+																		data-tooltip="Exclude"
+																		type="button"
+																		onClick={() =>
+																			removeLink(
+																				link.id,
+																			)
+																		}
+																	>
+																		<Trash2 aria-hidden="true" />
+																	</button>
 																</td>
 															</tr>
 														),
@@ -1406,20 +1771,35 @@ function CreateEntityModal({
 interface EntityDetailsModalProps {
 	accessLevels: AccessLevel[]
 	entity: Entity | null
+	entities: Entity[]
 	entityTemplates: EntityTemplate[]
 	error: string | null
 	isLoading: boolean
+	initialPosition?: {
+		x: number
+		y: number
+	}
+	windowId: string
+	zIndex?: number
 	onDelete: (entity: Entity) => void
-	onEdit: (entity: Entity) => void
+	onEdit: (
+		entity: Entity,
+		position: { x: number; y: number },
+		windowId: string,
+	) => void
 	onClose: () => void
 }
 
 function EntityDetailsModal({
 	accessLevels,
 	entity,
+	entities,
 	entityTemplates,
 	error,
 	isLoading,
+	initialPosition,
+	windowId,
+	zIndex = 1,
 	onDelete,
 	onEdit,
 	onClose,
@@ -1430,16 +1810,19 @@ function EntityDetailsModal({
 		'attributes',
 	)
 	const [position, setPosition] = useState(() => ({
-		x: Math.max(
-			entityModalMargin,
-			(window.innerWidth -
-				Math.min(
-					entityModalWidth,
-					window.innerWidth - entityModalMargin * 2,
-				)) /
-				2,
-		),
-		y: Math.max(entityModalMargin, window.innerHeight * 0.18),
+		x:
+			initialPosition?.x ??
+			Math.max(
+				entityModalMargin,
+				(window.innerWidth -
+					Math.min(
+						entityModalWidth,
+						window.innerWidth - entityModalMargin * 2,
+					)) /
+					2,
+			),
+		y:
+			initialPosition?.y ?? Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}))
 	const [size, setSize] = useState(() => ({
 		height: Math.min(
@@ -1451,6 +1834,8 @@ function EntityDetailsModal({
 			window.innerWidth - entityModalMargin * 2,
 		),
 	}))
+	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
+	const idPopoverRef = useRef<HTMLDivElement | null>(null)
 	const dragStart = useRef({
 		pointerX: 0,
 		pointerY: 0,
@@ -1473,6 +1858,25 @@ function EntityDetailsModal({
 	const getAccessLevelName = (accessLevelId: number): string =>
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
 			?.name ?? String(accessLevelId)
+	const getLinkTargetLabel = (link: EntityLink): string => {
+		const targetEntity = entities.find(
+			(candidate) => candidate.id === link.targetEntityId,
+		)
+
+		if (targetEntity) {
+			return getEntityListingLabel(targetEntity)
+		}
+
+		if (link.targetEntityTemplateId) {
+			return (
+				entityTemplates.find(
+					(template) => template.id === link.targetEntityTemplateId,
+				)?.name ?? link.targetEntityTemplateId
+			)
+		}
+
+		return link.targetEntityId ?? ''
+	}
 
 	const startDrag = useCallback(
 		(event: ReactPointerEvent<HTMLElement>) => {
@@ -1570,23 +1974,62 @@ function EntityDetailsModal({
 				aria-modal="false"
 				className="draggable-modal"
 				role="dialog"
-				style={{
-					height: size.height,
-					transform: `translate(${position.x}px, ${position.y}px)`,
-					width: size.width,
-					zIndex: 1,
-				}}
-			>
+					style={{
+						height: size.height,
+						transform: `translate(${position.x}px, ${position.y}px)`,
+						width: size.width,
+						zIndex,
+					}}
+				>
 				<div className="draggable-modal-body">
 					<div
 						className="draggable-modal-header"
 						onPointerDown={startDrag}
 					>
 						<h2>{modalTitle}</h2>
-						<div
-							className="draggable-modal-delete-action"
-							data-no-drag="true"
-						>
+						{entity ? (
+							<div
+								className="draggable-modal-info-action"
+								ref={idPopoverRef}
+							>
+								<button
+									aria-expanded={isIdPopoverOpen}
+									aria-label="Entity id"
+									className="draggable-modal-titlebar-button draggable-modal-info-button"
+									data-no-drag="true"
+									data-tooltip="Info"
+									type="button"
+									onPointerDown={(event) =>
+										event.stopPropagation()
+									}
+									onClick={() =>
+										setIsIdPopoverOpen((current) => !current)
+									}
+								>
+									<Info aria-hidden="true" />
+								</button>
+								{isIdPopoverOpen ? (
+									<div
+										className="include-attribute-popover entity-id-popover"
+										data-no-drag="true"
+										onPointerDown={(event) =>
+											event.stopPropagation()
+										}
+									>
+										<p
+											className="entity-id-popover-title"
+											data-selectable="true"
+										>
+											id: {entity.id}
+										</p>
+									</div>
+								) : null}
+							</div>
+						) : null}
+							<div
+								className="draggable-modal-delete-action"
+								data-no-drag="true"
+							>
 							<button
 								aria-expanded={isDeleteConfirmOpen}
 								aria-label={`Delete ${modalTitle}`}
@@ -1649,7 +2092,7 @@ function EntityDetailsModal({
 							onPointerDown={(event) => event.stopPropagation()}
 							onClick={() => {
 								if (entity) {
-									onEdit(entity)
+									onEdit(entity, position, windowId)
 								}
 							}}
 						>
@@ -1669,12 +2112,6 @@ function EntityDetailsModal({
 					</div>
 					<div className="draggable-modal-content">
 						<div className="entity-template-edit-form entity-template-view-form access-level-details">
-							<div className="attribute-template-id-row">
-								<p>id</p>
-								<strong className="attribute-template-id-value">
-									{entity?.id ?? ''}
-								</strong>
-							</div>
 							<div className="entity-template-fields">
 								<label>
 									<span>listing attribute</span>
@@ -1885,11 +2322,26 @@ function EntityDetailsModal({
 									</div>
 								) : (
 									<div role="tabpanel">
-										<table className="data-table entity-template-modal-table entity-template-links-table">
+										<table className="data-table entity-template-modal-table entity-template-view-links-table entity-entity-view-links-table">
+											<colgroup>
+												<col className="entity-template-link-name-column" />
+												<col className="entity-template-link-description-column" />
+												<col className="entity-template-link-target-column" />
+											</colgroup>
+											<thead>
+												<tr>
+													<th>name</th>
+													<th>description</th>
+													<th>target</th>
+												</tr>
+											</thead>
 											<tbody>
 												{orderedLinks.length === 0 ? (
 													<tr>
-														<td className="data-table-empty-cell">
+														<td
+															className="data-table-empty-cell"
+															colSpan={3}
+														>
 															<span>
 																There are no
 																entries
@@ -1901,9 +2353,12 @@ function EntityDetailsModal({
 														<tr key={link.id}>
 															<td>{link.name}</td>
 															<td>
-																{link.targetEntityId ??
-																	link.targetEntityTemplateId ??
-																	''}
+																{link.description ?? ''}
+															</td>
+															<td>
+																{getLinkTargetLabel(
+																	link,
+																)}
 															</td>
 														</tr>
 													))
@@ -1966,31 +2421,51 @@ export function DataExplorerView() {
 		useState('')
 	const [isCreateEntityModalOpen, setIsCreateEntityModalOpen] =
 		useState(false)
+	const [createEntityModalPosition, setCreateEntityModalPosition] = useState<
+		{ x: number; y: number } | undefined
+	>(undefined)
 	const [createEntityMode, setCreateEntityMode] = useState<
 		'template' | 'scratch'
 	>('template')
-	const [entityFormMode, setEntityFormMode] = useState<'create' | 'edit'>(
-		'create',
-	)
-	const [entityFormEntity, setEntityFormEntity] = useState<Entity | null>(
-		null,
-	)
-	const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
-	const [isEntityDetailsModalOpen, setIsEntityDetailsModalOpen] =
-		useState(false)
-	const [entityDetailsError, setEntityDetailsError] = useState<string | null>(
-		null,
-	)
-	const [isLoadingEntityDetails, setIsLoadingEntityDetails] = useState(false)
+	const [entityEditWindows, setEntityEditWindows] = useState<
+		EntityEditWindowState[]
+	>([])
+	const [entityDetailsWindows, setEntityDetailsWindows] = useState<
+		EntityDetailsWindowState[]
+	>([])
 	const [isSavingEntity, setIsSavingEntity] = useState(false)
 	const isMountedRef = useRef(false)
 	const loadRequestId = useRef(0)
 	const createOptionsLoadRequestId = useRef(0)
-	const entityDetailsLoadRequestId = useRef(0)
+	const entityDetailsLoadRequestIds = useRef(new Map<string, number>())
 	const isAuthenticated = storedAuth !== null
 	const isAuthorized =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Manager)
+
+	const getEntityDetailsPosition = useCallback((pointerX: number, pointerY: number) => {
+		const modalWidth = Math.min(
+			entityModalWidth,
+			window.innerWidth - entityModalMargin * 2,
+		)
+		const modalHeight = Math.min(
+			entityModalHeight,
+			window.innerHeight - entityModalMargin * 2,
+		)
+
+		return {
+			x: clampToRange(
+				pointerX - modalWidth * 0.3,
+				entityModalMargin,
+				window.innerWidth - modalWidth - entityModalMargin,
+			),
+			y: clampToRange(
+				pointerY - 48,
+				entityModalMargin,
+				window.innerHeight - modalHeight - entityModalMargin,
+			),
+		}
+	}, [])
 
 	const loadEntities = useCallback(async (): Promise<void> => {
 		const requestId = loadRequestId.current + 1
@@ -2120,12 +2595,11 @@ export function DataExplorerView() {
 
 	const openCreateEntityModal = useCallback(
 		(mode: 'template' | 'scratch') => {
-			setEntityFormMode('create')
-			setEntityFormEntity(null)
 			setCreateEntityMode(mode)
 			setCreateEntityError(null)
 			setIsCreateChoiceOpen(false)
 			setIsCreateEntityModalOpen(true)
+			setCreateEntityModalPosition(undefined)
 			void loadAccessLevels()
 
 			if (mode === 'template' && entityTemplates.length === 0) {
@@ -2136,26 +2610,60 @@ export function DataExplorerView() {
 	)
 
 	const openEntityEditModal = useCallback(
-		(entity: Entity) => {
-			setEntityFormMode('edit')
-			setEntityFormEntity(entity)
-			setCreateEntityMode(
-				entity.entityTemplateId ? 'template' : 'scratch',
-			)
+		(
+			entity: Entity,
+			position: { x: number; y: number },
+			windowId: string,
+		) => {
 			setCreateEntityError(null)
-			setIsEntityDetailsModalOpen(false)
-			setIsCreateEntityModalOpen(true)
+			setEntityDetailsWindows((current) =>
+				current.filter((window) => window.id !== windowId),
+			)
 			void loadAccessLevels()
 
 			if (entityTemplates.length === 0) {
 				void loadEntityTemplates()
 			}
+
+			setEntityEditWindows((current) => {
+				const existing = current.find((window) => window.entity.id === entity.id)
+
+				if (existing) {
+					return current.map((window) =>
+						window.id === existing.id
+							? {
+									...window,
+									entity,
+									initialPosition: position,
+							  }
+							: window,
+					)
+				}
+
+				return [
+					...current,
+					{
+						entity,
+						id: crypto.randomUUID(),
+						initialPosition: position,
+					},
+				]
+			})
 		},
 		[entityTemplates.length, loadAccessLevels, loadEntityTemplates],
 	)
 
 	const deleteEntity = useCallback(async (entity: Entity): Promise<void> => {
-		setEntityDetailsError(null)
+		setEntityDetailsWindows((current) =>
+			current.map((window) =>
+				window.entityId === entity.id
+					? {
+							...window,
+							error: null,
+					  }
+					: window,
+			),
+		)
 
 		try {
 			const response = await fetch(
@@ -2174,84 +2682,157 @@ export function DataExplorerView() {
 				setEntities((current) =>
 					current.filter((candidate) => candidate.id !== entity.id),
 				)
-				setSelectedEntity(null)
-				setIsEntityDetailsModalOpen(false)
+				setEntityDetailsWindows((current) =>
+					current.filter((window) => window.entityId !== entity.id),
+				)
 			}
 		} catch {
 			if (isMountedRef.current) {
-				setEntityDetailsError('Unable to delete entity')
+				setEntityDetailsWindows((current) =>
+					current.map((window) =>
+						window.entityId === entity.id
+							? {
+									...window,
+									error: 'Unable to delete entity',
+							  }
+							: window,
+					),
+				)
 			}
 		}
 	}, [])
 
-	const loadEntityDetails = useCallback(async (entityId: string) => {
-		const requestId = entityDetailsLoadRequestId.current + 1
-		entityDetailsLoadRequestId.current = requestId
+	const loadEntityDetails = useCallback(
+		async (windowId: string, entityId: string) => {
+			const requestId =
+				(entityDetailsLoadRequestIds.current.get(windowId) ?? 0) + 1
+			entityDetailsLoadRequestIds.current.set(windowId, requestId)
 
-		setIsLoadingEntityDetails(true)
-
-		try {
-			const response = await fetch(
-				`${apiBaseUrl}${apiRoutes.entity(entityId)}`,
+			setEntityDetailsWindows((current) =>
+				current.map((window) =>
+					window.id === windowId
+						? {
+								...window,
+								error: null,
+								isLoading: true,
+						  }
+						: window,
+				),
 			)
 
-			if (!response.ok) {
-				throw new Error('Unable to load entity')
-			}
+			try {
+				const response = await fetch(
+					`${apiBaseUrl}${apiRoutes.entity(entityId)}`,
+				)
 
-			const data = (await response.json()) as EntityResponse
+				if (!response.ok) {
+					throw new Error('Unable to load entity')
+				}
 
-			if (
-				isMountedRef.current &&
-				requestId === entityDetailsLoadRequestId.current
-			) {
-				setSelectedEntity(data.data)
-				setEntityDetailsError(null)
+				const data = (await response.json()) as EntityResponse
+
+				if (
+					isMountedRef.current &&
+					requestId ===
+						entityDetailsLoadRequestIds.current.get(windowId)
+				) {
+					setEntityDetailsWindows((current) =>
+						current.map((window) =>
+							window.id === windowId
+								? {
+										...window,
+										entity: data.data,
+										error: null,
+										isLoading: false,
+								  }
+								: window,
+						),
+					)
+				}
+			} catch {
+				if (
+					isMountedRef.current &&
+					requestId ===
+						entityDetailsLoadRequestIds.current.get(windowId)
+				) {
+					setEntityDetailsWindows((current) =>
+						current.map((window) =>
+							window.id === windowId
+								? {
+										...window,
+										entity: null,
+										error: 'Unable to load entity',
+										isLoading: false,
+								  }
+								: window,
+						),
+					)
+				}
+			} finally {
+				if (
+					isMountedRef.current &&
+					requestId ===
+						entityDetailsLoadRequestIds.current.get(windowId)
+				) {
+					setEntityDetailsWindows((current) =>
+						current.map((window) =>
+							window.id === windowId
+								? {
+										...window,
+										isLoading: false,
+								  }
+								: window,
+						),
+					)
+				}
 			}
-		} catch {
-			if (
-				isMountedRef.current &&
-				requestId === entityDetailsLoadRequestId.current
-			) {
-				setSelectedEntity(null)
-				setEntityDetailsError('Unable to load entity')
-			}
-		} finally {
-			if (
-				isMountedRef.current &&
-				requestId === entityDetailsLoadRequestId.current
-			) {
-				setIsLoadingEntityDetails(false)
-			}
-		}
-	}, [])
+		},
+		[],
+	)
 
 	const openEntityDetails = useCallback(
-		(entityId: string) => {
-			setSelectedEntity(null)
-			setEntityDetailsError(null)
-			setIsEntityDetailsModalOpen(true)
+		(
+			entityId: string,
+			pointerPosition?: { x: number; y: number },
+		) => {
+			const windowId = crypto.randomUUID()
+			const initialPosition = pointerPosition
+				? getEntityDetailsPosition(
+						pointerPosition.x,
+						pointerPosition.y,
+					)
+				: getEntityDetailsPosition(
+						window.innerWidth / 2,
+						window.innerHeight * 0.18,
+					)
+
+			setEntityDetailsWindows((current) => [
+				...current,
+				{
+					entity: null,
+					entityId,
+					error: null,
+					id: windowId,
+					initialPosition,
+					isLoading: true,
+				},
+			])
 			void loadAccessLevels()
 
 			if (entityTemplates.length === 0) {
 				void loadEntityTemplates()
 			}
 
-			void loadEntityDetails(entityId)
+			void loadEntityDetails(windowId, entityId)
 		},
-		[
-			entityTemplates.length,
-			loadAccessLevels,
-			loadEntityDetails,
-			loadEntityTemplates,
-		],
+		[getEntityDetailsPosition, entityTemplates.length, loadAccessLevels, loadEntityDetails, loadEntityTemplates],
 	)
 
-	const closeEntityDetails = useCallback(() => {
-		setIsEntityDetailsModalOpen(false)
-		setSelectedEntity(null)
-		setEntityDetailsError(null)
-		setIsLoadingEntityDetails(false)
+	const closeEntityDetails = useCallback((windowId: string) => {
+		entityDetailsLoadRequestIds.current.delete(windowId)
+		setEntityDetailsWindows((current) =>
+			current.filter((window) => window.id !== windowId),
+		)
 	}, [])
 
 	const createEntity = useCallback(
@@ -2281,8 +2862,6 @@ export function DataExplorerView() {
 				if (isMountedRef.current) {
 					setEntities((current) => [...current, data.data])
 					setIsCreateEntityModalOpen(false)
-					setEntityFormMode('create')
-					setEntityFormEntity(null)
 				}
 			} catch {
 				if (isMountedRef.current) {
@@ -2298,7 +2877,12 @@ export function DataExplorerView() {
 	)
 
 	const updateEntityRecord = useCallback(
-		async (id: string, input: UpdateEntityInput): Promise<void> => {
+		async (
+			id: string,
+			input: UpdateEntityInput,
+			editWindowId?: string,
+			editWindowPosition?: { x: number; y: number },
+		): Promise<void> => {
 			setIsSavingEntity(true)
 			setCreateEntityError(null)
 
@@ -2327,11 +2911,42 @@ export function DataExplorerView() {
 							candidate.id === id ? data.data : candidate,
 						),
 					)
-					setSelectedEntity(data.data)
-					setIsCreateEntityModalOpen(false)
-					setIsEntityDetailsModalOpen(true)
-					setEntityFormMode('create')
-					setEntityFormEntity(null)
+					if (editWindowId) {
+						setEntityEditWindows((current) =>
+							current.filter((window) => window.id !== editWindowId),
+						)
+						setEntityDetailsWindows((current) => [
+							...current.filter(
+								(window) => window.entityId !== id,
+							),
+							{
+								entity: data.data,
+								entityId: id,
+								error: null,
+								id: crypto.randomUUID(),
+								initialPosition:
+									editWindowPosition ?? {
+										x: Math.max(
+											entityModalMargin,
+											(window.innerWidth -
+												Math.min(
+													entityModalWidth,
+													window.innerWidth -
+														entityModalMargin * 2,
+												)) /
+												2,
+										),
+										y: Math.max(
+											entityModalMargin,
+											window.innerHeight * 0.18,
+										),
+									},
+								isLoading: false,
+							},
+						])
+					} else {
+						setIsCreateEntityModalOpen(false)
+					}
 				}
 			} catch {
 				if (isMountedRef.current) {
@@ -2448,23 +3063,38 @@ export function DataExplorerView() {
 												<tr
 													key={entity.id}
 													className="data-table-row"
-												tabIndex={0}
-												role="button"
-												aria-label={`Open entity ${listingAttribute?.value ?? entity.id}`}
-												onClick={() =>
-													openEntityDetails(entity.id)
-												}
-												onKeyDown={(event) => {
-													if (
-														event.key === 'Enter' ||
-														event.key === ' '
-													) {
-														event.preventDefault()
-														openEntityDetails(
-															entity.id,
-														)
+													tabIndex={0}
+													role="button"
+													aria-label={`Open entity ${listingAttribute?.value ?? entity.id}`}
+													onClick={(event) =>
+														openEntityDetails(entity.id, {
+															x: event.clientX,
+															y: event.clientY,
+														})
 													}
-												}}
+													onKeyDown={(event) => {
+														if (
+															event.key === 'Enter' ||
+															event.key === ' '
+														) {
+															event.preventDefault()
+															const rect =
+																event.currentTarget.getBoundingClientRect()
+															openEntityDetails(
+																entity.id,
+																{
+																	x:
+																		rect.left +
+																		rect.width /
+																			2,
+																	y:
+																		rect.top +
+																		rect.height /
+																			2,
+																},
+															)
+														}
+													}}
 												>
 												<td className="entity-listing-name-cell">
 													<span>
@@ -2592,34 +3222,66 @@ export function DataExplorerView() {
 				<CreateEntityModal
 					accessLevels={accessLevels}
 					creationMode={createEntityMode}
-					entity={entityFormMode === 'edit' ? entityFormEntity : null}
+					entities={entities}
 					entityTemplates={entityTemplates}
 					error={createEntityError}
 					initialEntityTemplateId={createChoiceEntityTemplateId}
+					initialPosition={createEntityModalPosition}
 					isLoadingOptions={isLoadingCreateOptions}
 					isSaving={isSavingEntity}
-					mode={entityFormMode}
+					mode="create"
 					onClose={() => {
 						setIsCreateEntityModalOpen(false)
-						setEntityFormMode('create')
-						setEntityFormEntity(null)
+						setCreateEntityModalPosition(undefined)
 					}}
 					onCreate={createEntity}
 					onUpdate={updateEntityRecord}
 				/>
 			) : null}
-			{isEntityDetailsModalOpen ? (
-				<EntityDetailsModal
+			{entityEditWindows.map((window) => (
+				<CreateEntityModal
+					key={window.id}
 					accessLevels={accessLevels}
-					entity={selectedEntity}
+					creationMode={
+						window.entity.entityTemplateId ? 'template' : 'scratch'
+					}
+					entity={window.entity}
+					entities={entities}
 					entityTemplates={entityTemplates}
-					error={entityDetailsError}
-					isLoading={isLoadingEntityDetails}
+					error={createEntityError}
+					initialEntityTemplateId={window.entity.entityTemplateId ?? ''}
+					initialPosition={window.initialPosition}
+					isLoadingOptions={isLoadingCreateOptions}
+					isSaving={isSavingEntity}
+					mode="edit"
+					onClose={() =>
+						setEntityEditWindows((current) =>
+							current.filter((item) => item.id !== window.id),
+						)
+					}
+					onCreate={createEntity}
+					onUpdate={(id, input) =>
+						updateEntityRecord(id, input, window.id, window.initialPosition)
+					}
+				/>
+			))}
+			{entityDetailsWindows.map((window, index) => (
+				<EntityDetailsModal
+					key={window.id}
+					accessLevels={accessLevels}
+					entity={window.entity}
+					entities={entities}
+					entityTemplates={entityTemplates}
+					error={window.error}
+					initialPosition={window.initialPosition}
+					isLoading={window.isLoading}
 					onDelete={deleteEntity}
 					onEdit={openEntityEditModal}
-					onClose={closeEntityDetails}
+					onClose={() => closeEntityDetails(window.id)}
+					windowId={window.id}
+					zIndex={index + 1}
 				/>
-			) : null}
+			))}
 		</section>
 	)
 }
