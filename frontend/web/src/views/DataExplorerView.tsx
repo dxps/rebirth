@@ -102,7 +102,7 @@ interface EntityDetailsWindowState {
 	entityId: string
 	error: string | null
 	id: string
-	activeTab: 'attributes' | 'links'
+	activeTab: 'attributes' | 'links' | 'inlinks'
 	zIndex: number
 	initialPosition: {
 		x: number
@@ -113,7 +113,7 @@ interface EntityDetailsWindowState {
 
 interface EntityEditWindowState {
 	entity: Entity
-	activeTab: 'attributes' | 'links'
+	activeTab: 'attributes' | 'links' | 'inlinks'
 	id: string
 	zIndex: number
 	initialPosition: {
@@ -131,7 +131,7 @@ interface CreateEntityModalProps {
 	error: string | null
 	mode: 'create' | 'edit'
 	initialEntityTemplateId?: string
-	initialActiveTab?: 'attributes' | 'links'
+	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
 	initialPosition?: {
 		x: number
 		y: number
@@ -142,12 +142,12 @@ interface CreateEntityModalProps {
 	onClose: () => void
 	onActivate?: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
-	onBack?: (position: { x: number; y: number }, activeTab: 'attributes' | 'links') => void
+	onBack?: (position: { x: number; y: number }, activeTab: 'attributes' | 'links' | 'inlinks') => void
 	onUpdate: (
 		id: string,
 		input: UpdateEntityInput,
 		position?: { x: number; y: number },
-		activeTab?: 'attributes' | 'links',
+		activeTab?: 'attributes' | 'links' | 'inlinks',
 	) => Promise<void>
 }
 
@@ -197,7 +197,7 @@ function CreateEntityModal({
 	const [selectedEntityTemplateId, setSelectedEntityTemplateId] = useState(
 		initialEntityTemplateId,
 	)
-	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
+	const [activeTab, setActiveTab] = useState<'attributes' | 'links' | 'inlinks'>(
 		initialActiveTab,
 	)
 	const [includedAttributes, setIncludedAttributes] = useState<
@@ -253,6 +253,19 @@ function CreateEntityModal({
 		includedAttributes.find(
 			(attribute) => attribute.id === listingAttributeId,
 		) ?? null
+	const orderedInlinks = entities
+		.flatMap((sourceEntity) =>
+			sourceEntity.links
+				.slice()
+				.sort((left, right) => left.listingIndex - right.listingIndex)
+				.filter((link) => link.targetEntityId === entity?.id)
+				.map((link) => ({
+					link,
+					sourceEntity,
+				})),
+		)
+	const getInlinkSourceLabel = (sourceEntity: Entity): string =>
+		getEntityListingLabel(sourceEntity)
 	const firstListingAttributeId = includedAttributes[0]?.id ?? ''
 	const isValid =
 		includedAttributes.length > 0 &&
@@ -1195,6 +1208,23 @@ function CreateEntityModal({
 												{includedLinks.length}
 											</span>
 										</button>
+										<button
+											aria-selected={
+												activeTab === 'inlinks'
+											}
+											className="entity-template-tab"
+											data-tooltip="Incoming links"
+											role="tab"
+											type="button"
+											onClick={() =>
+												setActiveTab('inlinks')
+											}
+										>
+											<span>Inlinks</span>
+											<span className="entity-template-tab-badge">
+												{orderedInlinks.length}
+											</span>
+										</button>
 									</div>
 								</div>
 
@@ -1653,7 +1683,7 @@ function CreateEntityModal({
 											</tbody>
 										</table>
 									</div>
-								) : (
+								) : activeTab === 'links' ? (
 									<div role="tabpanel">
 										<table className="data-table entity-template-modal-table entity-template-links-table entity-entity-links-table">
 											<colgroup>
@@ -1901,6 +1931,65 @@ function CreateEntityModal({
 											</tbody>
 										</table>
 									</div>
+								) : (
+									<div role="tabpanel">
+										<table className="data-table entity-template-modal-table entity-template-view-inlinks-table">
+											<colgroup>
+												<col className="entity-template-inlink-source-column" />
+												<col className="entity-template-inlink-name-column" />
+												<col className="entity-template-inlink-description-column" />
+											</colgroup>
+											<thead>
+												<tr>
+													<th>source</th>
+													<th>name</th>
+													<th>description</th>
+												</tr>
+											</thead>
+											<tbody>
+												{orderedInlinks.length === 0 ? (
+													<tr>
+														<td
+															className="data-table-empty-cell"
+															colSpan={3}
+														>
+															<span>
+																There are no
+																entries
+															</span>
+														</td>
+													</tr>
+												) : (
+													orderedInlinks.map(
+														({ link, sourceEntity }) => (
+															<tr key={link.id}>
+																<td>
+																	{getInlinkSourceLabel(
+																		sourceEntity,
+																	)}
+																</td>
+																<td>{link.name}</td>
+																<td>
+																	<span
+																		className="entity-template-link-description-value entity-template-link-description-view-value"
+																		data-tooltip={
+																			link.description ||
+																			undefined
+																		}
+																	>
+																		<span>
+																			{link.description ??
+																				''}
+																		</span>
+																	</span>
+																</td>
+															</tr>
+														),
+													)
+												)}
+											</tbody>
+										</table>
+									</div>
 								)}
 							</div>
 
@@ -1940,7 +2029,7 @@ interface EntityDetailsModalProps {
 		x: number
 		y: number
 	}
-	initialActiveTab?: 'attributes' | 'links'
+	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
 	windowId: string
 	zIndex?: number
 	onDelete: (entity: Entity) => void
@@ -1948,7 +2037,7 @@ interface EntityDetailsModalProps {
 		entity: Entity,
 		position: { x: number; y: number },
 		windowId: string,
-		activeTab: 'attributes' | 'links',
+		activeTab: 'attributes' | 'links' | 'inlinks',
 	) => void
 	onActivate: (windowId: string) => void
 	onClose: () => void
@@ -1972,7 +2061,7 @@ function EntityDetailsModal({
 }: EntityDetailsModalProps) {
 	const modalTitle = 'Entity'
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
+	const [activeTab, setActiveTab] = useState<'attributes' | 'links' | 'inlinks'>(
 		initialActiveTab,
 	)
 	const [position, setPosition] = useState(() => ({
@@ -2021,6 +2110,17 @@ function EntityDetailsModal({
 	const orderedLinks = (entity?.links ?? [])
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
+	const orderedInlinks = entities
+		.flatMap((sourceEntity) =>
+			sourceEntity.links
+				.slice()
+				.sort((left, right) => left.listingIndex - right.listingIndex)
+				.filter((link) => link.targetEntityId === entity?.id)
+				.map((link) => ({
+					link,
+					sourceEntity,
+				})),
+		)
 	const listingAttribute = entity ? getEntityListingAttribute(entity) : null
 	const getAccessLevelName = (accessLevelId: number): string =>
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
@@ -2044,6 +2144,8 @@ function EntityDetailsModal({
 
 		return link.targetEntityId ?? ''
 	}
+	const getInlinkSourceLabel = (sourceEntity: Entity): string =>
+		getEntityListingLabel(sourceEntity)
 
 	useEffect(() => {
 		setActiveTab(initialActiveTab)
@@ -2293,18 +2395,29 @@ function EntityDetailsModal({
 						onPointerDown={startDrag}
 					>
 						<div className="entity-template-edit-form entity-template-view-form access-level-details">
-							<div className="entity-view-summary">
-								<p className="entity-view-summary-label">
-									listing attribute
-								</p>
-								<div className="entity-view-summary-row">
-									<span className="entity-view-summary-name">
-										{listingAttribute?.name ?? ''}
-									</span>
-									<span className="entity-view-summary-value">
-										{listingAttribute?.value ?? ''}
-									</span>
-								</div>
+							<div className="entity-view-summary entity-create-summary">
+								<table className="data-table entity-create-summary-table">
+									<thead>
+										<tr>
+											<th>listing attribute name</th>
+											<th>value</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr>
+											<td>
+												<span className="entity-create-summary-value">
+													{listingAttribute?.name ?? ''}
+												</span>
+											</td>
+											<td>
+												<span className="entity-create-summary-value">
+													{listingAttribute?.value ?? ''}
+												</span>
+											</td>
+										</tr>
+									</tbody>
+								</table>
 							</div>
 							<div className="entity-template-tabs">
 								<div className="entity-template-tab-row">
@@ -2343,6 +2456,23 @@ function EntityDetailsModal({
 											<span>Outlinks</span>
 											<span className="entity-template-tab-badge">
 												{orderedLinks.length}
+											</span>
+										</button>
+										<button
+											aria-selected={
+												activeTab === 'inlinks'
+											}
+											className="entity-template-tab"
+											data-tooltip="Incoming links"
+											role="tab"
+											type="button"
+											onClick={() =>
+												setActiveTab('inlinks')
+											}
+										>
+											<span>Inlinks</span>
+											<span className="entity-template-tab-badge">
+												{orderedInlinks.length}
 											</span>
 										</button>
 									</div>
@@ -2414,7 +2544,7 @@ function EntityDetailsModal({
 											</tbody>
 										</table>
 									</div>
-								) : (
+								) : activeTab === 'links' ? (
 									<div role="tabpanel">
 										<table className="data-table entity-template-modal-table entity-template-view-links-table">
 											<colgroup>
@@ -2467,6 +2597,65 @@ function EntityDetailsModal({
 															</td>
 														</tr>
 													))
+												)}
+											</tbody>
+										</table>
+									</div>
+								) : (
+									<div role="tabpanel">
+										<table className="data-table entity-template-modal-table entity-template-view-inlinks-table">
+											<colgroup>
+												<col className="entity-template-inlink-source-column" />
+												<col className="entity-template-inlink-name-column" />
+												<col className="entity-template-inlink-description-column" />
+											</colgroup>
+											<thead>
+												<tr>
+													<th>source</th>
+													<th>name</th>
+													<th>description</th>
+												</tr>
+											</thead>
+											<tbody>
+												{orderedInlinks.length === 0 ? (
+													<tr>
+														<td
+															className="data-table-empty-cell"
+															colSpan={3}
+														>
+															<span>
+																There are no
+																entries
+															</span>
+														</td>
+													</tr>
+												) : (
+													orderedInlinks.map(
+														({ link, sourceEntity }) => (
+															<tr key={link.id}>
+																<td>
+																	{getInlinkSourceLabel(
+																		sourceEntity,
+																	)}
+																</td>
+																<td>{link.name}</td>
+																<td>
+																	<span
+																		className="entity-template-link-description-value entity-template-link-description-view-value"
+																		data-tooltip={
+																			link.description ||
+																			undefined
+																		}
+																	>
+																		<span>
+																			{link.description ??
+																				''}
+																		</span>
+																	</span>
+																</td>
+															</tr>
+														),
+													)
 												)}
 											</tbody>
 										</table>
@@ -2739,7 +2928,7 @@ export function DataExplorerView() {
 			entity: Entity,
 			position: { x: number; y: number },
 			windowId: string,
-			activeTab: 'attributes' | 'links',
+			activeTab: 'attributes' | 'links' | 'inlinks',
 		) => {
 			const zIndex = getNextModalZIndex()
 
@@ -3069,7 +3258,7 @@ export function DataExplorerView() {
 			id: string,
 			input: UpdateEntityInput,
 			editWindowPosition?: { x: number; y: number },
-			editWindowActiveTab?: 'attributes' | 'links',
+			editWindowActiveTab?: 'attributes' | 'links' | 'inlinks',
 			editWindowId?: string,
 		): Promise<void> => {
 			setIsSavingEntity(true)
