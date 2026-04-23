@@ -1312,6 +1312,9 @@ button.access-level-refresh-button:hover {
 .entity-attributes-table td:nth-child(2) {
 	min-width: 0;
 }
+.entity-attributes-table th:nth-child(1) {
+	padding-left: 0;
+}
 
 .entity-attributes-table td:nth-child(1) input,
 .entity-attributes-table td:nth-child(2) input {
@@ -1320,8 +1323,39 @@ button.access-level-refresh-button:hover {
 	width: 100%;
 }
 
+.entity-attributes-table td:nth-child(2) input[type='number'] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+.entity-attributes-table
+	td:nth-child(2)
+	input[type='number']::-webkit-inner-spin-button,
+.entity-attributes-table
+	td:nth-child(2)
+	input[type='number']::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
 .entity-attributes-table .entity-template-value-type-wrap {
 	width: 5.2rem;
+}
+
+.entity-attributes-table .entity-template-boolean-value-wrap {
+	display: block;
+	--select-chevron-color: var(--muted);
+	width: 100%;
+}
+
+.entity-attributes-table .entity-template-boolean-value-wrap select {
+	width: 100%;
+}
+
+.entity-attributes-table .entity-template-boolean-value-wrap::after {
+	height: 0.34rem;
+	right: 0.45rem;
+	width: 0.34rem;
 }
 
 .entity-attributes-table .entity-template-access-level-wrap {
@@ -2202,6 +2236,93 @@ button.security-user-permissions-trigger:focus-visible {
 	gap: 0.8rem;
 }
 
+.entity-view-summary {
+	display: grid;
+	gap: 0.25rem;
+}
+
+.entity-view-summary-row {
+	align-items: baseline;
+	display: flex;
+	font-size: 0.9rem;
+	gap: 1rem;
+	min-width: 0;
+	overflow: hidden;
+	padding-left: 0.36rem;
+	white-space: nowrap;
+}
+
+.entity-view-summary-name {
+	flex: 0 1 auto;
+	font-weight: 500;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.entity-view-summary-value {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.entity-create-summary {
+	gap: 0.35rem;
+}
+
+.entity-create-summary-table {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	width: 100%;
+}
+
+.entity-create-summary-table thead,
+.entity-create-summary-table tbody,
+.entity-create-summary-table tr {
+	display: contents;
+}
+
+.entity-create-summary-table th,
+.entity-create-summary-table td {
+	min-width: 0;
+}
+
+.entity-create-summary-select-wrap {
+	display: block;
+	width: 100%;
+}
+
+.entity-create-summary-select-wrap select {
+	width: 100%;
+}
+
+.entity-create-summary-value {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.entity-create-summary-table th:first-child,
+.entity-create-summary-table td:first-child {
+	padding-left: 0;
+}
+
+.entity-create-summary-table th:last-child,
+.entity-create-summary-table td:last-child {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.entity-create-summary-table td:last-child {
+	line-height: 1.8rem;
+}
+
+.entity-create-summary-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
 .entity-template-tabs {
 	display: grid;
 	gap: 0.55rem;
@@ -2283,6 +2404,7 @@ button.entity-template-tab {
 	padding: 0.25rem 0.55rem;
 	position: relative;
 	text-transform: capitalize;
+	user-select: none;
 }
 
 .entity-template-tab-badge {
@@ -2447,10 +2569,15 @@ button.entity-template-tab[aria-selected='true']:hover {
 	text-align: left;
 }
 
+.entity-template-view-form .entity-attributes-table th:first-child,
+.entity-template-view-form .entity-attributes-table td:first-child {
+	padding-left: 0;
+}
+
 .entity-template-view-form .entity-attributes-table th:nth-child(4),
 .entity-template-view-form .entity-attributes-table td:nth-child(4) {
 	padding-left: 0.35rem;
-	padding-right: 0.35rem;
+	padding-right: 0;
 	text-align: left;
 	width: 6.6rem;
 }
@@ -2459,6 +2586,11 @@ button.entity-template-tab[aria-selected='true']:hover {
 .entity-template-view-form .entity-attributes-table td:nth-child(3) {
 	padding-left: 0;
 	padding-right: 0.3rem;
+}
+
+.entity-template-view-form .entity-attributes-table td,
+.entity-template-view-form .entity-template-view-links-table td {
+	cursor: text;
 }
 
 .entity-template-view-form
@@ -2997,6 +3129,11 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	width: 5.8rem;
 }
 
+.entity-template-view-links-table th:first-child,
+.entity-template-view-links-table td:first-child {
+	padding-left: 0;
+}
+
 .entity-template-view-links-table .entity-template-link-description-column {
 	width: auto;
 }
@@ -3113,11 +3250,11 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-view-links-table td:first-child {
-	padding-left: 0.7rem;
+	padding-left: 0;
 }
 
 .entity-template-view-inlinks-table td:first-child {
-	padding-left: 0.7rem;
+	padding-left: 0;
 }
 
 .entity-template-view-links-table td:not(.data-table-empty-cell):last-child {
@@ -3140,11 +3277,30 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	position: relative;
 }
 
+.entity-template-link-description-edit-value {
+	display: block;
+}
+
+.entity-template-link-description-edit-value input {
+	display: block;
+	width: 100%;
+}
+
 .entity-template-link-description-value span {
 	display: block;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.entity-template-link-description-view-value {
+	display: block;
+	max-width: 100%;
+}
+
+.entity-template-link-description-view-value,
+.entity-template-link-description-view-value span {
+	cursor: text;
 }
 
 .entity-template-link-description-value[data-tooltip]::after {
@@ -3173,6 +3329,17 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-link-description-value[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+.entity-template-link-description-view-value[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+.entity-template-link-description-edit-value[data-tooltip]:hover::after,
+.entity-template-link-description-edit-value[data-tooltip]:focus-within::after {
 	opacity: 1;
 	transform: translate(-50%, 0);
 }

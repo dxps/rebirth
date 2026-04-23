@@ -74,7 +74,10 @@ export interface EntityTemplateLinkTargetInput {
 
 export interface CreateEntityFromTemplateInput {
 	entityTemplateId: EntityTemplateId
+	attributes?: CreateEntityAttributeInput[]
 	attributeValues?: EntityTemplateAttributeValueInput[]
+	listingAttributeId?: EntityAttributeId
+	links?: CreateEntityLinkInput[]
 	linkTargets?: EntityTemplateLinkTargetInput[]
 }
 
@@ -280,14 +283,25 @@ export function isCreateEntityInput(
 	const value = input as Record<string, unknown>
 
 	if (typeof value.entityTemplateId === 'string') {
+		const hasExplicitAttributes = value.attributes !== undefined
+
 		return (
 			isEntityTemplateId(value.entityTemplateId) &&
-			(value.attributeValues === undefined ||
-				(Array.isArray(value.attributeValues) &&
-					value.attributeValues.every(
-						isEntityTemplateAttributeValueInput,
-					))) &&
-			(value.linkTargets === undefined ||
+			(hasExplicitAttributes
+				? Array.isArray(value.attributes) &&
+					value.attributes.length > 0 &&
+					hasValidEntityAttributes(
+						value.attributes,
+						value.listingAttributeId,
+					)
+				: value.attributeValues === undefined ||
+					(Array.isArray(value.attributeValues) &&
+						value.attributeValues.every(
+							isEntityTemplateAttributeValueInput,
+						))) &&
+			((value.links === undefined && value.linkTargets === undefined) ||
+				(Array.isArray(value.links) &&
+					value.links.every(isCreateEntityLinkInput)) ||
 				(Array.isArray(value.linkTargets) &&
 					value.linkTargets.every(isEntityTemplateLinkTargetInput)))
 		)

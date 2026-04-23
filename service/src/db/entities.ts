@@ -302,38 +302,55 @@ async function buildEntityFromTemplate(
 		return undefined
 	}
 
-	const attributeValueByTemplateAttributeId = new Map(
-		(input.attributeValues ?? []).map((attributeValue) => [
-			attributeValue.entityTemplateAttributeId,
-			attributeValue.value.trim(),
-		]),
-	)
-	const linkTargetByTemplateLinkId = new Map(
-		(input.linkTargets ?? []).map((linkTarget) => [
-			linkTarget.entityTemplateLinkId,
-			linkTarget.targetEntityId ?? null,
-		]),
-	)
 	const entityTemplateAttributeIdToEntityAttributeId = new Map<string, string>()
-	const attributes = entityTemplate.attributes.map((attribute) => {
-		const id = createUuidV7()
-		entityTemplateAttributeIdToEntityAttributeId.set(attribute.id, id)
+	const attributes = input.attributes
+		? input.attributes
+				.map((attribute, index) => {
+					const id = attribute.id
 
-		return {
-			id,
-			accessLevelId: attribute.accessLevelId,
-			attributeTemplateId: attribute.attributeTemplateId,
-			description: attribute.description,
-			entityTemplateAttributeId: attribute.id,
-			listingIndex: attribute.listingIndex,
-			name: attribute.name,
-			value: attributeValueByTemplateAttributeId.get(attribute.id) ?? '',
-			valueType: attribute.valueType,
-		}
-	})
-	const listingAttributeId = entityTemplateAttributeIdToEntityAttributeId.get(
-		entityTemplate.listingAttributeId,
-	)
+					if (attribute.entityTemplateAttributeId) {
+						entityTemplateAttributeIdToEntityAttributeId.set(
+							attribute.entityTemplateAttributeId,
+							id,
+						)
+					}
+
+					return {
+						id,
+						accessLevelId: attribute.accessLevelId,
+						attributeTemplateId: attribute.attributeTemplateId,
+						description: attribute.description,
+						entityTemplateAttributeId:
+							attribute.entityTemplateAttributeId ?? null,
+						listingIndex: attribute.listingIndex ?? index,
+						name: attribute.name,
+						value: attribute.value,
+						valueType: attribute.valueType,
+					}
+				})
+				.sort((left, right) => left.listingIndex - right.listingIndex)
+		: entityTemplate.attributes.map((attribute) => {
+				const id = createUuidV7()
+				entityTemplateAttributeIdToEntityAttributeId.set(attribute.id, id)
+
+				return {
+					id,
+					accessLevelId: attribute.accessLevelId,
+					attributeTemplateId: attribute.attributeTemplateId,
+					description: attribute.description,
+					entityTemplateAttributeId: attribute.id,
+					listingIndex: attribute.listingIndex,
+					name: attribute.name,
+					value: '',
+					valueType: attribute.valueType,
+				}
+			})
+
+	const listingAttributeId =
+		input.listingAttributeId ??
+		entityTemplateAttributeIdToEntityAttributeId.get(
+			entityTemplate.listingAttributeId,
+		)
 
 	if (!listingAttributeId) {
 		throw new Error('Template listing attribute is missing.')
@@ -342,14 +359,16 @@ async function buildEntityFromTemplate(
 	return {
 		attributes,
 		entityTemplateId: entityTemplate.id,
-		links: entityTemplate.links.map((link) => ({
-			description: link.description,
-			entityTemplateLinkId: link.id,
-			listingIndex: link.listingIndex,
-			name: link.name,
-			targetEntityId: linkTargetByTemplateLinkId.get(link.id) ?? null,
-			targetEntityTemplateId: link.targetEntityTemplateId,
-		})),
+		links: input.links
+			? input.links
+			: entityTemplate.links.map((link) => ({
+					description: link.description,
+					entityTemplateLinkId: link.id,
+					listingIndex: link.listingIndex,
+					name: link.name,
+					targetEntityId: null,
+					targetEntityTemplateId: link.targetEntityTemplateId,
+				})),
 		listingAttributeId,
 	}
 }

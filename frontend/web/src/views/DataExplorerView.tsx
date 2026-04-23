@@ -43,10 +43,10 @@ import {
 } from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
-const entityModalHeight = 440
+const entityModalHeight = 400
 const entityModalMargin = 16
 const entityModalMinHeight = 300
-const entityModalMinWidth = 320
+const entityModalMinWidth = 380
 const entityModalWidth = 520
 const entityAttributeReorderThreshold = 0.5
 
@@ -78,6 +78,23 @@ function getEntityListingLabel(entity: Entity): string {
 	return listingAttribute
 		? `${listingAttribute.name}: ${listingAttribute.value}`
 		: entity.id
+}
+
+function normalizeEntityAttributeValue(
+	value: string,
+	valueType: ValueType,
+): string {
+	if (valueType === ValueType.Number) {
+		return value.trim().length === 0 || !Number.isNaN(Number(value))
+			? value
+			: ''
+	}
+
+	if (valueType === ValueType.Boolean) {
+		return value === 'true' || value === 'false' ? value : 'false'
+	}
+
+	return value
 }
 
 interface EntityDetailsWindowState {
@@ -122,7 +139,12 @@ interface CreateEntityModalProps {
 	onClose: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
 	onBack?: () => void
-	onUpdate: (id: string, input: UpdateEntityInput) => Promise<void>
+	onUpdate: (
+		id: string,
+		input: UpdateEntityInput,
+		position?: { x: number; y: number },
+		activeTab?: 'attributes' | 'links',
+	) => Promise<void>
 }
 
 interface EntityFormAttribute {
@@ -220,6 +242,10 @@ function CreateEntityModal({
 	const selectedEntityTemplate =
 		entityTemplates.find(
 			(entityTemplate) => entityTemplate.id === selectedEntityTemplateId,
+		) ?? null
+	const selectedListingAttribute =
+		includedAttributes.find(
+			(attribute) => attribute.id === listingAttributeId,
 		) ?? null
 	const firstListingAttributeId = includedAttributes[0]?.id ?? ''
 	const isValid =
@@ -566,30 +592,38 @@ function CreateEntityModal({
 				return
 			}
 
-			await onUpdate(entity.id, {
-				attributes: includedAttributes.map((attribute, index) => ({
-					accessLevelId: attribute.accessLevelId,
-					attributeTemplateId: attribute.attributeTemplateId,
-					description: attribute.description.trim(),
-					entityTemplateAttributeId:
-						attribute.entityTemplateAttributeId,
-					id: attribute.id,
-					listingIndex: index,
-					name: attribute.name.trim(),
-					value: attribute.value,
-					valueType: attribute.valueType,
-				})),
-				entityTemplateId: entity.entityTemplateId,
-				listingAttributeId,
-				links: includedLinks.map((link, index) => ({
-					description: link.description.trim(),
-					entityTemplateLinkId: link.entityTemplateLinkId,
-					listingIndex: index,
-					name: link.name.trim(),
-					targetEntityId: link.targetEntityId,
-					targetEntityTemplateId: link.targetEntityTemplateId,
-				})),
-			})
+			await onUpdate(
+				entity.id,
+				{
+					attributes: includedAttributes.map((attribute, index) => ({
+						accessLevelId: attribute.accessLevelId,
+						attributeTemplateId: attribute.attributeTemplateId,
+						description: attribute.description.trim(),
+						entityTemplateAttributeId:
+							attribute.entityTemplateAttributeId,
+						id: attribute.id,
+						listingIndex: index,
+						name: attribute.name.trim(),
+						value: normalizeEntityAttributeValue(
+							attribute.value,
+							attribute.valueType,
+						),
+						valueType: attribute.valueType,
+					})),
+					entityTemplateId: entity.entityTemplateId,
+					listingAttributeId,
+					links: includedLinks.map((link, index) => ({
+						description: link.description.trim(),
+						entityTemplateLinkId: link.entityTemplateLinkId,
+						listingIndex: index,
+						name: link.name.trim(),
+						targetEntityId: link.targetEntityId,
+						targetEntityTemplateId: link.targetEntityTemplateId,
+					})),
+				},
+				position,
+				activeTab,
+			)
 			return
 		}
 
@@ -599,23 +633,32 @@ function CreateEntityModal({
 			}
 
 			await onCreate({
-				attributeValues: includedAttributes
-					.filter(
-						(attribute) =>
-							attribute.entityTemplateAttributeId !== null,
-					)
-					.map((attribute) => ({
-						entityTemplateAttributeId:
-							attribute.entityTemplateAttributeId ?? '',
-						value: attribute.value,
-					})),
-				linkTargets: includedLinks
-					.filter((link) => link.entityTemplateLinkId !== null)
-					.map((link) => ({
-						entityTemplateLinkId: link.entityTemplateLinkId ?? '',
-						targetEntityId: link.targetEntityId ?? null,
-					})),
+				attributes: includedAttributes.map((attribute, index) => ({
+					accessLevelId: attribute.accessLevelId,
+					attributeTemplateId: attribute.attributeTemplateId,
+					description: attribute.description.trim(),
+					entityTemplateAttributeId:
+						attribute.entityTemplateAttributeId,
+					id: attribute.id,
+					listingIndex: index,
+					name: attribute.name.trim(),
+					value: normalizeEntityAttributeValue(
+						attribute.value,
+						attribute.valueType,
+					),
+					valueType: attribute.valueType,
+				})),
+				links: includedLinks.map((link, index) => ({
+					description: link.description.trim(),
+					entityTemplateLinkId: link.entityTemplateLinkId,
+					id: link.id,
+					listingIndex: index,
+					name: link.name.trim(),
+					targetEntityId: link.targetEntityId,
+					targetEntityTemplateId: link.targetEntityTemplateId,
+				})),
 				entityTemplateId: selectedEntityTemplate.id,
+				listingAttributeId,
 			})
 			return
 		}
@@ -629,7 +672,10 @@ function CreateEntityModal({
 				id: attribute.id,
 				listingIndex: index,
 				name: attribute.name.trim(),
-				value: attribute.value,
+				value: normalizeEntityAttributeValue(
+					attribute.value,
+					attribute.valueType,
+				),
 				valueType: attribute.valueType,
 			})),
 			entityTemplateId: null,
@@ -1041,34 +1087,60 @@ function CreateEntityModal({
 							className="entity-template-edit-form"
 							onSubmit={handleSubmit}
 						>
-							<div className="entity-template-fields">
-								<label data-selectable="true">
-									<span>listing attribute</span>
-									<span className="attribute-template-select-wrap">
-										<select
-											disabled={
-												includedAttributes.length === 0
-											}
-											value={listingAttributeId}
-											onChange={(event) =>
-												setListingAttributeId(
-													event.target.value,
-												)
-											}
-										>
-											{includedAttributes.map(
-												(attribute) => (
-													<option
-														key={attribute.id}
-														value={attribute.id}
+							<div className="entity-view-summary entity-create-summary">
+								<table className="data-table entity-create-summary-table">
+									<thead>
+										<tr>
+											<th>listing attribute name</th>
+											<th>value</th>
+										</tr>
+									</thead>
+								<tbody>
+									<tr>
+										<td>
+											<span className="attribute-template-select-wrap entity-create-summary-select-wrap">
+													<select
+														disabled={
+															includedAttributes.length ===
+															0
+														}
+														value={
+															listingAttributeId
+														}
+														onChange={(event) =>
+															setListingAttributeId(
+																event.target
+																	.value,
+															)
+														}
 													>
-														{attribute.name || ''}
-													</option>
-												),
-											)}
-										</select>
-									</span>
-								</label>
+														{includedAttributes.map(
+															(attribute) => (
+																<option
+																	key={
+																		attribute.id
+																	}
+																	value={
+																		attribute.id
+																	}
+																>
+																	{attribute.name ||
+																		''}
+																</option>
+															),
+														)}
+													</select>
+											</span>
+										</td>
+										<td>
+											<span className="entity-create-summary-value">
+												{selectedListingAttribute?.value ??
+													''}
+											</span>
+										</td>
+									</tr>
+								</tbody>
+							</table>
 							</div>
 
 							<div
@@ -1139,12 +1211,6 @@ function CreateEntityModal({
 																aria-label="Add attribute"
 																className="section-action-button"
 																data-tooltip="Include an attribute"
-																disabled={
-																	mode !==
-																		'edit' &&
-																	creationMode ===
-																		'template'
-																}
 																type="button"
 																onClick={() =>
 																	setIsIncludeAttributeOpen(
@@ -1325,12 +1391,6 @@ function CreateEntityModal({
 																	aria-label="Attribute name"
 																	className="entity-template-attribute-name-input"
 																	data-no-drag="true"
-																	readOnly={
-																		mode !==
-																			'edit' &&
-																		creationMode ===
-																			'template'
-																	}
 																	type="text"
 																	value={
 																		attribute.name
@@ -1350,41 +1410,16 @@ function CreateEntityModal({
 																/>
 															</td>
 															<td>
-																<input
-																	aria-label={`${attribute.name || 'Attribute'} value`}
-																	className="entity-template-attribute-name-input"
-																	data-no-drag="true"
-																	type="text"
-																	value={
-																		attribute.value
-																	}
-																	onChange={(
-																		event,
-																	) =>
-																		updateAttribute(
-																			attribute.id,
-																			{
-																				value: event
-																					.target
-																					.value,
-																			},
-																		)
-																	}
-																/>
-															</td>
-															<td>
-																<span className="attribute-template-select-wrap entity-template-value-type-wrap">
-																	<select
-																		aria-label={`${attribute.name || 'Attribute'} value type`}
+																{attribute.valueType ===
+																ValueType.Number ? (
+																	<input
+																		aria-label={`${attribute.name || 'Attribute'} value`}
+																		className="entity-template-attribute-name-input"
 																		data-no-drag="true"
-																		disabled={
-																			mode !==
-																				'edit' &&
-																			creationMode ===
-																				'template'
-																		}
+																		inputMode="decimal"
+																		type="number"
 																		value={
-																			attribute.valueType
+																			attribute.value
 																		}
 																		onChange={(
 																			event,
@@ -1392,13 +1427,98 @@ function CreateEntityModal({
 																			updateAttribute(
 																				attribute.id,
 																				{
-																					valueType:
-																						event
-																							.target
-																							.value as ValueType,
+																					value: event
+																						.target
+																						.value,
 																				},
 																			)
 																		}
+																	/>
+																) : attribute.valueType ===
+																  ValueType.Boolean ? (
+																	<span className="attribute-template-select-wrap entity-template-boolean-value-wrap">
+																		<select
+																			aria-label={`${attribute.name || 'Attribute'} value`}
+																			className="entity-template-attribute-name-input"
+																			data-no-drag="true"
+																			value={
+																				attribute.value ===
+																				'true'
+																					? 'true'
+																					: 'false'
+																			}
+																			onChange={(
+																				event,
+																			) =>
+																				updateAttribute(
+																					attribute.id,
+																					{
+																						value: event
+																							.target
+																							.value,
+																					},
+																				)
+																			}
+																		>
+																			<option value="false">
+																				false
+																			</option>
+																			<option value="true">
+																				true
+																			</option>
+																		</select>
+																	</span>
+																) : (
+																	<input
+																		aria-label={`${attribute.name || 'Attribute'} value`}
+																		className="entity-template-attribute-name-input"
+																		data-no-drag="true"
+																		type="text"
+																		value={
+																			attribute.value
+																		}
+																		onChange={(
+																			event,
+																		) =>
+																			updateAttribute(
+																				attribute.id,
+																				{
+																					value: event
+																						.target
+																						.value,
+																				},
+																			)
+																		}
+																	/>
+																)}
+															</td>
+															<td>
+																<span className="attribute-template-select-wrap entity-template-value-type-wrap">
+																	<select
+																		aria-label={`${attribute.name || 'Attribute'} value type`}
+																		data-no-drag="true"
+																		value={
+																			attribute.valueType
+																		}
+																		onChange={(
+																			event,
+																		) => {
+																			const valueType =
+																				event
+																					.target
+																					.value as ValueType
+
+																			updateAttribute(
+																				attribute.id,
+																				{
+																					valueType,
+																					value: normalizeEntityAttributeValue(
+																						attribute.value,
+																						valueType,
+																					),
+																				},
+																			)
+																		}}
 																	>
 																		{valueTypes.map(
 																			(
@@ -1426,12 +1546,6 @@ function CreateEntityModal({
 																	<select
 																		aria-label={`${attribute.name || 'Attribute'} access level`}
 																		data-no-drag="true"
-																		disabled={
-																			mode !==
-																				'edit' &&
-																			creationMode ===
-																				'template'
-																		}
 																		value={
 																			attribute.accessLevelId
 																		}
@@ -1492,12 +1606,8 @@ function CreateEntityModal({
 																	data-no-drag="true"
 																	data-tooltip="Exclude"
 																	disabled={
-																		(mode !==
-																			'edit' &&
-																			creationMode ===
-																				'template') ||
 																		includedAttributes.length ===
-																			1
+																		1
 																	}
 																	type="button"
 																	onClick={() =>
@@ -1621,34 +1731,46 @@ function CreateEntityModal({
 																	/>
 																</td>
 																<td>
-																	<input
-																		aria-label="Link description"
-																		className="entity-template-link-input"
-																		data-no-drag="true"
-																		disabled={
-																			mode !==
-																				'edit' &&
-																			creationMode ===
-																				'template'
+																	<span
+																		className="entity-template-link-description-value entity-template-link-description-edit-value"
+																		data-tooltip={
+																			link
+																				.description
+																				.length >
+																			0
+																				? link.description
+																				: undefined
 																		}
-																		type="text"
-																		value={
-																			link.description
-																		}
-																		onChange={(
-																			event,
-																		) =>
-																			updateLink(
-																				link.id,
-																				{
-																					description:
-																						event
-																							.target
-																							.value,
-																				},
-																			)
-																		}
-																	/>
+																	>
+																		<input
+																			aria-label="Link description"
+																			className="entity-template-link-input"
+																			data-no-drag="true"
+																			disabled={
+																				mode !==
+																					'edit' &&
+																				creationMode ===
+																					'template'
+																			}
+																			type="text"
+																			value={
+																				link.description
+																			}
+																			onChange={(
+																				event,
+																			) =>
+																				updateLink(
+																					link.id,
+																					{
+																						description:
+																							event
+																								.target
+																								.value,
+																					},
+																				)
+																			}
+																		/>
+																	</span>
 																</td>
 																<td>
 																	<span
@@ -2160,27 +2282,18 @@ function EntityDetailsModal({
 					</div>
 					<div className="draggable-modal-content">
 						<div className="entity-template-edit-form entity-template-view-form access-level-details">
-							<div className="entity-template-fields">
-								<label>
-									<span>listing attribute</span>
-									<span className="attribute-template-select-wrap">
-										<select
-											disabled
-											value={listingAttribute?.id ?? ''}
-										>
-											{orderedAttributes.map(
-												(attribute) => (
-													<option
-														key={attribute.id}
-														value={attribute.id}
-													>
-														{attribute.name}
-													</option>
-												),
-											)}
-										</select>
+							<div className="entity-view-summary">
+								<p className="entity-view-summary-label">
+									listing attribute
+								</p>
+								<div className="entity-view-summary-row">
+									<span className="entity-view-summary-name">
+										{listingAttribute?.name ?? ''}
 									</span>
-								</label>
+									<span className="entity-view-summary-value">
+										{listingAttribute?.value ?? ''}
+									</span>
+								</div>
 							</div>
 							<div className="entity-template-tabs">
 								<div className="entity-template-tab-row">
@@ -2264,99 +2377,24 @@ function EntityDetailsModal({
 																}
 															>
 																<td>
-																	<input
-																		aria-label="Attribute name"
-																		className="entity-template-attribute-name-input"
-																		readOnly
-																		type="text"
-																		value={
-																			attribute.name
-																		}
-																	/>
+																	{
+																		attribute.name
+																	}
 																</td>
 																<td>
-																	<input
-																		aria-label={`${attribute.name || 'Attribute'} value`}
-																		className="entity-template-attribute-name-input"
-																		readOnly
-																		type="text"
-																		value={
-																			attribute.value
-																		}
-																	/>
+																	{
+																		attribute.value
+																	}
 																</td>
 																<td>
-																	<span className="attribute-template-select-wrap entity-template-value-type-wrap">
-																		<select
-																			aria-label={`${attribute.name || 'Attribute'} value type`}
-																			disabled
-																			value={
-																				attribute.valueType
-																			}
-																		>
-																			{valueTypes.map(
-																				(
-																					valueType,
-																				) => (
-																					<option
-																						key={
-																							valueType
-																						}
-																						value={
-																							valueType
-																						}
-																					>
-																						{
-																							valueType
-																						}
-																					</option>
-																				),
-																			)}
-																		</select>
-																	</span>
+																	{
+																		attribute.valueType
+																	}
 																</td>
 																<td>
-																	<span className="attribute-template-select-wrap entity-template-access-level-wrap">
-																		<select
-																			aria-label={`${attribute.name || 'Attribute'} access level`}
-																			disabled
-																			value={
-																				attribute.accessLevelId
-																			}
-																		>
-																			{accessLevels.length ===
-																			0 ? (
-																				<option
-																					value={
-																						attribute.accessLevelId
-																					}
-																				>
-																					{
-																						attribute.accessLevelId
-																					}
-																				</option>
-																			) : (
-																				accessLevels.map(
-																					(
-																						accessLevel,
-																					) => (
-																						<option
-																							key={
-																								accessLevel.id
-																							}
-																							value={
-																								accessLevel.id
-																							}
-																						>
-																							{
-																								accessLevel.name
-																							}
-																						</option>
-																					),
-																				)
-																			)}
-																		</select>
-																	</span>
+																	{getAccessLevelName(
+																		attribute.accessLevelId,
+																	)}
 																</td>
 															</tr>
 														),
@@ -2367,7 +2405,7 @@ function EntityDetailsModal({
 									</div>
 								) : (
 									<div role="tabpanel">
-										<table className="data-table entity-template-modal-table entity-template-view-links-table entity-entity-view-links-table">
+										<table className="data-table entity-template-modal-table entity-template-view-links-table">
 											<colgroup>
 												<col className="entity-template-link-name-column" />
 												<col className="entity-template-link-description-column" />
@@ -2398,8 +2436,18 @@ function EntityDetailsModal({
 														<tr key={link.id}>
 															<td>{link.name}</td>
 															<td>
-																{link.description ??
-																	''}
+																<span
+																	className="entity-template-link-description-value entity-template-link-description-view-value"
+																	data-tooltip={
+																		link.description ||
+																		undefined
+																	}
+																>
+																	<span>
+																		{link.description ??
+																			''}
+																	</span>
+																</span>
 															</td>
 															<td>
 																{getLinkTargetLabel(
@@ -2846,6 +2894,39 @@ export function DataExplorerView() {
 
 	const openEntityDetails = useCallback(
 		(entityId: string, pointerPosition?: { x: number; y: number }) => {
+			const existingWindow = entityDetailsWindows.find(
+				(window) => window.entityId === entityId,
+			)
+
+			if (existingWindow) {
+				setEntityDetailsWindows((current) => {
+					const index = current.findIndex(
+						(window) => window.id === existingWindow.id,
+					)
+
+					if (index < 0 || index === current.length - 1) {
+						return current
+					}
+
+					const next = current.slice()
+					const [window] = next.splice(index, 1)
+
+					if (!window) {
+						return current
+					}
+
+					next.push(window)
+					return next
+				})
+				void loadAccessLevels()
+
+				if (entityTemplates.length === 0) {
+					void loadEntityTemplates()
+				}
+
+				return
+			}
+
 			const windowId = crypto.randomUUID()
 			const initialPosition = pointerPosition
 				? getEntityDetailsPosition(pointerPosition.x, pointerPosition.y)
@@ -2875,6 +2956,7 @@ export function DataExplorerView() {
 			void loadEntityDetails(windowId, entityId)
 		},
 		[
+			entityDetailsWindows,
 			getEntityDetailsPosition,
 			entityTemplates.length,
 			loadAccessLevels,
@@ -2955,9 +3037,9 @@ export function DataExplorerView() {
 		async (
 			id: string,
 			input: UpdateEntityInput,
-			editWindowId?: string,
 			editWindowPosition?: { x: number; y: number },
 			editWindowActiveTab?: 'attributes' | 'links',
+			editWindowId?: string,
 		): Promise<void> => {
 			setIsSavingEntity(true)
 			setCreateEntityError(null)
@@ -3366,13 +3448,13 @@ export function DataExplorerView() {
 						])
 					}}
 					onCreate={createEntity}
-					onUpdate={(id, input) =>
+					onUpdate={(id, input, position, activeTab) =>
 						updateEntityRecord(
 							id,
 							input,
+							position ?? window.initialPosition,
+							activeTab ?? window.activeTab,
 							window.id,
-							window.initialPosition,
-							window.activeTab,
 						)
 					}
 				/>
