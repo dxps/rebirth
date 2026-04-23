@@ -25,6 +25,12 @@ import {
 	type EntityTemplate,
 	type UpdateEntityTemplateInput,
 } from './types/entity-template'
+import {
+	isCreateEntityInput,
+	isEntityId,
+	type CreateEntityInput,
+	type Entity,
+} from './types/entity'
 
 export type ServiceStatus = 'ok' | 'degraded' | 'down'
 
@@ -56,6 +62,14 @@ export interface EntityTemplatesResponse {
 
 export interface EntityTemplateResponse {
 	data: EntityTemplate
+}
+
+export interface EntitiesResponse {
+	data: Entity[]
+}
+
+export interface EntityResponse {
+	data: Entity
 }
 
 export interface PermissionsResponse {
@@ -116,6 +130,8 @@ export const apiRoutes = {
 	authMe: '/auth/me',
 	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
 	attributeTemplates: '/attribute-templates',
+	entity: (id: string) => `/entities/${id}`,
+	entities: '/entities',
 	entityTemplate: (id: string) => `/entity-templates/${id}`,
 	entityTemplates: '/entity-templates',
 	health: '/health',
@@ -420,12 +436,37 @@ export type {
 	UpdateAttributeTemplateInput,
 } from './types/attribute-template'
 export {
+	entityAttributeModel,
+	entityLinkModel,
+	entityModel,
+	isCreateEntityInput,
+	isEntityAttributeId,
+	isEntityId,
+	isEntityLinkId,
+} from './types/entity'
+export type {
+	CreateEntityAttributeInput,
+	CreateEntityFromScratchInput,
+	CreateEntityFromTemplateInput,
+	CreateEntityInput,
+	CreateEntityLinkInput,
+	Entity,
+	EntityAttribute,
+	EntityAttributeId,
+	EntityId,
+	EntityLink,
+	EntityLinkId,
+	EntityTemplateAttributeValueInput,
+	EntityTemplateLinkTargetInput,
+} from './types/entity'
+export {
 	entityTemplateAttributeModel,
 	entityTemplateLinkModel,
 	entityTemplateModel,
 	hasValidEntityTemplateAttributes,
 	isEntityTemplateAttributeId,
 	isEntityTemplateId,
+	isEntityTemplateLinkId,
 } from './types/entity-template'
 export type {
 	CreateEntityTemplateAttributeInput,

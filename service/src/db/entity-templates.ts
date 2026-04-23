@@ -154,7 +154,7 @@ function toEntityTemplates(
 	return rows.map((row) => toEntityTemplate(row, attributeRows, linkRows))
 }
 
-async function readEntityTemplateRows(
+export async function readEntityTemplateRows(
 	client: ReturnType<typeof createDatabase>['client'],
 	id?: string,
 ): Promise<EntityTemplate[]> {

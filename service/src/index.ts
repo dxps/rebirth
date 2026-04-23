@@ -6,8 +6,10 @@ import {
   isAttributeTemplateId,
   isCreateAccessLevelInput,
   isCreateAttributeTemplateInput,
+  isCreateEntityInput,
   isCreateEntityTemplateInput,
   isCreateUserInput,
+  isEntityId,
   isEntityTemplateId,
   isLoginInput,
   isUpdateEmailInput,
@@ -25,6 +27,8 @@ import {
   type AttributeTemplatesResponse,
   type EntityTemplateResponse,
   type EntityTemplatesResponse,
+  type EntityResponse,
+  type EntitiesResponse,
   type ApiErrorResponse,
   type LoginResponse,
   type PermissionsResponse,
@@ -34,6 +38,7 @@ import {
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
+import { createEntity, getEntity, listEntities } from "./db/entities";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { listPermissions } from "./db/permissions";
 import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
@@ -894,10 +899,153 @@ const server = Bun.serve({
       }
     }
 
+    if (request.method === "GET" && url.pathname === apiRoutes.entities) {
+      try {
+        const response: EntitiesResponse = {
+          data: await listEntities()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load entities"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === apiRoutes.entities) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const input = await request.json();
+
+        if (!isCreateEntityInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid entity"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const createdEntity = await createEntity(input);
+
+        if (!createdEntity) {
+          return Response.json(
+            {
+              error: "Entity template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: EntityResponse = {
+          data: createdEntity
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders,
+          status: 201
+        });
+      } catch (error) {
+        if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
+          return Response.json(uniqueConflictResponse, {
+            headers: jsonHeaders,
+            status: 409
+          });
+        }
+
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to create entity"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
     const accessLevelMatch = /^\/access-levels\/(\d+)$/.exec(url.pathname);
     const attributeTemplateMatch = /^\/attribute-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
+    const entityMatch = /^\/entities\/([0-9a-f-]+)$/i.exec(url.pathname);
     const entityTemplateMatch = /^\/entity-templates\/([0-9a-f-]+)$/i.exec(url.pathname);
     const userMatch = /^\/users\/([0-9a-f-]+)$/i.exec(url.pathname);
+
+    if (request.method === "GET" && entityMatch) {
+      try {
+        const id = entityMatch[1] ?? "";
+
+        if (!isEntityId(id)) {
+          return Response.json(
+            {
+              error: "Invalid entity id"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const entity = await getEntity(id);
+
+        if (!entity) {
+          return Response.json(
+            {
+              error: "Entity not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: EntityResponse = {
+          data: entity
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load entity"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
 
     if (request.method === "PATCH" && accessLevelMatch) {
       const authenticatedUser = await requireSecurityManager(request);
