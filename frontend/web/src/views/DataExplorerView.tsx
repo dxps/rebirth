@@ -103,6 +103,7 @@ interface EntityDetailsWindowState {
 	error: string | null
 	id: string
 	activeTab: 'attributes' | 'links'
+	zIndex: number
 	initialPosition: {
 		x: number
 		y: number
@@ -114,6 +115,7 @@ interface EntityEditWindowState {
 	entity: Entity
 	activeTab: 'attributes' | 'links'
 	id: string
+	zIndex: number
 	initialPosition: {
 		x: number
 		y: number
@@ -136,7 +138,9 @@ interface CreateEntityModalProps {
 	}
 	isLoadingOptions: boolean
 	isSaving: boolean
+	zIndex?: number
 	onClose: () => void
+	onActivate?: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
 	onBack?: () => void
 	onUpdate: (
@@ -182,7 +186,9 @@ function CreateEntityModal({
 	initialPosition,
 	isLoadingOptions,
 	isSaving,
+	zIndex = 1,
 	onClose,
+	onActivate,
 	onCreate,
 	onBack,
 	onUpdate,
@@ -982,17 +988,17 @@ function CreateEntityModal({
 	}
 
 	return (
-		<div className="draggable-modal-layer">
+		<div className="draggable-modal-layer" style={{ zIndex }}>
 			<div
 				aria-label={modalTitle}
 				aria-modal="false"
 				className="draggable-modal"
 				role="dialog"
+				onPointerDown={() => onActivate?.()}
 				style={{
 					height: size.height,
 					transform: `translate(${position.x}px, ${position.y}px)`,
 					width: size.width,
-					zIndex: 1,
 				}}
 			>
 				<div className="draggable-modal-body">
@@ -1081,7 +1087,10 @@ function CreateEntityModal({
 							<X aria-hidden="true" />
 						</button>
 					</div>
-					<div className="draggable-modal-content">
+					<div
+						className="draggable-modal-content"
+						onPointerDown={startDrag}
+					>
 						<form
 							id={formId}
 							className="entity-template-edit-form"
@@ -2130,7 +2139,7 @@ function EntityDetailsModal({
 	)
 
 	return (
-		<div className="draggable-modal-layer">
+		<div className="draggable-modal-layer" style={{ zIndex }}>
 			<div
 				aria-label={modalTitle}
 				aria-modal="false"
@@ -2141,7 +2150,6 @@ function EntityDetailsModal({
 					height: size.height,
 					transform: `translate(${position.x}px, ${position.y}px)`,
 					width: size.width,
-					zIndex,
 				}}
 			>
 				<div className="draggable-modal-body">
@@ -2280,7 +2288,10 @@ function EntityDetailsModal({
 							<X aria-hidden="true" />
 						</button>
 					</div>
-					<div className="draggable-modal-content">
+					<div
+						className="draggable-modal-content"
+						onPointerDown={startDrag}
+					>
 						<div className="entity-template-edit-form entity-template-view-form access-level-details">
 							<div className="entity-view-summary">
 								<p className="entity-view-summary-label">
@@ -2518,6 +2529,7 @@ export function DataExplorerView() {
 	const [createEntityModalPosition, setCreateEntityModalPosition] = useState<
 		{ x: number; y: number } | undefined
 	>(undefined)
+	const [createEntityModalZIndex, setCreateEntityModalZIndex] = useState(1)
 	const [createEntityMode, setCreateEntityMode] = useState<
 		'template' | 'scratch'
 	>('template')
@@ -2532,6 +2544,7 @@ export function DataExplorerView() {
 	const loadRequestId = useRef(0)
 	const createOptionsLoadRequestId = useRef(0)
 	const entityDetailsLoadRequestIds = useRef(new Map<string, number>())
+	const modalZIndexRef = useRef(1)
 	const isAuthenticated = storedAuth !== null
 	const isAuthorized =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
@@ -2563,6 +2576,11 @@ export function DataExplorerView() {
 		},
 		[],
 	)
+
+	const getNextModalZIndex = useCallback((): number => {
+		modalZIndexRef.current += 1
+		return modalZIndexRef.current
+	}, [])
 
 	const loadEntities = useCallback(async (): Promise<void> => {
 		const requestId = loadRequestId.current + 1
@@ -2697,14 +2715,24 @@ export function DataExplorerView() {
 			setIsCreateChoiceOpen(false)
 			setIsCreateEntityModalOpen(true)
 			setCreateEntityModalPosition(undefined)
+			setCreateEntityModalZIndex(getNextModalZIndex())
 			void loadAccessLevels()
 
 			if (mode === 'template' && entityTemplates.length === 0) {
 				void loadEntityTemplates()
 			}
 		},
-		[entityTemplates.length, loadAccessLevels, loadEntityTemplates],
+		[
+			getNextModalZIndex,
+			entityTemplates.length,
+			loadAccessLevels,
+			loadEntityTemplates,
+		],
 	)
+
+	const activateCreateEntityModal = useCallback(() => {
+		setCreateEntityModalZIndex(getNextModalZIndex())
+	}, [getNextModalZIndex])
 
 	const openEntityEditModal = useCallback(
 		(
@@ -2713,6 +2741,8 @@ export function DataExplorerView() {
 			windowId: string,
 			activeTab: 'attributes' | 'links',
 		) => {
+			const zIndex = getNextModalZIndex()
+
 			setCreateEntityError(null)
 			setEntityDetailsWindows((current) =>
 				current.filter((window) => window.id !== windowId),
@@ -2736,6 +2766,7 @@ export function DataExplorerView() {
 									entity,
 									activeTab,
 									initialPosition: position,
+									zIndex,
 								}
 							: window,
 					)
@@ -2748,11 +2779,12 @@ export function DataExplorerView() {
 						activeTab,
 						id: crypto.randomUUID(),
 						initialPosition: position,
+						zIndex,
 					},
 				]
 			})
 		},
-		[entityTemplates.length, loadAccessLevels, loadEntityTemplates],
+		[getNextModalZIndex, entityTemplates.length, loadAccessLevels, loadEntityTemplates],
 	)
 
 	const deleteEntity = useCallback(async (entity: Entity): Promise<void> => {
@@ -2899,25 +2931,16 @@ export function DataExplorerView() {
 			)
 
 			if (existingWindow) {
-				setEntityDetailsWindows((current) => {
-					const index = current.findIndex(
-						(window) => window.id === existingWindow.id,
-					)
-
-					if (index < 0 || index === current.length - 1) {
-						return current
-					}
-
-					const next = current.slice()
-					const [window] = next.splice(index, 1)
-
-					if (!window) {
-						return current
-					}
-
-					next.push(window)
-					return next
-				})
+				setEntityDetailsWindows((current) =>
+					current.map((window) =>
+						window.id === existingWindow.id
+							? {
+									...window,
+									zIndex: getNextModalZIndex(),
+								}
+							: window,
+					),
+				)
 				void loadAccessLevels()
 
 				if (entityTemplates.length === 0) {
@@ -2944,6 +2967,7 @@ export function DataExplorerView() {
 					error: null,
 					id: windowId,
 					initialPosition,
+					zIndex: getNextModalZIndex(),
 					isLoading: true,
 				},
 			])
@@ -2956,6 +2980,7 @@ export function DataExplorerView() {
 			void loadEntityDetails(windowId, entityId)
 		},
 		[
+			getNextModalZIndex,
 			entityDetailsWindows,
 			getEntityDetailsPosition,
 			entityTemplates.length,
@@ -2973,24 +2998,30 @@ export function DataExplorerView() {
 	}, [])
 
 	const activateEntityDetailsWindow = useCallback((windowId: string) => {
-		setEntityDetailsWindows((current) => {
-			const index = current.findIndex((window) => window.id === windowId)
+		setEntityDetailsWindows((current) =>
+			current.map((window) =>
+				window.id === windowId
+					? {
+							...window,
+							zIndex: getNextModalZIndex(),
+						}
+					: window,
+			),
+		)
+	}, [getNextModalZIndex])
 
-			if (index < 0 || index === current.length - 1) {
-				return current
-			}
-
-			const next = current.slice()
-			const [window] = next.splice(index, 1)
-
-			if (!window) {
-				return current
-			}
-
-			next.push(window)
-			return next
-		})
-	}, [])
+	const activateEntityEditWindow = useCallback((windowId: string) => {
+		setEntityEditWindows((current) =>
+			current.map((window) =>
+				window.id === windowId
+					? {
+							...window,
+							zIndex: getNextModalZIndex(),
+						}
+					: window,
+			),
+		)
+	}, [getNextModalZIndex])
 
 	const createEntity = useCallback(
 		async (input: CreateEntityInput): Promise<void> => {
@@ -3079,13 +3110,13 @@ export function DataExplorerView() {
 							...current.filter(
 								(window) => window.entityId !== id,
 							),
-							{
-								entity: data.data,
-								entityId: id,
-								activeTab: editWindowActiveTab ?? 'attributes',
-								error: null,
-								id: crypto.randomUUID(),
-								initialPosition: editWindowPosition ?? {
+								{
+									entity: data.data,
+									entityId: id,
+									activeTab: editWindowActiveTab ?? 'attributes',
+									error: null,
+									id: crypto.randomUUID(),
+									initialPosition: editWindowPosition ?? {
 									x: Math.max(
 										entityModalMargin,
 										(window.innerWidth -
@@ -3100,10 +3131,11 @@ export function DataExplorerView() {
 										entityModalMargin,
 										window.innerHeight * 0.18,
 									),
+									},
+									zIndex: getNextModalZIndex(),
+									isLoading: false,
 								},
-								isLoading: false,
-							},
-						])
+							])
 					} else {
 						setIsCreateEntityModalOpen(false)
 					}
@@ -3395,6 +3427,7 @@ export function DataExplorerView() {
 					initialPosition={createEntityModalPosition}
 					isLoadingOptions={isLoadingCreateOptions}
 					isSaving={isSavingEntity}
+					onActivate={activateCreateEntityModal}
 					mode="create"
 					onClose={() => {
 						setIsCreateEntityModalOpen(false)
@@ -3402,6 +3435,7 @@ export function DataExplorerView() {
 					}}
 					onCreate={createEntity}
 					onUpdate={updateEntityRecord}
+					zIndex={createEntityModalZIndex}
 				/>
 			) : null}
 			{entityEditWindows.map((window) => (
@@ -3422,6 +3456,7 @@ export function DataExplorerView() {
 					initialPosition={window.initialPosition}
 					isLoadingOptions={isLoadingCreateOptions}
 					isSaving={isSavingEntity}
+					onActivate={() => activateEntityEditWindow(window.id)}
 					mode="edit"
 					onClose={() =>
 						setEntityEditWindows((current) =>
@@ -3443,6 +3478,7 @@ export function DataExplorerView() {
 								error: null,
 								id: crypto.randomUUID(),
 								initialPosition: window.initialPosition,
+								zIndex: getNextModalZIndex(),
 								isLoading: false,
 							},
 						])
@@ -3457,9 +3493,10 @@ export function DataExplorerView() {
 							window.id,
 						)
 					}
+					zIndex={window.zIndex}
 				/>
 			))}
-			{entityDetailsWindows.map((window, index) => (
+			{entityDetailsWindows.map((window) => (
 				<EntityDetailsModal
 					key={window.id}
 					accessLevels={accessLevels}
@@ -3475,7 +3512,7 @@ export function DataExplorerView() {
 					onEdit={openEntityEditModal}
 					onClose={() => closeEntityDetails(window.id)}
 					windowId={window.id}
-					zIndex={index + 1}
+					zIndex={window.zIndex}
 				/>
 			))}
 		</section>
