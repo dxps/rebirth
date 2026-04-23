@@ -117,6 +117,7 @@ class FormResponseError extends Error {
 interface OpenTemplateModal {
 	attributeTemplate: AttributeTemplate | null
 	entityTemplate: EntityTemplate | null
+	entityTemplateActiveTab?: 'attributes' | 'links' | 'inlinks'
 	initialPosition: {
 		x: number
 		y: number
@@ -741,12 +742,14 @@ interface EntityTemplateEditFormProps {
 	autoFocusName?: boolean
 	entityTemplate?: EntityTemplate
 	entityTemplates: EntityTemplate[]
+	initialActiveTab?: 'attributes' | 'links'
 	formId: string
 	modalKey: string
 	onCreateAttributeTemplate: (
 		input: CreateAttributeTemplateInput,
 	) => Promise<AttributeTemplate>
 	onSave: (input: CreateEntityTemplateInput) => Promise<void>
+	onActiveTabChange?: (key: string, tab: 'attributes' | 'links') => void
 	onValidityChange: (key: string, isValid: boolean) => void
 }
 
@@ -774,14 +777,16 @@ function EntityTemplateEditForm({
 	autoFocusName = false,
 	entityTemplate,
 	entityTemplates,
+	initialActiveTab = 'attributes',
 	formId,
 	modalKey,
 	onCreateAttributeTemplate,
+	onActiveTabChange,
 	onSave,
 	onValidityChange,
 }: EntityTemplateEditFormProps) {
 	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
-		'attributes',
+		initialActiveTab,
 	)
 	const defaultAccessLevelId = accessLevels[0]?.id ?? 1
 	const [description, setDescription] = useState(
@@ -898,6 +903,10 @@ function EntityTemplateEditForm({
 	}, [isValid, modalKey, onValidityChange])
 
 	useEffect(() => {
+		setActiveTab(initialActiveTab)
+	}, [initialActiveTab])
+
+	useEffect(() => {
 		if (autoFocusName) {
 			nameInputRef.current?.focus()
 		}
@@ -908,6 +917,14 @@ function EntityTemplateEditForm({
 			newAttributeNameInputRef.current?.focus()
 		}
 	}, [includeAttributeMode, isIncludeAttributeOpen])
+
+	const changeActiveTab = useCallback(
+		(tab: 'attributes' | 'links') => {
+			setActiveTab(tab)
+			onActiveTabChange?.(modalKey, tab)
+		},
+		[modalKey, onActiveTabChange],
+	)
 
 	useEffect(() => {
 		function blurAccessLevelSelect(event: PointerEvent): void {
@@ -1702,7 +1719,7 @@ function EntityTemplateEditForm({
 							className="entity-template-tab"
 							role="tab"
 							type="button"
-							onClick={() => setActiveTab('attributes')}
+							onClick={() => changeActiveTab('attributes')}
 						>
 							<span>Attributes</span>
 							<span className="entity-template-tab-badge">
@@ -1715,7 +1732,7 @@ function EntityTemplateEditForm({
 							data-tooltip="Outbound Links"
 							role="tab"
 							type="button"
-							onClick={() => setActiveTab('links')}
+							onClick={() => changeActiveTab('links')}
 						>
 							<span>Outlinks</span>
 							<span className="entity-template-tab-badge">
@@ -1723,239 +1740,6 @@ function EntityTemplateEditForm({
 							</span>
 						</button>
 					</div>
-					{activeTab === 'attributes' ? (
-						<span className="include-attribute-action">
-							<button
-								aria-expanded={isIncludeAttributeOpen}
-								aria-label="Add attribute"
-								className="section-action-button"
-								data-tooltip="Include an attribute"
-								type="button"
-								onClick={() =>
-									setIsIncludeAttributeOpen(
-										(current) => !current,
-									)
-								}
-							>
-								<Plus aria-hidden="true" />
-							</button>
-							{isIncludeAttributeOpen ? (
-								<div
-									className="include-attribute-popover"
-									data-no-drag="true"
-								>
-									<button
-										aria-label="Close include attribute popup"
-										className="icon-only-button include-attribute-close-button"
-										type="button"
-										onClick={() =>
-											setIsIncludeAttributeOpen(false)
-										}
-									>
-										<X aria-hidden="true" />
-									</button>
-									<div className="include-attribute-mode-tabs">
-										<button
-											aria-selected={
-												includeAttributeMode ===
-												'existing'
-											}
-											type="button"
-											onClick={() =>
-												setIncludeAttributeMode(
-													'existing',
-												)
-											}
-										>
-											Existing
-										</button>
-										<button
-											aria-selected={
-												includeAttributeMode === 'new'
-											}
-											type="button"
-											onClick={() =>
-												setIncludeAttributeMode('new')
-											}
-										>
-											New
-										</button>
-									</div>
-									{includeAttributeMode === 'existing' ? (
-										<div className="include-attribute-fields">
-											<label>
-												<span>attribute template</span>
-												<span className="attribute-template-select-wrap">
-													<select
-														disabled={
-															availableAttributeTemplates.length ===
-															0
-														}
-														value={
-															selectedAttributeTemplateId
-														}
-														onChange={(event) =>
-															setSelectedAttributeTemplateId(
-																event.target
-																	.value,
-															)
-														}
-													>
-														{availableAttributeTemplates.map(
-															(
-																attributeTemplate,
-															) => (
-																<option
-																	key={
-																		attributeTemplate.id
-																	}
-																	value={
-																		attributeTemplate.id
-																	}
-																>
-																	{
-																		attributeTemplate.name
-																	}
-																</option>
-															),
-														)}
-													</select>
-												</span>
-											</label>
-											<button
-												aria-label="Include"
-												className="icon-only-button include-attribute-submit-button"
-												data-tooltip="Include"
-												disabled={
-													availableAttributeTemplates.length ===
-													0
-												}
-												type="button"
-												onClick={
-													includeExistingAttribute
-												}
-											>
-												<Plus aria-hidden="true" />
-											</button>
-										</div>
-									) : (
-										<div className="include-attribute-fields">
-											<label>
-												<span>name</span>
-												<input
-													ref={
-														newAttributeNameInputRef
-													}
-													type="text"
-													value={newAttributeName}
-													onChange={(event) =>
-														setNewAttributeName(
-															event.target.value,
-														)
-													}
-												/>
-											</label>
-											<label>
-												<span>description</span>
-												<textarea
-													rows={2}
-													value={
-														newAttributeDescription
-													}
-													onChange={(event) =>
-														setNewAttributeDescription(
-															event.target.value,
-														)
-													}
-												/>
-											</label>
-											<label>
-												<span>value type</span>
-												<span className="attribute-template-select-wrap">
-													<select
-														value={
-															newAttributeValueType
-														}
-														onChange={(event) =>
-															setNewAttributeValueType(
-																event.target
-																	.value as ValueType,
-															)
-														}
-													>
-														{valueTypes.map(
-															(valueType) => (
-																<option
-																	key={
-																		valueType
-																	}
-																	value={
-																		valueType
-																	}
-																>
-																	{valueType}
-																</option>
-															),
-														)}
-													</select>
-												</span>
-											</label>
-											<label className="include-attribute-checkbox">
-												<input
-													checked={
-														newAttributeSaveAsTemplate
-													}
-													type="checkbox"
-													onChange={(event) =>
-														setNewAttributeSaveAsTemplate(
-															event.target
-																.checked,
-														)
-													}
-												/>
-												<span>
-													save it as attribute
-													template
-												</span>
-											</label>
-											<button
-												aria-label="Include"
-												className="icon-only-button include-attribute-submit-button"
-												data-tooltip="Include"
-												disabled={
-													newAttributeName.trim()
-														.length === 0
-												}
-												type="button"
-												onClick={() =>
-													void includeNewAttribute()
-												}
-											>
-												<Plus aria-hidden="true" />
-											</button>
-										</div>
-									)}
-								</div>
-							) : null}
-						</span>
-					) : (
-						<span className="include-link-action">
-							<button
-								aria-label="Include link"
-								className="section-action-button"
-								data-tooltip={
-									availableLinkTargets.length === 0
-										? 'There are no entity templates\nto refer to in a link.'
-										: 'Include link'
-								}
-								disabled={availableLinkTargets.length === 0}
-								type="button"
-								onClick={addLink}
-							>
-								<Plus aria-hidden="true" />
-							</button>
-						</span>
-					)}
 				</div>
 
 				{activeTab === 'attributes' ? (
@@ -1973,6 +1757,265 @@ function EntityTemplateEditForm({
 								<col className="entity-template-attribute-access-level-column" />
 								<col className="entity-template-attribute-action-column" />
 							</colgroup>
+							<thead>
+								<tr>
+									<th>name</th>
+									<th>value type</th>
+									<th>access level</th>
+									<th className="entity-template-attributes-header-action-cell">
+										<div
+											className="include-attribute-action"
+											data-no-drag="true"
+										>
+											<button
+												aria-expanded={
+													isIncludeAttributeOpen
+												}
+												aria-label="Add attribute"
+												className="section-action-button"
+												data-tooltip="Include an attribute"
+												type="button"
+												onClick={() =>
+													setIsIncludeAttributeOpen(
+														(current) => !current,
+													)
+												}
+											>
+												<Plus aria-hidden="true" />
+											</button>
+											{isIncludeAttributeOpen ? (
+												<div
+													className="include-attribute-popover"
+													data-no-drag="true"
+												>
+													<button
+														aria-label="Close include attribute popup"
+														className="icon-only-button include-attribute-close-button"
+														type="button"
+														onClick={() =>
+															setIsIncludeAttributeOpen(
+																false,
+															)
+														}
+													>
+														<X aria-hidden="true" />
+													</button>
+													<div className="include-attribute-mode-tabs">
+														<button
+															aria-selected={
+																includeAttributeMode ===
+																'existing'
+															}
+															type="button"
+															onClick={() =>
+																setIncludeAttributeMode(
+																	'existing',
+																)
+															}
+														>
+															Existing
+														</button>
+														<button
+															aria-selected={
+																includeAttributeMode ===
+																'new'
+															}
+															type="button"
+															onClick={() =>
+																setIncludeAttributeMode(
+																	'new',
+																)
+															}
+														>
+															New
+														</button>
+													</div>
+													{includeAttributeMode ===
+													'existing' ? (
+														<div className="include-attribute-fields">
+															<label>
+																<span>
+																	attribute
+																	template
+																</span>
+																<span className="attribute-template-select-wrap">
+																	<select
+																		disabled={
+																			availableAttributeTemplates.length ===
+																			0
+																		}
+																		value={
+																			selectedAttributeTemplateId
+																		}
+																		onChange={(
+																			event,
+																		) =>
+																			setSelectedAttributeTemplateId(
+																				event.target
+																					.value,
+																			)
+																		}
+																	>
+																		{availableAttributeTemplates.map(
+																			(
+																				attributeTemplate,
+																			) => (
+																				<option
+																					key={
+																						attributeTemplate.id
+																					}
+																					value={
+																						attributeTemplate.id
+																					}
+																				>
+																					{
+																						attributeTemplate.name
+																					}
+																				</option>
+																			),
+																		)}
+																	</select>
+																</span>
+															</label>
+															<button
+																aria-label="Include"
+																className="icon-only-button include-attribute-submit-button"
+																data-tooltip="Include"
+																disabled={
+																	availableAttributeTemplates.length ===
+																	0
+																}
+																type="button"
+																onClick={
+																	includeExistingAttribute
+																}
+															>
+																<Plus aria-hidden="true" />
+															</button>
+														</div>
+													) : (
+														<div className="include-attribute-fields">
+															<label>
+																<span>name</span>
+																<input
+																	ref={
+																		newAttributeNameInputRef
+																	}
+																	type="text"
+																	value={
+																		newAttributeName
+																	}
+																	onChange={(
+																		event,
+																	) =>
+																		setNewAttributeName(
+																			event.target.value,
+																		)
+																	}
+																/>
+															</label>
+															<label>
+																<span>
+																	description
+																</span>
+																<textarea
+																	rows={2}
+																	value={
+																		newAttributeDescription
+																	}
+																	onChange={(
+																		event,
+																	) =>
+																		setNewAttributeDescription(
+																			event.target.value,
+																		)
+																	}
+																/>
+															</label>
+															<label>
+																<span>
+																	value type
+																</span>
+																<span className="attribute-template-select-wrap">
+																	<select
+																		value={
+																			newAttributeValueType
+																		}
+																		onChange={(
+																			event,
+																		) =>
+																			setNewAttributeValueType(
+																				event.target
+																					.value as ValueType,
+																			)
+																		}
+																	>
+																		{valueTypes.map(
+																			(
+																				valueType,
+																			) => (
+																				<option
+																					key={
+																						valueType
+																					}
+																					value={
+																						valueType
+																					}
+																				>
+																					{
+																						valueType
+																					}
+																				</option>
+																			),
+																		)}
+																	</select>
+																</span>
+															</label>
+															<label className="include-attribute-checkbox">
+																<input
+																	checked={
+																		newAttributeSaveAsTemplate
+																	}
+																	type="checkbox"
+																	onChange={(
+																		event,
+																	) =>
+																		setNewAttributeSaveAsTemplate(
+																			event.target
+																				.checked,
+																		)
+																	}
+																/>
+																<span>
+																	save it as
+																	attribute
+																	template
+																</span>
+															</label>
+															<button
+																aria-label="Include"
+																className="icon-only-button include-attribute-submit-button"
+																data-tooltip="Include"
+																disabled={
+																	newAttributeName.trim()
+																		.length ===
+																	0
+																}
+																type="button"
+																onClick={() =>
+																	void includeNewAttribute()
+																}
+															>
+																<Plus aria-hidden="true" />
+															</button>
+														</div>
+													)}
+												</div>
+											) : null}
+										</div>
+									</th>
+								</tr>
+							</thead>
 							<tbody>
 								{includedAttributes.length === 0 ? (
 									<tr>
@@ -2166,6 +2209,31 @@ function EntityTemplateEditForm({
 								<col className="entity-template-link-target-column" />
 								<col className="entity-template-link-action-column" />
 							</colgroup>
+							<thead>
+								<tr>
+									<th>name</th>
+									<th>description</th>
+									<th>target</th>
+									<th className="entity-template-links-header-action-cell">
+										<div className="entity-template-links-header-action-inner">
+											<button
+												aria-label="Include link"
+												className="section-action-button"
+												data-tooltip={
+													availableLinkTargets.length === 0
+														? 'There are no entity templates\nto refer to in a link.'
+														: 'Include link'
+												}
+												disabled={availableLinkTargets.length === 0}
+												type="button"
+												onClick={addLink}
+											>
+												<Plus aria-hidden="true" />
+											</button>
+										</div>
+									</th>
+								</tr>
+							</thead>
 							<tbody>
 								{includedLinks.length === 0 ? (
 									<tr>
@@ -2322,6 +2390,8 @@ interface EntityTemplateDetailsViewProps {
 	accessLevels: AccessLevel[]
 	entityTemplate: EntityTemplate
 	entityTemplates: EntityTemplate[]
+	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
+	onActiveTabChange?: (tab: 'attributes' | 'links' | 'inlinks') => void
 }
 
 function LinkDescriptionValue({ description }: { description: string | null }) {
@@ -2413,10 +2483,12 @@ function EntityTemplateDetailsView({
 	accessLevels,
 	entityTemplate,
 	entityTemplates,
+	initialActiveTab = 'attributes',
+	onActiveTabChange,
 }: EntityTemplateDetailsViewProps) {
 	const [activeTab, setActiveTab] = useState<
 		'attributes' | 'links' | 'inlinks'
-	>('attributes')
+	>(initialActiveTab)
 	const orderedAttributes = entityTemplate.attributes
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
@@ -2446,6 +2518,18 @@ function EntityTemplateDetailsView({
 
 			return left.link.listingIndex - right.link.listingIndex
 		})
+
+	useEffect(() => {
+		setActiveTab(initialActiveTab)
+	}, [initialActiveTab])
+
+	const changeActiveTab = useCallback(
+		(tab: 'attributes' | 'links' | 'inlinks') => {
+			setActiveTab(tab)
+			onActiveTabChange?.(tab)
+		},
+		[onActiveTabChange],
+	)
 
 	return (
 		<div
@@ -2495,7 +2579,7 @@ function EntityTemplateDetailsView({
 							className="entity-template-tab"
 							role="tab"
 							type="button"
-							onClick={() => setActiveTab('attributes')}
+							onClick={() => changeActiveTab('attributes')}
 						>
 							<span>Attributes</span>
 							<span className="entity-template-tab-badge">
@@ -2508,7 +2592,7 @@ function EntityTemplateDetailsView({
 							data-tooltip="Outbound Links"
 							role="tab"
 							type="button"
-							onClick={() => setActiveTab('links')}
+							onClick={() => changeActiveTab('links')}
 						>
 							<span>Outlinks</span>
 							<span className="entity-template-tab-badge">
@@ -2522,7 +2606,7 @@ function EntityTemplateDetailsView({
 								data-tooltip="Incoming links"
 								role="tab"
 								type="button"
-								onClick={() => setActiveTab('inlinks')}
+								onClick={() => changeActiveTab('inlinks')}
 							>
 								<span>Inlinks</span>
 								<span className="entity-template-tab-badge">
@@ -3146,6 +3230,7 @@ export function TemplatesView() {
 					{
 						attributeTemplate: null,
 						entityTemplate,
+						entityTemplateActiveTab: 'attributes',
 						initialPosition: { x, y },
 						key: `entity-template-${entityTemplate.id}`,
 						mode: 'details',
@@ -3154,6 +3239,19 @@ export function TemplatesView() {
 					},
 				]
 			})
+		},
+		[],
+	)
+
+	const setEntityTemplateActiveTab = useCallback(
+		(key: string, activeTab: 'attributes' | 'links' | 'inlinks') => {
+			setOpenModals((current) =>
+				current.map((modal) =>
+					modal.key === key
+						? { ...modal, entityTemplateActiveTab: activeTab }
+						: modal,
+				),
+			)
 		},
 		[],
 	)
@@ -3611,35 +3709,47 @@ export function TemplatesView() {
 					>
 						{modal.templateType === 'entity' &&
 						modal.mode === 'create' ? (
-							<EntityTemplateEditForm
-								accessLevels={accessLevels}
-								attributeTemplates={attributeTemplates}
-								autoFocusName
-								entityTemplates={entityTemplates}
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onCreateAttributeTemplate={
-									createAttributeTemplate
-								}
-								onSave={createEntityTemplate}
-								onValidityChange={setModalFormValidity}
-							/>
+						<EntityTemplateEditForm
+							accessLevels={accessLevels}
+							attributeTemplates={attributeTemplates}
+							autoFocusName
+							entityTemplates={entityTemplates}
+							initialActiveTab={
+								modal.entityTemplateActiveTab === 'links'
+									? 'links'
+									: 'attributes'
+							}
+							formId={`${modal.key}-edit-form`}
+							modalKey={modal.key}
+							onCreateAttributeTemplate={
+								createAttributeTemplate
+							}
+							onActiveTabChange={setEntityTemplateActiveTab}
+							onSave={createEntityTemplate}
+							onValidityChange={setModalFormValidity}
+						/>
 						) : modal.templateType === 'entity' &&
 						  modal.mode === 'edit' &&
 						  modal.entityTemplate ? (
-							<EntityTemplateEditForm
-								accessLevels={accessLevels}
-								attributeTemplates={attributeTemplates}
-								autoFocusName
-								entityTemplate={modal.entityTemplate}
-								entityTemplates={entityTemplates}
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onCreateAttributeTemplate={
-									createAttributeTemplate
-								}
-								onSave={(input) => {
-									const entityTemplate = modal.entityTemplate
+						<EntityTemplateEditForm
+							accessLevels={accessLevels}
+							attributeTemplates={attributeTemplates}
+							autoFocusName
+							entityTemplate={modal.entityTemplate}
+							entityTemplates={entityTemplates}
+							initialActiveTab={
+								modal.entityTemplateActiveTab === 'links'
+									? 'links'
+									: 'attributes'
+							}
+							formId={`${modal.key}-edit-form`}
+							modalKey={modal.key}
+							onCreateAttributeTemplate={
+								createAttributeTemplate
+							}
+							onActiveTabChange={setEntityTemplateActiveTab}
+							onSave={(input) => {
+								const entityTemplate = modal.entityTemplate
 
 									if (!entityTemplate) {
 										return Promise.resolve()
@@ -3688,6 +3798,10 @@ export function TemplatesView() {
 								accessLevels={accessLevels}
 								entityTemplate={modal.entityTemplate}
 								entityTemplates={entityTemplates}
+								initialActiveTab={modal.entityTemplateActiveTab}
+								onActiveTabChange={(tab) =>
+									setEntityTemplateActiveTab(modal.key, tab)
+								}
 							/>
 						) : modal.attributeTemplate ? (
 							<div

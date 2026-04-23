@@ -1236,7 +1236,7 @@ button.access-level-refresh-button:hover {
 
 .entity-create-popover-fields .include-attribute-submit-button,
 .entity-create-popover-continue {
-	justify-self: end;
+	justify-self: center;
 }
 
 .entity-include-attribute-popover {
@@ -2399,6 +2399,29 @@ button.entity-template-tab[aria-selected='true']:hover {
 	width: 3.25rem;
 }
 
+.entity-template-attributes-header-action-cell {
+	padding-right: 0.1rem;
+	text-align: right;
+}
+
+.entity-template-link-action-column {
+	width: 3.25rem;
+}
+
+.entity-template-links-header-action-cell {
+	padding-left: 0;
+	padding-right: 0;
+	position: relative;
+	text-align: right;
+}
+
+.entity-template-links-header-action-inner {
+	position: absolute;
+	right: 0.08rem;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
 .entity-template-attributes-table th:nth-child(2),
 .entity-template-attributes-table td:nth-child(2) {
 	white-space: nowrap;
@@ -2416,6 +2439,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 .entity-template-attributes-table th:last-child,
 .entity-template-attributes-table td:last-child {
 	text-align: right;
+	padding-right: 0;
 }
 
 .entity-template-view-attributes-table th:last-child,
@@ -2446,7 +2470,6 @@ button.entity-template-tab[aria-selected='true']:hover {
 .include-attribute-action {
 	align-items: center;
 	display: inline-flex;
-	grid-column: 3;
 	justify-self: end;
 	position: relative;
 }
@@ -2454,7 +2477,6 @@ button.entity-template-tab[aria-selected='true']:hover {
 .include-link-action {
 	align-items: center;
 	display: inline-flex;
-	grid-column: 3;
 	justify-self: end;
 }
 
@@ -2755,6 +2777,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .entity-template-link-target-wrap[data-tooltip],
 .icon-only-button[data-tooltip] {
 	position: relative;
+	justify-self: center;
 }
 
 .entity-template-value-type-cell[data-tooltip]::after,
@@ -3132,6 +3155,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 
 .entity-template-link-actions .icon-only-button + .icon-only-button {
 	margin-left: 0.38rem;
+	justify-content: right;
 }
 
 .entity-template-link-actions .icon-only-button[data-tooltip]::after {
