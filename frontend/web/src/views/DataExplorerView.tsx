@@ -2404,9 +2404,13 @@ export function DataExplorerView() {
 				) : (
 					<div className="data-table-wrap templates-table-wrap">
 						<table className="data-table entities-table">
+							<colgroup>
+								<col className="entity-listing-name-column" />
+								<col className="entity-listing-value-column" />
+							</colgroup>
 							<thead>
 								<tr>
-									<th className="data-table-action-heading">
+									<th className="data-table-action-heading" colSpan={2}>
 										<span className="entity-create-action">
 											<button
 												aria-expanded={
@@ -2441,9 +2445,9 @@ export function DataExplorerView() {
 											getEntityListingAttribute(entity)
 
 										return (
-											<tr
-												key={entity.id}
-												className="data-table-row"
+												<tr
+													key={entity.id}
+													className="data-table-row"
 												tabIndex={0}
 												role="button"
 												aria-label={`Open entity ${listingAttribute?.value ?? entity.id}`}
@@ -2461,12 +2465,14 @@ export function DataExplorerView() {
 														)
 													}
 												}}
-											>
-												<td className="entity-listing-cell">
+												>
+												<td className="entity-listing-name-cell">
 													<span>
 														{listingAttribute?.name ??
 															''}
 													</span>
+												</td>
+												<td className="entity-listing-value-cell">
 													<strong>
 														{listingAttribute?.value ??
 															''}

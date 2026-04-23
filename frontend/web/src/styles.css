@@ -1094,28 +1094,37 @@ button.access-level-refresh-button:hover {
 	right: 0.35rem;
 }
 
-.entities-table th.data-table-action-heading {
-	width: 100%;
+.entities-table col.entity-listing-name-column,
+.entities-table col.entity-listing-value-column {
+	width: 50%;
 }
 
-.entities-table td:first-child,
-.entities-table td:last-child {
+.entities-table th.data-table-action-heading {
+	padding-left: 0;
+	padding-right: 0;
+	text-align: right;
+}
+
+.entities-table td {
 	padding-left: 0.7rem;
 	padding-right: 0.7rem;
-	width: auto;
+	width: 50%;
 }
 
-.entity-listing-cell {
-	align-items: baseline;
-	display: flex;
-	gap: 1rem;
-	justify-content: space-between;
+.entity-listing-name-cell {
+	text-align: left;
 }
 
-.entity-listing-cell strong {
+.entity-listing-value-cell {
+	text-align: right;
+}
+
+.entity-listing-value-cell strong {
 	color: var(--fg);
 	font-weight: 400;
-	overflow-wrap: anywhere;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	text-align: right;
 }
 
