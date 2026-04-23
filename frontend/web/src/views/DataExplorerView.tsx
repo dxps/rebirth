@@ -142,7 +142,7 @@ interface CreateEntityModalProps {
 	onClose: () => void
 	onActivate?: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
-	onBack?: () => void
+	onBack?: (position: { x: number; y: number }, activeTab: 'attributes' | 'links') => void
 	onUpdate: (
 		id: string,
 		input: UpdateEntityInput,
@@ -1058,7 +1058,7 @@ function CreateEntityModal({
 								onPointerDown={(event) =>
 									event.stopPropagation()
 								}
-								onClick={() => onBack?.()}
+								onClick={() => onBack?.(position, activeTab)}
 							>
 								<ArrowLeft aria-hidden="true" />
 							</button>
@@ -3463,7 +3463,7 @@ export function DataExplorerView() {
 							current.filter((item) => item.id !== window.id),
 						)
 					}
-					onBack={() => {
+					onBack={(position, activeTab) => {
 						setEntityEditWindows((current) =>
 							current.filter((item) => item.id !== window.id),
 						)
@@ -3474,10 +3474,10 @@ export function DataExplorerView() {
 							{
 								entity: window.entity,
 								entityId: window.entity.id,
-								activeTab: window.activeTab,
+								activeTab,
 								error: null,
 								id: crypto.randomUUID(),
-								initialPosition: window.initialPosition,
+								initialPosition: position,
 								zIndex: getNextModalZIndex(),
 								isLoading: false,
 							},
