@@ -220,6 +220,32 @@ input[type='checkbox']:checked::after {
 	width: 24%;
 }
 
+input[type='radio'] {
+	appearance: none;
+	background: transparent;
+	background-color: transparent;
+	border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+	border-radius: 999px;
+	padding: 0;
+	position: relative;
+}
+
+input[type='radio']:checked {
+	border-color: var(--focus-ring);
+}
+
+input[type='radio']:checked::after {
+	background: var(--focus-ring);
+	border-radius: 999px;
+	content: '';
+	height: 52%;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 52%;
+}
+
 button svg,
 .mobile-note svg,
 .status svg {
@@ -1091,6 +1117,223 @@ button.access-level-refresh-button:hover {
 	font-weight: 400;
 	overflow-wrap: anywhere;
 	text-align: right;
+}
+
+.entity-create-action {
+	align-items: center;
+	display: inline-flex;
+	position: relative;
+}
+
+.entity-create-popover {
+	position: fixed;
+	right: auto;
+	top: auto;
+	min-width: 11rem;
+	padding-top: 0.75rem;
+	text-align: left;
+	width: 11rem;
+	z-index: 40;
+}
+
+.entity-create-popover .include-attribute-close-button,
+.entity-create-popover button.include-attribute-close-button {
+	border-radius: 999px;
+	height: 1.45rem;
+	min-height: 1.45rem;
+	width: 1.45rem;
+}
+
+.entity-create-popover-title {
+	color: var(--muted);
+	font-size: 0.78rem;
+	line-height: 1.25;
+	margin: 0;
+	padding-right: 1.6rem;
+}
+
+.entity-create-radio-group {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.entity-template-edit-form .entity-create-radio-group label,
+.entity-create-radio-group label {
+	align-items: center;
+	border-radius: 6px;
+	color: var(--fg);
+	cursor: pointer;
+	display: flex;
+	flex-direction: row;
+	font-size: 0.78rem;
+	gap: 0.42rem;
+	grid-template-columns: none;
+	line-height: 1.2;
+	padding: 0.26rem 0.32rem;
+	white-space: nowrap;
+}
+
+.entity-template-edit-form .entity-create-radio-group label:hover,
+.entity-create-radio-group label:hover {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.entity-template-edit-form .entity-create-radio-group input,
+.entity-create-radio-group input {
+	border-radius: 999px;
+	flex: 0 0 auto;
+	height: 1.05rem;
+	width: 1.05rem;
+}
+
+.entity-template-edit-form .entity-create-radio-group label > span:first-child {
+	padding-left: 0;
+}
+
+.entity-create-popover-fields {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.entity-create-popover-fields label {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.72rem;
+	gap: 0.2rem;
+}
+
+.entity-create-popover-fields label > span:first-child {
+	padding-left: 0.32rem;
+}
+
+.entity-create-popover-fields select {
+	appearance: none;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.78rem;
+	height: 1.38rem;
+	line-height: 1.3;
+	padding: 0.13rem 1.75rem 0.13rem 0.32rem;
+	width: 100%;
+}
+
+.entity-create-popover-fields select:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.entity-create-popover-fields .include-attribute-submit-button,
+.entity-create-popover-continue {
+	justify-self: end;
+}
+
+.entity-include-attribute-popover {
+	min-width: 16rem;
+	width: 16rem;
+}
+
+.entity-create-fields {
+	display: grid;
+	gap: 0.65rem;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.entity-attributes-table {
+	table-layout: fixed;
+}
+
+.entity-attribute-name-column {
+	width: auto;
+}
+
+.entity-attribute-value-column {
+	width: auto;
+}
+
+.entity-attribute-value-type-column {
+	width: 5.2rem;
+}
+
+.entity-attribute-access-level-column {
+	width: 6.6rem;
+}
+
+.entity-attribute-action-column {
+	width: 3.25rem;
+}
+
+.entity-attributes-table th:last-child,
+.entity-attributes-table td:last-child {
+	padding-left: 0;
+	padding-right: 0;
+	text-align: right;
+	width: 3.25rem;
+}
+
+.entity-attribute-header-action {
+	grid-column: auto;
+	justify-self: end;
+}
+
+.entity-attributes-table .entity-template-attribute-actions {
+	padding-left: 0.55rem;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.entity-attributes-table .entity-template-attribute-actions .icon-only-button {
+	margin-left: 0.28rem;
+}
+
+.entity-attributes-table tr[data-dragging='true'] {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.entity-attributes-table th:nth-child(1),
+.entity-attributes-table td:nth-child(1),
+.entity-attributes-table th:nth-child(2),
+.entity-attributes-table td:nth-child(2) {
+	min-width: 0;
+}
+
+.entity-attributes-table td:nth-child(1) input,
+.entity-attributes-table td:nth-child(2) input {
+	display: block;
+	min-width: 0;
+	width: 100%;
+}
+
+.entity-attributes-table .entity-template-value-type-wrap {
+	width: 5.2rem;
+}
+
+.entity-attributes-table .entity-template-access-level-wrap {
+	width: 6.3rem;
+}
+
+.entity-create-two-column-row {
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.entity-create-status,
+.entity-create-error {
+	font-size: 0.82rem;
+	line-height: 1.3;
+	margin: 0;
+}
+
+.entity-create-status {
+	color: var(--muted);
+}
+
+.entity-create-error {
+	color: var(--error);
 }
 
 .entity-templates-table tbody tr:last-child td,

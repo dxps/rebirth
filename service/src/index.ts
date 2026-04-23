@@ -16,6 +16,7 @@ import {
   isUserId,
   isUpdateAccessLevelInput,
   isUpdateAttributeTemplateInput,
+  isUpdateEntityInput,
   isUpdateEntityTemplateInput,
   isUpdatePasswordInput,
   isUpdateUserInput,
@@ -38,7 +39,7 @@ import {
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
-import { createEntity, getEntity, listEntities } from "./db/entities";
+import { createEntity, deleteEntity, getEntity, listEntities, updateEntity } from "./db/entities";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { listPermissions } from "./db/permissions";
 import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
@@ -1038,6 +1039,128 @@ const server = Bun.serve({
         return Response.json(
           {
             error: "Unable to load entity"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "PUT" && entityMatch) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const id = entityMatch[1] ?? "";
+        const input = await request.json();
+
+        if (!isEntityId(id) || !isUpdateEntityInput(input)) {
+          return Response.json(
+            {
+              error: "Invalid entity update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const updatedEntity = await updateEntity(id, {
+          attributes: input.attributes,
+          entityTemplateId: input.entityTemplateId,
+          links: input.links,
+          listingAttributeId: input.listingAttributeId
+        });
+
+        if (!updatedEntity) {
+          return Response.json(
+            {
+              error: "Entity not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: EntityResponse = {
+          data: updatedEntity
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to update entity"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "DELETE" && entityMatch) {
+      const authenticatedUser = await requireDataManager(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const id = entityMatch[1] ?? "";
+
+        if (!isEntityId(id)) {
+          return Response.json(
+            {
+              error: "Invalid entity id"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
+        const deletedEntity = await deleteEntity(id);
+
+        if (!deletedEntity) {
+          return Response.json(
+            {
+              error: "Entity not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        const response: EntityResponse = {
+          data: deletedEntity
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to delete entity"
           },
           {
             headers: jsonHeaders,

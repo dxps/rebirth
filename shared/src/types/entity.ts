@@ -85,6 +85,13 @@ export interface CreateEntityFromScratchInput {
 	links?: CreateEntityLinkInput[]
 }
 
+export interface UpdateEntityInput {
+	entityTemplateId?: EntityTemplateId | null
+	attributes: CreateEntityAttributeInput[]
+	listingAttributeId: EntityAttributeId
+	links?: CreateEntityLinkInput[]
+}
+
 export type CreateEntityInput =
 	| CreateEntityFromTemplateInput
 	| CreateEntityFromScratchInput
@@ -288,6 +295,27 @@ export function isCreateEntityInput(
 
 	return (
 		(value.entityTemplateId === undefined || value.entityTemplateId === null) &&
+		hasValidEntityAttributes(value.attributes, value.listingAttributeId) &&
+		(value.links === undefined ||
+			(Array.isArray(value.links) &&
+				value.links.every(isCreateEntityLinkInput)))
+	)
+}
+
+export function isUpdateEntityInput(
+	input: unknown,
+): input is UpdateEntityInput {
+	if (!input || typeof input !== 'object') {
+		return false
+	}
+
+	const value = input as Record<string, unknown>
+
+	return (
+		(value.entityTemplateId === undefined ||
+			value.entityTemplateId === null ||
+			(typeof value.entityTemplateId === 'string' &&
+				isEntityTemplateId(value.entityTemplateId))) &&
 		hasValidEntityAttributes(value.attributes, value.listingAttributeId) &&
 		(value.links === undefined ||
 			(Array.isArray(value.links) &&

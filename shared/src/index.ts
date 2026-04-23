@@ -28,6 +28,7 @@ import {
 import {
 	isCreateEntityInput,
 	isEntityId,
+	isUpdateEntityInput,
 	type CreateEntityInput,
 	type Entity,
 } from './types/entity'
@@ -443,6 +444,7 @@ export {
 	isEntityAttributeId,
 	isEntityId,
 	isEntityLinkId,
+	isUpdateEntityInput,
 } from './types/entity'
 export type {
 	CreateEntityAttributeInput,
@@ -458,6 +460,7 @@ export type {
 	EntityLinkId,
 	EntityTemplateAttributeValueInput,
 	EntityTemplateLinkTargetInput,
+	UpdateEntityInput,
 } from './types/entity'
 export {
 	entityTemplateAttributeModel,

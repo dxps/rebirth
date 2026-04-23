@@ -6,6 +6,7 @@ import type {
 	Entity,
 	EntityAttribute,
 	EntityLink,
+	UpdateEntityInput,
 	ValueType,
 } from '@rebirth/shared'
 import type postgres from 'postgres'
@@ -256,6 +257,30 @@ async function insertEntityLinks(
 	}
 }
 
+async function replaceEntityAttributes(
+	sql: postgres.TransactionSql,
+	entityId: string,
+	attributes: EntityAttribute[],
+): Promise<void> {
+	await sql`
+		DELETE FROM entity_attributes
+		WHERE entity_id = ${entityId}
+	`
+	await insertEntityAttributes(sql, entityId, attributes)
+}
+
+async function replaceEntityLinks(
+	sql: postgres.TransactionSql,
+	entityId: string,
+	links: CreateEntityLinkInput[],
+): Promise<void> {
+	await sql`
+		DELETE FROM entity_links
+		WHERE entity_id = ${entityId}
+	`
+	await insertEntityLinks(sql, entityId, links)
+}
+
 async function buildEntityFromTemplate(
 	client: ReturnType<typeof createDatabase>['client'],
 	input: Extract<CreateEntityInput, { entityTemplateId: string }>,
@@ -418,6 +443,92 @@ export async function createEntity(input: CreateEntityInput) {
 		const [createdEntity] = await readEntityRows(client, id)
 
 		return createdEntity
+	} finally {
+		await client.end()
+	}
+}
+
+export async function updateEntity(id: string, input: UpdateEntityInput) {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [existingEntity] = await readEntityRows(client, id)
+
+		if (!existingEntity) {
+			return undefined
+		}
+
+		const nextAttributes = normalizeAttributes(input.attributes)
+		const nextLinks = normalizeLinks(input.links)
+		const nextListingAttributeId = input.listingAttributeId
+
+		if (
+			!isListingAttributeIncluded({
+				attributes: nextAttributes,
+				listingAttributeId: nextListingAttributeId,
+			})
+		) {
+			throw new Error('Listing attribute must be included in attributes.')
+		}
+
+		await client.begin(async (sql) => {
+			await sql`
+				UPDATE entities
+				SET
+					entity_template_id = ${input.entityTemplateId ?? existingEntity.entityTemplateId},
+					listing_attribute_id = ${nextListingAttributeId}
+				WHERE id = ${id}
+			`
+			await replaceEntityAttributes(sql, id, nextAttributes)
+			await replaceEntityLinks(sql, id, nextLinks)
+		})
+
+		const [updatedEntity] = await readEntityRows(client, id)
+
+		return updatedEntity
+	} finally {
+		await client.end()
+	}
+}
+
+export async function deleteEntity(id: string) {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [existingEntity] = await readEntityRows(client, id)
+
+		if (!existingEntity) {
+			return undefined
+		}
+
+		await client.begin(async (sql) => {
+			await sql`
+				DELETE FROM entity_links
+				WHERE entity_id = ${id}
+			`
+			await sql`
+				DELETE FROM entity_attributes
+				WHERE entity_id = ${id}
+			`
+			await sql`
+				DELETE FROM entities
+				WHERE id = ${id}
+			`
+		})
+
+		return existingEntity
 	} finally {
 		await client.end()
 	}
