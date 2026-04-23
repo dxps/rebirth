@@ -2232,7 +2232,6 @@ function EntityDetailsModal({
 												<col className="entity-attribute-value-column" />
 												<col className="entity-attribute-value-type-column" />
 												<col className="entity-attribute-access-level-column" />
-												<col className="entity-attribute-action-column" />
 											</colgroup>
 											<thead>
 												<tr>
@@ -2240,7 +2239,6 @@ function EntityDetailsModal({
 													<th>value</th>
 													<th>value type</th>
 													<th>access level</th>
-													<th className="data-table-action-heading" />
 												</tr>
 											</thead>
 											<tbody>
@@ -2249,7 +2247,7 @@ function EntityDetailsModal({
 													<tr>
 														<td
 															className="data-table-empty-cell"
-															colSpan={5}
+															colSpan={4}
 														>
 															<span>
 																There are no
@@ -2360,7 +2358,6 @@ function EntityDetailsModal({
 																		</select>
 																	</span>
 																</td>
-																<td className="entity-template-attribute-actions" />
 															</tr>
 														),
 													)

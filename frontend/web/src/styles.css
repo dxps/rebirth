@@ -2447,6 +2447,35 @@ button.entity-template-tab[aria-selected='true']:hover {
 	text-align: left;
 }
 
+.entity-template-view-form .entity-attributes-table th:nth-child(4),
+.entity-template-view-form .entity-attributes-table td:nth-child(4) {
+	padding-left: 0.35rem;
+	padding-right: 0.35rem;
+	text-align: left;
+	width: 6.6rem;
+}
+
+.entity-template-view-form .entity-attributes-table th:nth-child(3),
+.entity-template-view-form .entity-attributes-table td:nth-child(3) {
+	padding-left: 0;
+	padding-right: 0.3rem;
+}
+
+.entity-template-view-form
+	.entity-attributes-table
+	.entity-attribute-value-type-column {
+	width: 5.2rem;
+}
+
+.entity-template-view-form
+	.entity-attributes-table
+	.entity-template-value-type-wrap,
+.entity-template-view-form
+	.entity-attributes-table
+	.entity-template-access-level-wrap {
+	width: 100%;
+}
+
 .entity-template-view-attributes-table td:first-child {
 	padding-left: 0.7rem;
 }
