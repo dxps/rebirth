@@ -64,6 +64,23 @@ function getAuthHeaders(): Record<string, string> {
 		: {}
 }
 
+async function getErrorMessageFromResponse(
+	response: Response,
+	fallback: string,
+): Promise<string> {
+	try {
+		const payload = (await response.json()) as { error?: unknown }
+
+		if (typeof payload.error === 'string' && payload.error.length > 0) {
+			return payload.error
+		}
+	} catch {
+		// Ignore invalid error payloads and use the fallback message.
+	}
+
+	return fallback
+}
+
 function getEntityListingAttribute(entity: Entity) {
 	return (
 		entity.attributes.find(
@@ -95,6 +112,17 @@ function normalizeEntityAttributeValue(
 	}
 
 	return value
+}
+
+function isMissingRequiredEntityAttributeValue(
+	value: string,
+	valueType: ValueType,
+): boolean {
+	if (valueType === ValueType.Boolean) {
+		return false
+	}
+
+	return value.trim().length === 0
 }
 
 interface EntityDetailsWindowState {
@@ -253,6 +281,32 @@ function CreateEntityModal({
 		includedAttributes.find(
 			(attribute) => attribute.id === listingAttributeId,
 		) ?? null
+	const attributeTemplateById = new Map(
+		attributeTemplates.map((attributeTemplate) => [
+			attributeTemplate.id,
+			attributeTemplate,
+		]),
+	)
+	const missingRequiredAttribute = includedAttributes.find((attribute) => {
+		if (!attribute.attributeTemplateId) {
+			return false
+		}
+
+		const attributeTemplate = attributeTemplateById.get(
+			attribute.attributeTemplateId,
+		)
+
+		return (
+			Boolean(attributeTemplate?.isRequired) &&
+			isMissingRequiredEntityAttributeValue(
+				attribute.value,
+				attribute.valueType,
+			)
+		)
+	})
+	const validationError = missingRequiredAttribute
+		? `${missingRequiredAttribute.name || 'Attribute'} is required.`
+		: null
 	const orderedInlinks = entities
 		.flatMap((sourceEntity) =>
 			sourceEntity.links
@@ -272,7 +326,8 @@ function CreateEntityModal({
 		listingAttributeId.length > 0 &&
 		includedAttributes.every(
 			(attribute) => attribute.name.trim().length > 0,
-		)
+		) &&
+		validationError === null
 	const isCreateDisabled = isSaving || isLoadingOptions || !isValid
 
 	useEffect(() => {
@@ -320,7 +375,9 @@ function CreateEntityModal({
 	}, [entity, mode])
 
 	useEffect(() => {
-		setActiveTab(initialActiveTab)
+		setActiveTab(
+			initialActiveTab === 'inlinks' ? 'attributes' : initialActiveTab,
+		)
 	}, [initialActiveTab])
 
 	useEffect(() => {
@@ -598,6 +655,10 @@ function CreateEntityModal({
 			}
 		}
 	}, [])
+
+	useEffect(() => {
+		void loadAttributeTemplates()
+	}, [loadAttributeTemplates])
 
 	async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
 		event.preventDefault()
@@ -1120,7 +1181,10 @@ function CreateEntityModal({
 								<tbody>
 									<tr>
 										<td>
-											<span className="attribute-template-select-wrap entity-create-summary-select-wrap">
+											<span
+												className="attribute-template-select-wrap entity-create-summary-select-wrap"
+												data-no-drag="true"
+											>
 													<select
 														disabled={
 															includedAttributes.length ===
@@ -1206,23 +1270,6 @@ function CreateEntityModal({
 											<span>Outlinks</span>
 											<span className="entity-template-tab-badge">
 												{includedLinks.length}
-											</span>
-										</button>
-										<button
-											aria-selected={
-												activeTab === 'inlinks'
-											}
-											className="entity-template-tab"
-											data-tooltip="Incoming links"
-											role="tab"
-											type="button"
-											onClick={() =>
-												setActiveTab('inlinks')
-											}
-										>
-											<span>Inlinks</span>
-											<span className="entity-template-tab-badge">
-												{orderedInlinks.length}
 											</span>
 										</button>
 									</div>
@@ -1993,8 +2040,10 @@ function CreateEntityModal({
 								)}
 							</div>
 
-							{error ? (
-								<p className="entity-create-error">{error}</p>
+							{validationError || error ? (
+								<p className="entity-create-error">
+									{validationError ?? error}
+								</p>
 							) : null}
 						</form>
 					</div>
@@ -3231,7 +3280,12 @@ export function DataExplorerView() {
 				)
 
 				if (!response.ok) {
-					throw new Error('Unable to create entity')
+					throw new Error(
+						await getErrorMessageFromResponse(
+							response,
+							'Unable to create entity',
+						),
+					)
 				}
 
 				const data = (await response.json()) as EntityResponse
@@ -3240,9 +3294,13 @@ export function DataExplorerView() {
 					setEntities((current) => [...current, data.data])
 					setIsCreateEntityModalOpen(false)
 				}
-			} catch {
+			} catch (error) {
 				if (isMountedRef.current) {
-					setCreateEntityError('Unable to create entity')
+					setCreateEntityError(
+						error instanceof Error
+							? error.message
+							: 'Unable to create entity',
+					)
 				}
 			} finally {
 				if (isMountedRef.current) {
@@ -3278,7 +3336,12 @@ export function DataExplorerView() {
 				)
 
 				if (!response.ok) {
-					throw new Error('Unable to update entity')
+					throw new Error(
+						await getErrorMessageFromResponse(
+							response,
+							'Unable to update entity',
+						),
+					)
 				}
 
 				const data = (await response.json()) as EntityResponse
@@ -3329,9 +3392,13 @@ export function DataExplorerView() {
 						setIsCreateEntityModalOpen(false)
 					}
 				}
-			} catch {
+			} catch (error) {
 				if (isMountedRef.current) {
-					setCreateEntityError('Unable to update entity')
+					setCreateEntityError(
+						error instanceof Error
+							? error.message
+							: 'Unable to update entity',
+					)
 				}
 			} finally {
 				if (isMountedRef.current) {

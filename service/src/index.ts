@@ -39,7 +39,7 @@ import {
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
-import { createEntity, deleteEntity, getEntity, listEntities, updateEntity } from "./db/entities";
+import { createEntity, deleteEntity, EntityValidationError, getEntity, listEntities, updateEntity } from "./db/entities";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { listPermissions } from "./db/permissions";
 import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
@@ -119,6 +119,15 @@ function isPostgresErrorWithConstraint(
   }
 
   return false;
+}
+
+function getErrorMessage(error: unknown): string | undefined {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  const message = getErrorProperty(error, "message");
+  return typeof message === "string" ? message : undefined;
 }
 
 function normalizeDefaultValue(value: string | null | undefined): string | null | undefined {
@@ -487,6 +496,18 @@ const server = Bun.serve({
           headers: jsonHeaders
         });
       } catch (error) {
+        if (error instanceof EntityValidationError) {
+          return Response.json(
+            {
+              error: getErrorMessage(error) ?? "Invalid entity"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
         if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
           return Response.json(uniqueConflictResponse, {
             headers: jsonHeaders,
@@ -518,6 +539,18 @@ const server = Bun.serve({
           headers: jsonHeaders
         });
       } catch (error) {
+        if (error instanceof EntityValidationError) {
+          return Response.json(
+            {
+              error: getErrorMessage(error) ?? "Invalid entity update"
+            },
+            {
+              headers: jsonHeaders,
+              status: 400
+            }
+          );
+        }
+
         console.error(error);
 
         return Response.json(

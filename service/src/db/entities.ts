@@ -45,6 +45,19 @@ interface EntityLinkRow {
 	listing_index: number
 }
 
+interface AttributeTemplateRequirementRow {
+	id: string
+	is_required: boolean
+	name: string
+}
+
+export class EntityValidationError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'EntityValidationError'
+	}
+}
+
 function normalizeNullableText(value: string | null | undefined): string | null {
 	if (value === undefined || value === null) {
 		return null
@@ -146,6 +159,61 @@ function getListingAttributeValue(entity: Entity): string {
 		entity.attributes.find(
 			(attribute) => attribute.id === entity.listingAttributeId,
 		)?.value ?? ''
+	)
+}
+
+function isMissingRequiredAttributeValue(attribute: EntityAttribute): boolean {
+	if (attribute.valueType === 'boolean') {
+		return false
+	}
+
+	return attribute.value.trim().length === 0
+}
+
+async function validateRequiredAttributes(
+	client: ReturnType<typeof createDatabase>['client'],
+	attributes: EntityAttribute[],
+): Promise<void> {
+	const attributeTemplateIds = [
+		...new Set(
+			attributes
+				.map((attribute) => attribute.attributeTemplateId)
+				.filter((attributeTemplateId): attributeTemplateId is string =>
+					Boolean(attributeTemplateId),
+				),
+		),
+	]
+
+	if (attributeTemplateIds.length === 0) {
+		return
+	}
+
+	const templateRows = await client<AttributeTemplateRequirementRow[]>`
+		SELECT id, name, is_required
+		FROM attribute_templates
+		WHERE id = ANY(${attributeTemplateIds})
+	`
+	const templateById = new Map(
+		templateRows.map((row) => [row.id, row]),
+	)
+	const missingRequiredAttributes = attributes.filter((attribute) => {
+		if (!attribute.attributeTemplateId) {
+			return false
+		}
+
+		const template = templateById.get(attribute.attributeTemplateId)
+
+		return Boolean(template?.is_required) && isMissingRequiredAttributeValue(attribute)
+	})
+
+	if (missingRequiredAttributes.length === 0) {
+		return
+	}
+
+	throw new EntityValidationError(
+		`Required attribute values are missing: ${missingRequiredAttributes
+			.map((attribute) => attribute.name)
+			.join(', ')}.`,
 	)
 }
 
@@ -318,7 +386,7 @@ async function buildEntityFromTemplate(
 					return {
 						id,
 						accessLevelId: attribute.accessLevelId,
-						attributeTemplateId: attribute.attributeTemplateId,
+						attributeTemplateId: attribute.attributeTemplateId ?? null,
 						description: attribute.description,
 						entityTemplateAttributeId:
 							attribute.entityTemplateAttributeId ?? null,
@@ -442,6 +510,8 @@ export async function createEntity(input: CreateEntityInput) {
 			throw new Error('Listing attribute must be included in attributes.')
 		}
 
+		await validateRequiredAttributes(client, normalizedInput.attributes)
+
 		await client.begin(async (sql) => {
 			await sql`
 				INSERT INTO entities (
@@ -495,6 +565,8 @@ export async function updateEntity(id: string, input: UpdateEntityInput) {
 		) {
 			throw new Error('Listing attribute must be included in attributes.')
 		}
+
+		await validateRequiredAttributes(client, nextAttributes)
 
 		await client.begin(async (sql) => {
 			await sql`

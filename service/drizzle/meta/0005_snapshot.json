@@ -1,6 +1,6 @@
 {
-  "id": "c1410b1b-0d22-4f84-8b38-bee167dea4b5",
-  "prevId": "db6586f1-22d2-42f0-9c51-ab392d84f084",
+  "id": "633f92d7-23f4-45cf-9a0d-7ac58f95d09a",
+  "prevId": "c1410b1b-0d22-4f84-8b38-bee167dea4b5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -129,6 +129,336 @@
         "attribute_templates_description_trimmed_check": {
           "name": "attribute_templates_description_trimmed_check",
           "value": "\"attribute_templates\".\"description\" = btrim(\"attribute_templates\".\"description\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.entities": {
+      "name": "entities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_template_id": {
+          "name": "entity_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_attribute_id": {
+          "name": "listing_attribute_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "entities_entity_tmpl_id_entity_tmpls_id_fk": {
+          "name": "entities_entity_tmpl_id_entity_tmpls_id_fk",
+          "tableFrom": "entities",
+          "tableTo": "entity_templates",
+          "columnsFrom": [
+            "entity_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.entity_attributes": {
+      "name": "entity_attributes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_template_attribute_id": {
+          "name": "entity_template_attribute_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attribute_template_id": {
+          "name": "attribute_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "attribute_template_value_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_level_id": {
+          "name": "access_level_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listing_index": {
+          "name": "listing_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "entity_attrs_entity_id_entities_id_fk": {
+          "name": "entity_attrs_entity_id_entities_id_fk",
+          "tableFrom": "entity_attributes",
+          "tableTo": "entities",
+          "columnsFrom": [
+            "entity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "entity_attrs_entity_tmpl_attr_id_entity_tmpl_attrs_id_fk": {
+          "name": "entity_attrs_entity_tmpl_attr_id_entity_tmpl_attrs_id_fk",
+          "tableFrom": "entity_attributes",
+          "tableTo": "entity_template_attributes",
+          "columnsFrom": [
+            "entity_template_attribute_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entity_attrs_attr_tmpl_id_attribute_tmpls_id_fk": {
+          "name": "entity_attrs_attr_tmpl_id_attribute_tmpls_id_fk",
+          "tableFrom": "entity_attributes",
+          "tableTo": "attribute_templates",
+          "columnsFrom": [
+            "attribute_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entity_attrs_access_level_id_access_levels_id_fk": {
+          "name": "entity_attrs_access_level_id_access_levels_id_fk",
+          "tableFrom": "entity_attributes",
+          "tableTo": "access_levels",
+          "columnsFrom": [
+            "access_level_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entity_attrs_entity_id_listing_idx_unique": {
+          "name": "entity_attrs_entity_id_listing_idx_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "entity_id",
+            "listing_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "entity_attrs_listing_idx_check": {
+          "name": "entity_attrs_listing_idx_check",
+          "value": "\"entity_attributes\".\"listing_index\" >= 0"
+        },
+        "entity_attrs_name_trimmed_check": {
+          "name": "entity_attrs_name_trimmed_check",
+          "value": "\"entity_attributes\".\"name\" = btrim(\"entity_attributes\".\"name\")"
+        },
+        "entity_attrs_desc_trimmed_check": {
+          "name": "entity_attrs_desc_trimmed_check",
+          "value": "\"entity_attributes\".\"description\" = btrim(\"entity_attributes\".\"description\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.entity_links": {
+      "name": "entity_links",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_template_link_id": {
+          "name": "entity_template_link_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_entity_template_id": {
+          "name": "target_entity_template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_entity_id": {
+          "name": "target_entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_index": {
+          "name": "listing_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "entity_links_entity_id_entities_id_fk": {
+          "name": "entity_links_entity_id_entities_id_fk",
+          "tableFrom": "entity_links",
+          "tableTo": "entities",
+          "columnsFrom": [
+            "entity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "entity_links_entity_tmpl_link_id_entity_tmpl_links_id_fk": {
+          "name": "entity_links_entity_tmpl_link_id_entity_tmpl_links_id_fk",
+          "tableFrom": "entity_links",
+          "tableTo": "entity_template_links",
+          "columnsFrom": [
+            "entity_template_link_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entity_links_target_entity_tmpl_id_entity_tmpls_id_fk": {
+          "name": "entity_links_target_entity_tmpl_id_entity_tmpls_id_fk",
+          "tableFrom": "entity_links",
+          "tableTo": "entity_templates",
+          "columnsFrom": [
+            "target_entity_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entity_links_target_entity_id_entities_id_fk": {
+          "name": "entity_links_target_entity_id_entities_id_fk",
+          "tableFrom": "entity_links",
+          "tableTo": "entities",
+          "columnsFrom": [
+            "target_entity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entity_links_entity_id_listing_idx_unique": {
+          "name": "entity_links_entity_id_listing_idx_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "entity_id",
+            "listing_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "entity_links_listing_idx_check": {
+          "name": "entity_links_listing_idx_check",
+          "value": "\"entity_links\".\"listing_index\" >= 0"
+        },
+        "entity_links_name_trimmed_check": {
+          "name": "entity_links_name_trimmed_check",
+          "value": "\"entity_links\".\"name\" = btrim(\"entity_links\".\"name\")"
+        },
+        "entity_links_desc_trimmed_check": {
+          "name": "entity_links_desc_trimmed_check",
+          "value": "\"entity_links\".\"description\" IS NULL OR \"entity_links\".\"description\" = btrim(\"entity_links\".\"description\")"
         }
       },
       "isRLSEnabled": false

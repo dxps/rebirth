@@ -39,7 +39,11 @@ import {
 	type ReactNode,
 	type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { authChangedEventName, getStoredAuth, hasStoredPermission } from '../auth'
+import {
+	authChangedEventName,
+	getStoredAuth,
+	hasStoredPermission,
+} from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 362
@@ -429,7 +433,10 @@ function DraggableModal({
 				<div className="draggable-modal-header">
 					<h2>{title}</h2>
 					{infoText ? (
-						<div className="draggable-modal-info-action" ref={infoPopoverRef}>
+						<div
+							className="draggable-modal-info-action"
+							ref={infoPopoverRef}
+						>
 							<button
 								aria-expanded={isInfoPopoverOpen}
 								aria-label="Template id"
@@ -458,7 +465,7 @@ function DraggableModal({
 										className="entity-id-popover-title"
 										data-selectable="true"
 									>
-										{infoText}
+										id: {infoText}
 									</p>
 								</div>
 							) : null}
@@ -1851,7 +1858,8 @@ function EntityTemplateEditForm({
 																			event,
 																		) =>
 																			setSelectedAttributeTemplateId(
-																				event.target
+																				event
+																					.target
 																					.value,
 																			)
 																		}
@@ -1896,7 +1904,9 @@ function EntityTemplateEditForm({
 													) : (
 														<div className="include-attribute-fields">
 															<label>
-																<span>name</span>
+																<span>
+																	name
+																</span>
 																<input
 																	ref={
 																		newAttributeNameInputRef
@@ -1909,7 +1919,9 @@ function EntityTemplateEditForm({
 																		event,
 																	) =>
 																		setNewAttributeName(
-																			event.target.value,
+																			event
+																				.target
+																				.value,
 																		)
 																	}
 																/>
@@ -1927,7 +1939,9 @@ function EntityTemplateEditForm({
 																		event,
 																	) =>
 																		setNewAttributeDescription(
-																			event.target.value,
+																			event
+																				.target
+																				.value,
 																		)
 																	}
 																/>
@@ -1945,7 +1959,8 @@ function EntityTemplateEditForm({
 																			event,
 																		) =>
 																			setNewAttributeValueType(
-																				event.target
+																				event
+																					.target
 																					.value as ValueType,
 																			)
 																		}
@@ -1981,7 +1996,8 @@ function EntityTemplateEditForm({
 																		event,
 																	) =>
 																		setNewAttributeSaveAsTemplate(
-																			event.target
+																			event
+																				.target
 																				.checked,
 																		)
 																	}
@@ -2220,11 +2236,15 @@ function EntityTemplateEditForm({
 												aria-label="Include link"
 												className="section-action-button"
 												data-tooltip={
-													availableLinkTargets.length === 0
+													availableLinkTargets.length ===
+													0
 														? 'There are no entity templates\nto refer to in a link.'
 														: 'Include link'
 												}
-												disabled={availableLinkTargets.length === 0}
+												disabled={
+													availableLinkTargets.length ===
+													0
+												}
 												type="button"
 												onClick={addLink}
 											>
@@ -2499,8 +2519,7 @@ function EntityTemplateDetailsView({
 		.flatMap((sourceTemplate) =>
 			sourceTemplate.links
 				.filter(
-					(link) =>
-						link.targetEntityTemplateId === entityTemplate.id,
+					(link) => link.targetEntityTemplateId === entityTemplate.id,
 				)
 				.map((link) => ({
 					link,
@@ -2736,15 +2755,19 @@ function EntityTemplateDetailsView({
 								</tr>
 							</thead>
 							<tbody>
-								{incomingLinks.map(({ link, sourceTemplate }) => (
-									<tr key={`${sourceTemplate.id}:${link.id}`}>
-										<td>{sourceTemplate.name}</td>
-										<td>{link.name}</td>
-										<LinkDescriptionValue
-											description={link.description}
-										/>
-									</tr>
-								))}
+								{incomingLinks.map(
+									({ link, sourceTemplate }) => (
+										<tr
+											key={`${sourceTemplate.id}:${link.id}`}
+										>
+											<td>{sourceTemplate.name}</td>
+											<td>{link.name}</td>
+											<LinkDescriptionValue
+												description={link.description}
+											/>
+										</tr>
+									),
+								)}
 							</tbody>
 						</table>
 					</div>
@@ -3709,47 +3732,47 @@ export function TemplatesView() {
 					>
 						{modal.templateType === 'entity' &&
 						modal.mode === 'create' ? (
-						<EntityTemplateEditForm
-							accessLevels={accessLevels}
-							attributeTemplates={attributeTemplates}
-							autoFocusName
-							entityTemplates={entityTemplates}
-							initialActiveTab={
-								modal.entityTemplateActiveTab === 'links'
-									? 'links'
-									: 'attributes'
-							}
-							formId={`${modal.key}-edit-form`}
-							modalKey={modal.key}
-							onCreateAttributeTemplate={
-								createAttributeTemplate
-							}
-							onActiveTabChange={setEntityTemplateActiveTab}
-							onSave={createEntityTemplate}
-							onValidityChange={setModalFormValidity}
-						/>
+							<EntityTemplateEditForm
+								accessLevels={accessLevels}
+								attributeTemplates={attributeTemplates}
+								autoFocusName
+								entityTemplates={entityTemplates}
+								initialActiveTab={
+									modal.entityTemplateActiveTab === 'links'
+										? 'links'
+										: 'attributes'
+								}
+								formId={`${modal.key}-edit-form`}
+								modalKey={modal.key}
+								onCreateAttributeTemplate={
+									createAttributeTemplate
+								}
+								onActiveTabChange={setEntityTemplateActiveTab}
+								onSave={createEntityTemplate}
+								onValidityChange={setModalFormValidity}
+							/>
 						) : modal.templateType === 'entity' &&
 						  modal.mode === 'edit' &&
 						  modal.entityTemplate ? (
-						<EntityTemplateEditForm
-							accessLevels={accessLevels}
-							attributeTemplates={attributeTemplates}
-							autoFocusName
-							entityTemplate={modal.entityTemplate}
-							entityTemplates={entityTemplates}
-							initialActiveTab={
-								modal.entityTemplateActiveTab === 'links'
-									? 'links'
-									: 'attributes'
-							}
-							formId={`${modal.key}-edit-form`}
-							modalKey={modal.key}
-							onCreateAttributeTemplate={
-								createAttributeTemplate
-							}
-							onActiveTabChange={setEntityTemplateActiveTab}
-							onSave={(input) => {
-								const entityTemplate = modal.entityTemplate
+							<EntityTemplateEditForm
+								accessLevels={accessLevels}
+								attributeTemplates={attributeTemplates}
+								autoFocusName
+								entityTemplate={modal.entityTemplate}
+								entityTemplates={entityTemplates}
+								initialActiveTab={
+									modal.entityTemplateActiveTab === 'links'
+										? 'links'
+										: 'attributes'
+								}
+								formId={`${modal.key}-edit-form`}
+								modalKey={modal.key}
+								onCreateAttributeTemplate={
+									createAttributeTemplate
+								}
+								onActiveTabChange={setEntityTemplateActiveTab}
+								onSave={(input) => {
+									const entityTemplate = modal.entityTemplate
 
 									if (!entityTemplate) {
 										return Promise.resolve()
@@ -3804,9 +3827,7 @@ export function TemplatesView() {
 								}
 							/>
 						) : modal.attributeTemplate ? (
-							<div
-								className="access-level-details access-level-edit-form attribute-template-view-form"
-							>
+							<div className="access-level-details access-level-edit-form attribute-template-view-form">
 								<label data-selectable="true">
 									<span>name</span>
 									<input
