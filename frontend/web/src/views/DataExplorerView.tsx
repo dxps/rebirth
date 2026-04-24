@@ -170,7 +170,10 @@ interface CreateEntityModalProps {
 	onClose: () => void
 	onActivate?: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
-	onBack?: (position: { x: number; y: number }, activeTab: 'attributes' | 'links' | 'inlinks') => void
+	onBack?: (
+		position: { x: number; y: number },
+		activeTab: 'attributes' | 'links' | 'inlinks',
+	) => void
 	onUpdate: (
 		id: string,
 		input: UpdateEntityInput,
@@ -225,9 +228,9 @@ function CreateEntityModal({
 	const [selectedEntityTemplateId, setSelectedEntityTemplateId] = useState(
 		initialEntityTemplateId,
 	)
-	const [activeTab, setActiveTab] = useState<'attributes' | 'links' | 'inlinks'>(
-		initialActiveTab,
-	)
+	const [activeTab, setActiveTab] = useState<
+		'attributes' | 'links' | 'inlinks'
+	>(initialActiveTab)
 	const [includedAttributes, setIncludedAttributes] = useState<
 		EntityFormAttribute[]
 	>([])
@@ -304,20 +307,29 @@ function CreateEntityModal({
 			)
 		)
 	})
+	const missingLinkTarget = includedLinks.find(
+		(link) => link.targetEntityId === null,
+	)
+	const missingLinkName = includedLinks.find(
+		(link) => link.name.trim().length === 0,
+	)
 	const validationError = missingRequiredAttribute
-		? `${missingRequiredAttribute.name || 'Attribute'} is required.`
-		: null
-	const orderedInlinks = entities
-		.flatMap((sourceEntity) =>
-			sourceEntity.links
-				.slice()
-				.sort((left, right) => left.listingIndex - right.listingIndex)
-				.filter((link) => link.targetEntityId === entity?.id)
-				.map((link) => ({
-					link,
-					sourceEntity,
-				})),
-		)
+		? `Attribute '${missingRequiredAttribute.name || ''}' is required.`
+		: missingLinkName
+			? 'Link name is required.'
+			: missingLinkTarget
+			? `Link '${missingLinkTarget.name || ''}' requires a target.`
+			: null
+	const orderedInlinks = entities.flatMap((sourceEntity) =>
+		sourceEntity.links
+			.slice()
+			.sort((left, right) => left.listingIndex - right.listingIndex)
+			.filter((link) => link.targetEntityId === entity?.id)
+			.map((link) => ({
+				link,
+				sourceEntity,
+			})),
+	)
 	const getInlinkSourceLabel = (sourceEntity: Entity): string =>
 		getEntityListingLabel(sourceEntity)
 	const firstListingAttributeId = includedAttributes[0]?.id ?? ''
@@ -530,6 +542,8 @@ function CreateEntityModal({
 		null,
 	)
 	const draggedAttributeIdRef = useRef<string | null>(null)
+	const [draggedLinkId, setDraggedLinkId] = useState<string | null>(null)
+	const draggedLinkIdRef = useRef<string | null>(null)
 	const attributeTemplatesLoadRequestId = useRef(0)
 
 	const startDrag = useCallback(
@@ -849,12 +863,6 @@ function CreateEntityModal({
 	}
 
 	function addLink(): void {
-		const targetEntity = entities[0]
-
-		if (!targetEntity) {
-			return
-		}
-
 		setIncludedLinks((current) => [
 			...current,
 			{
@@ -863,8 +871,8 @@ function CreateEntityModal({
 				id: crypto.randomUUID(),
 				listingIndex: current.length,
 				name: '',
-				targetEntityId: targetEntity.id,
-				targetEntityTemplateId: targetEntity.entityTemplateId,
+				targetEntityId: null,
+				targetEntityTemplateId: null,
 			},
 		])
 	}
@@ -878,7 +886,7 @@ function CreateEntityModal({
 	}
 
 	function getLinkTargetEntities(link: EntityFormLink): Entity[] {
-		if (creationMode !== 'template') {
+		if (creationMode !== 'template' || !link.entityTemplateLinkId) {
 			return entities
 		}
 
@@ -951,9 +959,46 @@ function CreateEntityModal({
 		})
 	}
 
+	function reorderLink(draggedLinkId: string, targetLinkId: string): void {
+		if (draggedLinkId === targetLinkId) {
+			return
+		}
+
+		setIncludedLinks((current) => {
+			const draggedIndex = current.findIndex(
+				(link) => link.id === draggedLinkId,
+			)
+			const targetIndex = current.findIndex(
+				(link) => link.id === targetLinkId,
+			)
+
+			if (draggedIndex < 0 || targetIndex < 0) {
+				return current
+			}
+
+			const next = current.slice()
+			const [draggedLink] = next.splice(draggedIndex, 1)
+			if (!draggedLink) {
+				return current
+			}
+
+			next.splice(targetIndex, 0, draggedLink)
+
+			return next.map((link, index) => ({
+				...link,
+				listingIndex: index,
+			}))
+		})
+	}
+
 	function setActiveDraggedAttribute(attributeId: string | null): void {
 		draggedAttributeIdRef.current = attributeId
 		setDraggedAttributeId(attributeId)
+	}
+
+	function setActiveDraggedLink(linkId: string | null): void {
+		draggedLinkIdRef.current = linkId
+		setDraggedLinkId(linkId)
 	}
 
 	function getAttributeRowLayoutBounds(row: HTMLTableRowElement): {
@@ -1054,6 +1099,98 @@ function CreateEntityModal({
 				// Ignore browsers that do not support pointer capture here.
 			}
 			setActiveDraggedAttribute(null)
+		}
+
+		window.addEventListener('pointermove', move)
+		window.addEventListener('pointerup', stop)
+		window.addEventListener('pointercancel', stop)
+	}
+
+	function startLinkPointerDrag(
+		event: ReactPointerEvent<HTMLButtonElement>,
+		linkId: string,
+	): void {
+		event.preventDefault()
+		event.stopPropagation()
+
+		const formElement = event.currentTarget.closest('form')
+		if (!formElement) {
+			return
+		}
+		const form = formElement as HTMLFormElement
+
+		const handle = event.currentTarget
+		const pointerId = event.pointerId
+
+		setActiveDraggedLink(linkId)
+
+		try {
+			handle.setPointerCapture(pointerId)
+		} catch {
+			// Ignore browsers that do not support pointer capture here.
+		}
+
+		function move(pointerEvent: PointerEvent): void {
+			const rows = Array.from(
+				form.querySelectorAll<HTMLTableRowElement>(
+					'[data-entity-link-id]',
+				),
+			)
+			const draggedId = draggedLinkIdRef.current
+			const draggedIndex = rows.findIndex(
+				(row) => row.dataset.entityLinkId === draggedId,
+			)
+
+			if (!draggedId || draggedIndex < 0) {
+				return
+			}
+
+			const previousRow = rows[draggedIndex - 1]
+			const nextRow = rows[draggedIndex + 1]
+
+			if (previousRow) {
+				const previousRect = getAttributeRowLayoutBounds(previousRow)
+				const previousTriggerY =
+					previousRect.top +
+					previousRect.height * (1 - entityAttributeReorderThreshold)
+
+				if (pointerEvent.clientY < previousTriggerY) {
+					const previousLinkId = previousRow.dataset.entityLinkId
+
+					if (previousLinkId) {
+						reorderLink(draggedId, previousLinkId)
+					}
+
+					return
+				}
+			}
+
+			if (nextRow) {
+				const nextRect = getAttributeRowLayoutBounds(nextRow)
+				const nextTriggerY =
+					nextRect.top +
+					nextRect.height * entityAttributeReorderThreshold
+
+				if (pointerEvent.clientY > nextTriggerY) {
+					const nextLinkId = nextRow.dataset.entityLinkId
+
+					if (nextLinkId) {
+						reorderLink(draggedId, nextLinkId)
+					}
+				}
+			}
+		}
+
+		function stop(): void {
+			window.removeEventListener('pointermove', move)
+			window.removeEventListener('pointerup', stop)
+			window.removeEventListener('pointercancel', stop)
+			try {
+				handle.releasePointerCapture(pointerId)
+			} catch {
+				// Ignore browsers that do not support pointer capture here.
+			}
+			setActiveDraggedLink(null)
 		}
 
 		window.addEventListener('pointermove', move)
@@ -1178,13 +1315,13 @@ function CreateEntityModal({
 											<th>value</th>
 										</tr>
 									</thead>
-								<tbody>
-									<tr>
-										<td>
-											<span
-												className="attribute-template-select-wrap entity-create-summary-select-wrap"
-												data-no-drag="true"
-											>
+									<tbody>
+										<tr>
+											<td>
+												<span
+													className="attribute-template-select-wrap entity-create-summary-select-wrap"
+													data-no-drag="true"
+												>
 													<select
 														disabled={
 															includedAttributes.length ===
@@ -1216,17 +1353,17 @@ function CreateEntityModal({
 															),
 														)}
 													</select>
-											</span>
-										</td>
-										<td>
-											<span className="entity-create-summary-value">
-												{selectedListingAttribute?.value ??
-													''}
-											</span>
-										</td>
-									</tr>
-								</tbody>
-							</table>
+												</span>
+											</td>
+											<td>
+												<span className="entity-create-summary-value">
+													{selectedListingAttribute?.value ??
+														''}
+												</span>
+											</td>
+										</tr>
+									</tbody>
+								</table>
 							</div>
 
 							<div
@@ -1750,12 +1887,8 @@ function CreateEntityModal({
 															className="section-action-button"
 															data-tooltip="Include link"
 															disabled={
-																(mode !==
-																	'edit' &&
-																	creationMode ===
-																		'template') ||
 																entities.length ===
-																	0
+																0
 															}
 															type="button"
 															onClick={addLink}
@@ -1783,6 +1916,11 @@ function CreateEntityModal({
 														(link) => (
 															<tr
 																key={link.id}
+																data-dragging={
+																	draggedLinkId ===
+																		link.id ||
+																	undefined
+																}
 																data-entity-link-id={
 																	link.id
 																}
@@ -1796,7 +1934,9 @@ function CreateEntityModal({
 																			mode !==
 																				'edit' &&
 																			creationMode ===
-																				'template'
+																				'template' &&
+																			link.entityTemplateLinkId !==
+																				null
 																		}
 																		type="text"
 																		value={
@@ -1836,7 +1976,9 @@ function CreateEntityModal({
 																				mode !==
 																					'edit' &&
 																				creationMode ===
-																					'template'
+																					'template' &&
+																				link.entityTemplateLinkId !==
+																					null
 																			}
 																			type="text"
 																			value={
@@ -1970,6 +2112,25 @@ function CreateEntityModal({
 																	>
 																		<Trash2 aria-hidden="true" />
 																	</button>
+																	<button
+																		aria-label={`Drag ${link.name || 'link'}`}
+																		className="icon-only-button entity-template-drag-handle"
+																		data-no-drag="true"
+																		data-tooltip={
+																			'Drag up or down\nto reorder'
+																		}
+																		type="button"
+																		onPointerDown={(
+																			event,
+																		) =>
+																			startLinkPointerDrag(
+																				event,
+																				link.id,
+																			)
+																		}
+																	>
+																		<GripVertical aria-hidden="true" />
+																	</button>
 																</td>
 															</tr>
 														),
@@ -2008,14 +2169,19 @@ function CreateEntityModal({
 													</tr>
 												) : (
 													orderedInlinks.map(
-														({ link, sourceEntity }) => (
+														({
+															link,
+															sourceEntity,
+														}) => (
 															<tr key={link.id}>
 																<td>
 																	{getInlinkSourceLabel(
 																		sourceEntity,
 																	)}
 																</td>
-																<td>{link.name}</td>
+																<td>
+																	{link.name}
+																</td>
 																<td>
 																	<span
 																		className="entity-template-link-description-value entity-template-link-description-view-value"
@@ -2110,9 +2276,9 @@ function EntityDetailsModal({
 }: EntityDetailsModalProps) {
 	const modalTitle = 'Entity'
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-	const [activeTab, setActiveTab] = useState<'attributes' | 'links' | 'inlinks'>(
-		initialActiveTab,
-	)
+	const [activeTab, setActiveTab] = useState<
+		'attributes' | 'links' | 'inlinks'
+	>(initialActiveTab)
 	const [position, setPosition] = useState(() => ({
 		x:
 			initialPosition?.x ??
@@ -2159,17 +2325,16 @@ function EntityDetailsModal({
 	const orderedLinks = (entity?.links ?? [])
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
-	const orderedInlinks = entities
-		.flatMap((sourceEntity) =>
-			sourceEntity.links
-				.slice()
-				.sort((left, right) => left.listingIndex - right.listingIndex)
-				.filter((link) => link.targetEntityId === entity?.id)
-				.map((link) => ({
-					link,
-					sourceEntity,
-				})),
-		)
+	const orderedInlinks = entities.flatMap((sourceEntity) =>
+		sourceEntity.links
+			.slice()
+			.sort((left, right) => left.listingIndex - right.listingIndex)
+			.filter((link) => link.targetEntityId === entity?.id)
+			.map((link) => ({
+				link,
+				sourceEntity,
+			})),
+	)
 	const listingAttribute = entity ? getEntityListingAttribute(entity) : null
 	const getAccessLevelName = (accessLevelId: number): string =>
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
@@ -2456,12 +2621,14 @@ function EntityDetailsModal({
 										<tr>
 											<td>
 												<span className="entity-create-summary-value">
-													{listingAttribute?.name ?? ''}
+													{listingAttribute?.name ??
+														''}
 												</span>
 											</td>
 											<td>
 												<span className="entity-create-summary-value">
-													{listingAttribute?.value ?? ''}
+													{listingAttribute?.value ??
+														''}
 												</span>
 											</td>
 										</tr>
@@ -2680,14 +2847,19 @@ function EntityDetailsModal({
 													</tr>
 												) : (
 													orderedInlinks.map(
-														({ link, sourceEntity }) => (
+														({
+															link,
+															sourceEntity,
+														}) => (
 															<tr key={link.id}>
 																<td>
 																	{getInlinkSourceLabel(
 																		sourceEntity,
 																	)}
 																</td>
-																<td>{link.name}</td>
+																<td>
+																	{link.name}
+																</td>
 																<td>
 																	<span
 																		className="entity-template-link-description-value entity-template-link-description-view-value"
@@ -3022,7 +3194,12 @@ export function DataExplorerView() {
 				]
 			})
 		},
-		[getNextModalZIndex, entityTemplates.length, loadAccessLevels, loadEntityTemplates],
+		[
+			getNextModalZIndex,
+			entityTemplates.length,
+			loadAccessLevels,
+			loadEntityTemplates,
+		],
 	)
 
 	const deleteEntity = useCallback(async (entity: Entity): Promise<void> => {
@@ -3235,31 +3412,37 @@ export function DataExplorerView() {
 		)
 	}, [])
 
-	const activateEntityDetailsWindow = useCallback((windowId: string) => {
-		setEntityDetailsWindows((current) =>
-			current.map((window) =>
-				window.id === windowId
-					? {
-							...window,
-							zIndex: getNextModalZIndex(),
-						}
-					: window,
-			),
-		)
-	}, [getNextModalZIndex])
+	const activateEntityDetailsWindow = useCallback(
+		(windowId: string) => {
+			setEntityDetailsWindows((current) =>
+				current.map((window) =>
+					window.id === windowId
+						? {
+								...window,
+								zIndex: getNextModalZIndex(),
+							}
+						: window,
+				),
+			)
+		},
+		[getNextModalZIndex],
+	)
 
-	const activateEntityEditWindow = useCallback((windowId: string) => {
-		setEntityEditWindows((current) =>
-			current.map((window) =>
-				window.id === windowId
-					? {
-							...window,
-							zIndex: getNextModalZIndex(),
-						}
-					: window,
-			),
-		)
-	}, [getNextModalZIndex])
+	const activateEntityEditWindow = useCallback(
+		(windowId: string) => {
+			setEntityEditWindows((current) =>
+				current.map((window) =>
+					window.id === windowId
+						? {
+								...window,
+								zIndex: getNextModalZIndex(),
+							}
+						: window,
+				),
+			)
+		},
+		[getNextModalZIndex],
+	)
 
 	const createEntity = useCallback(
 		async (input: CreateEntityInput): Promise<void> => {
@@ -3362,13 +3545,13 @@ export function DataExplorerView() {
 							...current.filter(
 								(window) => window.entityId !== id,
 							),
-								{
-									entity: data.data,
-									entityId: id,
-									activeTab: editWindowActiveTab ?? 'attributes',
-									error: null,
-									id: crypto.randomUUID(),
-									initialPosition: editWindowPosition ?? {
+							{
+								entity: data.data,
+								entityId: id,
+								activeTab: editWindowActiveTab ?? 'attributes',
+								error: null,
+								id: crypto.randomUUID(),
+								initialPosition: editWindowPosition ?? {
 									x: Math.max(
 										entityModalMargin,
 										(window.innerWidth -
@@ -3383,11 +3566,11 @@ export function DataExplorerView() {
 										entityModalMargin,
 										window.innerHeight * 0.18,
 									),
-									},
-									zIndex: getNextModalZIndex(),
-									isLoading: false,
 								},
-							])
+								zIndex: getNextModalZIndex(),
+								isLoading: false,
+							},
+						])
 					} else {
 						setIsCreateEntityModalOpen(false)
 					}
