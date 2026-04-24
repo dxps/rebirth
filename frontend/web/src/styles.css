@@ -1370,8 +1370,8 @@ button.access-level-refresh-button:hover {
 
 .entity-create-status,
 .entity-create-error {
-	font-size: 0.82rem;
-	line-height: 1.3;
+	font-size: 0.75rem;
+	line-height: 0;
 	margin: 0;
 }
 
