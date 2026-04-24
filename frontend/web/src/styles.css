@@ -3114,7 +3114,6 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .entity-template-edit-form:not(.entity-template-view-form)
 	.entity-template-links-table
 	td:last-child {
-	border: 1px solid red;
 	padding-left: 0;
 	padding-right: 0;
 }

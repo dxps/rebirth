@@ -103,9 +103,7 @@ function normalizeEntityAttributeValue(
 	valueType: ValueType,
 ): string {
 	if (valueType === ValueType.Number) {
-		return value.trim().length === 0 || !Number.isNaN(Number(value))
-			? value
-			: ''
+		return normalizeNumberAttributeValue(value)
 	}
 
 	if (valueType === ValueType.Boolean) {
@@ -113,6 +111,26 @@ function normalizeEntityAttributeValue(
 	}
 
 	return value
+}
+
+function normalizeNumberAttributeValue(value: string): string {
+	let hasDecimalSeparator = false
+
+	return value
+		.split('')
+		.filter((character) => {
+			if (character >= '0' && character <= '9') {
+				return true
+			}
+
+			if (character === '.' && !hasDecimalSeparator) {
+				hasDecimalSeparator = true
+				return true
+			}
+
+			return false
+		})
+		.join('')
 }
 
 function isMissingRequiredEntityAttributeValue(
@@ -1641,7 +1659,8 @@ function CreateEntityModal({
 																		className="entity-template-attribute-name-input"
 																		data-no-drag="true"
 																		inputMode="decimal"
-																		type="number"
+																		pattern="[0-9.]*"
+																		type="text"
 																		value={
 																			attribute.value
 																		}
@@ -1651,9 +1670,11 @@ function CreateEntityModal({
 																			updateAttribute(
 																				attribute.id,
 																				{
-																					value: event
-																						.target
-																						.value,
+																					value: normalizeNumberAttributeValue(
+																						event
+																							.target
+																							.value,
+																					),
 																				},
 																			)
 																		}
