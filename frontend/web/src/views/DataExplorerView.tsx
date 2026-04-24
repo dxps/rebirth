@@ -18,6 +18,7 @@ import {
 } from '@rebirth/shared'
 import {
 	ArrowLeft,
+	ExternalLink,
 	GripVertical,
 	Info,
 	Pencil,
@@ -2248,6 +2249,10 @@ interface EntityDetailsModalProps {
 	windowId: string
 	zIndex?: number
 	onDelete: (entity: Entity) => void
+	onOpenEntity: (
+		entityId: string,
+		pointerPosition?: { x: number; y: number },
+	) => void
 	onEdit: (
 		entity: Entity,
 		position: { x: number; y: number },
@@ -2273,6 +2278,7 @@ function EntityDetailsModal({
 	onEdit,
 	onActivate,
 	onClose,
+	onOpenEntity,
 }: EntityDetailsModalProps) {
 	const modalTitle = 'Entity'
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
@@ -2340,9 +2346,7 @@ function EntityDetailsModal({
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
 			?.name ?? String(accessLevelId)
 	const getLinkTargetLabel = (link: EntityLink): string => {
-		const targetEntity = entities.find(
-			(candidate) => candidate.id === link.targetEntityId,
-		)
+		const targetEntity = getLinkTargetEntity(link)
 
 		if (targetEntity) {
 			return getEntityListingLabel(targetEntity)
@@ -2358,9 +2362,23 @@ function EntityDetailsModal({
 
 		return link.targetEntityId ?? ''
 	}
+	const getLinkTargetEntity = (link: EntityLink): Entity | null =>
+		entities.find((candidate) => candidate.id === link.targetEntityId) ??
+		null
 	const getInlinkSourceLabel = (sourceEntity: Entity): string =>
 		getEntityListingLabel(sourceEntity)
 	const isDeleteBlocked = orderedInlinks.length > 0
+
+	function openReferencedEntity(
+		entityId: string,
+		event: ReactMouseEvent<HTMLButtonElement>,
+	): void {
+		event.stopPropagation()
+		onOpenEntity(entityId, {
+			x: event.clientX,
+			y: event.clientY,
+		})
+	}
 
 	useEffect(() => {
 		setActiveTab(initialActiveTab)
@@ -2796,30 +2814,63 @@ function EntityDetailsModal({
 														</td>
 													</tr>
 												) : (
-													orderedLinks.map((link) => (
-														<tr key={link.id}>
-															<td>{link.name}</td>
-															<td>
-																<span
-																	className="entity-template-link-description-value entity-template-link-description-view-value"
-																	data-tooltip={
-																		link.description ||
-																		undefined
-																	}
-																>
-																	<span>
-																		{link.description ??
-																			''}
+													orderedLinks.map((link) => {
+														const targetEntity =
+															getLinkTargetEntity(
+																link,
+															)
+
+														return (
+															<tr key={link.id}>
+																<td>
+																	{link.name}
+																</td>
+																<td>
+																	<span
+																		className="entity-template-link-description-value entity-template-link-description-view-value"
+																		data-tooltip={
+																			link.description ||
+																			undefined
+																		}
+																	>
+																		<span>
+																			{link.description ??
+																				''}
+																		</span>
 																	</span>
-																</span>
-															</td>
-															<td>
-																{getLinkTargetLabel(
-																	link,
-																)}
-															</td>
-														</tr>
-													))
+																</td>
+																<td>
+																	{targetEntity ? (
+																		<button
+																			aria-label={`Open entity ${getEntityListingLabel(targetEntity)}`}
+																			className="entity-reference-button"
+																			data-no-drag="true"
+																			type="button"
+																			onClick={(
+																				event,
+																			) =>
+																				openReferencedEntity(
+																					targetEntity.id,
+																					event,
+																				)
+																			}
+																		>
+																			<span>
+																				{getEntityListingLabel(
+																					targetEntity,
+																				)}
+																			</span>
+																			<ExternalLink aria-hidden="true" />
+																		</button>
+																	) : (
+																		getLinkTargetLabel(
+																			link,
+																		)
+																	)}
+																</td>
+															</tr>
+														)
+													})
 												)}
 											</tbody>
 										</table>
@@ -2860,9 +2911,27 @@ function EntityDetailsModal({
 														}) => (
 															<tr key={link.id}>
 																<td>
-																	{getInlinkSourceLabel(
-																		sourceEntity,
-																	)}
+																	<button
+																		aria-label={`Open entity ${getInlinkSourceLabel(sourceEntity)}`}
+																		className="entity-reference-button"
+																		data-no-drag="true"
+																		type="button"
+																		onClick={(
+																			event,
+																		) =>
+																			openReferencedEntity(
+																				sourceEntity.id,
+																				event,
+																			)
+																		}
+																	>
+																		<span>
+																			{getInlinkSourceLabel(
+																				sourceEntity,
+																			)}
+																		</span>
+																		<ExternalLink aria-hidden="true" />
+																	</button>
 																</td>
 																<td>
 																	{link.name}
@@ -3356,6 +3425,25 @@ export function DataExplorerView() {
 
 	const openEntityDetails = useCallback(
 		(entityId: string, pointerPosition?: { x: number; y: number }) => {
+			const existingEditWindow = entityEditWindows.find(
+				(window) => window.entity.id === entityId,
+			)
+
+			if (existingEditWindow) {
+				setEntityEditWindows((current) =>
+					current.map((window) =>
+						window.id === existingEditWindow.id
+							? {
+									...window,
+									zIndex: getNextModalZIndex(),
+								}
+							: window,
+					),
+				)
+
+				return
+			}
+
 			const existingWindow = entityDetailsWindows.find(
 				(window) => window.entityId === entityId,
 			)
@@ -3411,6 +3499,7 @@ export function DataExplorerView() {
 		},
 		[
 			getNextModalZIndex,
+			entityEditWindows,
 			entityDetailsWindows,
 			getEntityDetailsPosition,
 			entityTemplates.length,
@@ -3964,6 +4053,7 @@ export function DataExplorerView() {
 					onActivate={activateEntityDetailsWindow}
 					onDelete={deleteEntity}
 					onEdit={openEntityEditModal}
+					onOpenEntity={openEntityDetails}
 					onClose={() => closeEntityDetails(window.id)}
 					windowId={window.id}
 					zIndex={window.zIndex}

@@ -3279,6 +3279,63 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	text-align: left;
 }
 
+.entity-reference-button,
+button.entity-reference-button {
+	align-items: center;
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	color: inherit;
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: inherit;
+	font-weight: 500;
+	gap: 0.32rem;
+	max-width: 100%;
+	min-width: 0;
+	padding: 0;
+	text-align: left;
+}
+
+.entity-reference-button:hover,
+button.entity-reference-button:hover {
+	background: transparent;
+	background-color: transparent;
+	color: inherit;
+}
+
+.entity-reference-button span {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.entity-reference-button svg {
+	color: var(--muted);
+	flex: 0 0 auto;
+	height: 0.72rem;
+	opacity: 0;
+	transform: translateX(-0.12rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	width: 0.72rem;
+}
+
+.entity-reference-button:hover svg,
+.entity-reference-button:focus-visible svg {
+	opacity: 1;
+	transform: translateX(0);
+}
+
+.entity-reference-button:focus-visible {
+	border-radius: 4px;
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 45%, transparent);
+	outline: 0;
+}
+
 .entity-template-view-links-table tbody tr:last-child td {
 	border-bottom: 0;
 }
