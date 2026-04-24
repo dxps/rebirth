@@ -43,10 +43,10 @@ import {
 } from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
-const entityModalHeight = 400
+const entityModalHeight = 330
 const entityModalMargin = 16
 const entityModalMinHeight = 300
-const entityModalMinWidth = 380
+const entityModalMinWidth = 400
 const entityModalWidth = 520
 const entityAttributeReorderThreshold = 0.5
 
@@ -318,8 +318,8 @@ function CreateEntityModal({
 		: missingLinkName
 			? 'Link name is required.'
 			: missingLinkTarget
-			? `Link '${missingLinkTarget.name || ''}' requires a target.`
-			: null
+				? `Link '${missingLinkTarget.name || ''}' requires a target.`
+				: null
 	const orderedInlinks = entities.flatMap((sourceEntity) =>
 		sourceEntity.links
 			.slice()
@@ -2360,6 +2360,7 @@ function EntityDetailsModal({
 	}
 	const getInlinkSourceLabel = (sourceEntity: Entity): string =>
 		getEntityListingLabel(sourceEntity)
+	const isDeleteBlocked = orderedInlinks.length > 0
 
 	useEffect(() => {
 		setActiveTab(initialActiveTab)
@@ -2525,8 +2526,13 @@ function EntityDetailsModal({
 								className="draggable-modal-titlebar-button"
 								data-no-drag="true"
 								data-tooltip={
-									isDeleteConfirmOpen ? undefined : 'Delete'
+									isDeleteBlocked
+										? 'Cannot delete while referenced'
+										: isDeleteConfirmOpen
+											? undefined
+											: 'Delete'
 								}
+								disabled={isDeleteBlocked}
 								type="button"
 								onPointerDown={(event) =>
 									event.stopPropagation()
@@ -2663,6 +2669,7 @@ function EntityDetailsModal({
 												activeTab === 'links'
 											}
 											className="entity-template-tab"
+											data-tooltip="Outgoing links"
 											role="tab"
 											type="button"
 											onClick={() =>
@@ -3224,7 +3231,12 @@ export function DataExplorerView() {
 			)
 
 			if (!response.ok) {
-				throw new Error('Unable to delete entity')
+				throw new Error(
+					await getErrorMessageFromResponse(
+						response,
+						'Unable to delete entity',
+					),
+				)
 			}
 
 			if (isMountedRef.current) {
@@ -3235,14 +3247,17 @@ export function DataExplorerView() {
 					current.filter((window) => window.entityId !== entity.id),
 				)
 			}
-		} catch {
+		} catch (error) {
 			if (isMountedRef.current) {
 				setEntityDetailsWindows((current) =>
 					current.map((window) =>
 						window.entityId === entity.id
 							? {
 									...window,
-									error: 'Unable to delete entity',
+									error:
+										error instanceof Error
+											? error.message
+											: 'Unable to delete entity',
 								}
 							: window,
 					),

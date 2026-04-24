@@ -604,6 +604,19 @@ export async function deleteEntity(id: string) {
 			return undefined
 		}
 
+		const referencingLinks = await client<{ id: string }[]>`
+			SELECT id
+			FROM entity_links
+			WHERE target_entity_id = ${id}
+			LIMIT 1
+		`
+
+		if (referencingLinks.length > 0) {
+			throw new EntityValidationError(
+				'Entity cannot be deleted while other entities link to it.',
+			)
+		}
+
 		await client.begin(async (sql) => {
 			await sql`
 				DELETE FROM entity_links

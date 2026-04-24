@@ -124,7 +124,7 @@ export const entityLinks = pgTable(
 			columns: [table.targetEntityId],
 			foreignColumns: [entities.id],
 			name: 'entity_links_target_entity_id_entities_id_fk',
-		}).onDelete('set null'),
+		}),
 		unique('entity_links_entity_id_listing_idx_unique').on(
 			table.entityId,
 			table.listingIndex,

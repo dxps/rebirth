@@ -2581,6 +2581,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 
 .entity-template-view-form .entity-attributes-table th:nth-child(4),
 .entity-template-view-form .entity-attributes-table td:nth-child(4) {
+	color: var(--muted);
 	padding-left: 0.35rem;
 	padding-right: 0;
 	text-align: left;
@@ -3039,7 +3040,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-attribute-actions .icon-only-button + .icon-only-button {
-	margin-left: 0.24rem;
+	margin-left: 0.1rem;
 }
 
 .entity-template-attribute-actions .icon-only-button[data-tooltip]::after {
@@ -3107,7 +3108,15 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .entity-template-edit-form:not(.entity-template-view-form)
 	.entity-template-links-table
 	td:first-child {
-	padding-left: 2px;
+	padding-left: 0;
+}
+
+.entity-template-edit-form:not(.entity-template-view-form)
+	.entity-template-links-table
+	td:last-child {
+	border: 1px solid red;
+	padding-left: 0;
+	padding-right: 0;
 }
 
 .entity-template-links-table tbody tr:last-child td {
@@ -3160,7 +3169,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-link-action-column {
-	width: 3.2rem;
+	width: 1.6rem;
 }
 
 .entity-template-link-name-cell,
@@ -3355,7 +3364,6 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .entity-template-link-actions .icon-only-button + .icon-only-button {
-	margin-left: 0.38rem;
 	justify-content: right;
 }
 
@@ -3382,7 +3390,7 @@ button.icon-only-button {
 	justify-content: center;
 	min-height: 1.35rem;
 	padding: 0;
-	width: 1.35rem;
+	width: 1.15rem;
 }
 
 .icon-only-button:hover,

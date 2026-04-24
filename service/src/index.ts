@@ -1189,6 +1189,18 @@ const server = Bun.serve({
           headers: jsonHeaders
         });
       } catch (error) {
+        if (error instanceof EntityValidationError) {
+          return Response.json(
+            {
+              error: getErrorMessage(error) ?? "Invalid entity delete"
+            },
+            {
+              headers: jsonHeaders,
+              status: 409
+            }
+          );
+        }
+
         console.error(error);
 
         return Response.json(
