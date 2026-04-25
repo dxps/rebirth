@@ -148,6 +148,7 @@ interface DraggableModalProps {
 	onClose: (id: string) => void
 	onDelete: (id: string) => void
 	onEdit: (id: string) => void
+	canEdit?: boolean
 	infoText?: string
 	saveDisabledTooltip?: string
 	title: string
@@ -195,6 +196,7 @@ function DraggableModal({
 	onClose,
 	onDelete,
 	onEdit,
+	canEdit = true,
 	infoText,
 	saveDisabledTooltip = 'A template must have a name',
 	title,
@@ -473,20 +475,24 @@ function DraggableModal({
 					) : null}
 					{mode === 'details' ? (
 						<>
-							{deleteButton}
-							<button
-								aria-label={`Edit ${title}`}
-								className="draggable-modal-titlebar-button"
-								data-no-drag="true"
-								data-tooltip="Edit"
-								type="button"
-								onPointerDown={(event) =>
-									event.stopPropagation()
-								}
-								onClick={() => onEdit(id)}
-							>
-								<Pencil aria-hidden="true" />
-							</button>
+							{canEdit ? (
+								<>
+									{deleteButton}
+									<button
+										aria-label={`Edit ${title}`}
+										className="draggable-modal-titlebar-button"
+										data-no-drag="true"
+										data-tooltip="Edit"
+										type="button"
+										onPointerDown={(event) =>
+											event.stopPropagation()
+										}
+										onClick={() => onEdit(id)}
+									>
+										<Pencil aria-hidden="true" />
+									</button>
+								</>
+							) : null}
 						</>
 					) : (
 						<>
@@ -2801,18 +2807,21 @@ export function TemplatesView() {
 	const loadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
 	const isAuthenticated = storedAuth !== null
-	const isAuthorized =
+	const canManageTemplates =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor)
+	const isAuthorized =
+		canManageTemplates ||
+		hasStoredPermission(storedAuth, PermissionName.Viewer)
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
 		const requestId = accessLevelsLoadRequestId.current + 1
 		accessLevelsLoadRequestId.current = requestId
 
 		try {
-			const response = await fetch(
-				`${apiBaseUrl}${apiRoutes.accessLevels}`,
-			)
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`, {
+				headers: getAuthHeaders(),
+			})
 
 			if (!response.ok) {
 				throw new Error('Unable to load access levels')
@@ -2845,6 +2854,9 @@ export function TemplatesView() {
 		try {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.attributeTemplates}`,
+				{
+					headers: getAuthHeaders(),
+				},
 			)
 
 			if (!response.ok) {
@@ -2877,6 +2889,9 @@ export function TemplatesView() {
 		try {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.entityTemplates}`,
+				{
+					headers: getAuthHeaders(),
+				},
 			)
 
 			if (!response.ok) {
@@ -3336,6 +3351,10 @@ export function TemplatesView() {
 
 	const openCreateAttributeTemplate = useCallback(
 		(point: { clientX: number; clientY: number }) => {
+			if (!canManageTemplates) {
+				return
+			}
+
 			nextZIndex.current += 1
 			setOpenModals((current) => {
 				const existing = current.find(
@@ -3379,11 +3398,15 @@ export function TemplatesView() {
 				]
 			})
 		},
-		[],
+		[canManageTemplates],
 	)
 
 	const openCreateEntityTemplate = useCallback(
 		(point: { clientX: number; clientY: number }) => {
+			if (!canManageTemplates) {
+				return
+			}
+
 			nextZIndex.current += 1
 			setOpenModals((current) => {
 				const existing = current.find(
@@ -3427,7 +3450,7 @@ export function TemplatesView() {
 				]
 			})
 		},
-		[],
+		[canManageTemplates],
 	)
 
 	if (!isAuthorized) {
@@ -3472,17 +3495,21 @@ export function TemplatesView() {
 									<th>name</th>
 									<th>description</th>
 									<th className="data-table-action-heading">
-										<button
-											aria-label="Create entity template"
-											className="section-action-button"
-											data-tooltip="Add an entity template"
-											type="button"
-											onClick={(event) =>
-												openCreateEntityTemplate(event)
-											}
-										>
-											<Plus aria-hidden="true" />
-										</button>
+										{canManageTemplates ? (
+											<button
+												aria-label="Create entity template"
+												className="section-action-button"
+												data-tooltip="Add an entity template"
+												type="button"
+												onClick={(event) =>
+													openCreateEntityTemplate(
+														event,
+													)
+												}
+											>
+												<Plus aria-hidden="true" />
+											</button>
+										) : null}
 									</th>
 								</tr>
 							</thead>
@@ -3577,19 +3604,21 @@ export function TemplatesView() {
 									<th>description</th>
 									<th>value type</th>
 									<th className="data-table-action-heading">
-										<button
-											aria-label="Create attribute template"
-											className="section-action-button"
-											data-tooltip="Add an attribute template"
-											type="button"
-											onClick={(event) =>
-												openCreateAttributeTemplate(
-													event,
-												)
-											}
-										>
-											<Plus aria-hidden="true" />
-										</button>
+										{canManageTemplates ? (
+											<button
+												aria-label="Create attribute template"
+												className="section-action-button"
+												data-tooltip="Add an attribute template"
+												type="button"
+												onClick={(event) =>
+													openCreateAttributeTemplate(
+														event,
+													)
+												}
+											>
+												<Plus aria-hidden="true" />
+											</button>
+										) : null}
 									</th>
 								</tr>
 							</thead>
@@ -3704,6 +3733,10 @@ export function TemplatesView() {
 						}}
 						onClose={closeModal}
 						onDelete={() => {
+							if (!canManageTemplates) {
+								return
+							}
+
 							if (modal.entityTemplate) {
 								void deleteEntityTemplate(modal.entityTemplate)
 							} else if (modal.attributeTemplate) {
@@ -3713,6 +3746,7 @@ export function TemplatesView() {
 							}
 						}}
 						onEdit={(key) => setModalMode(key, 'edit')}
+						canEdit={canManageTemplates}
 						saveDisabledTooltip={
 							modal.templateType === 'entity'
 								? 'An entity template must have a name\nand include at least one attribute'

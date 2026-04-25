@@ -28,6 +28,7 @@ import {
   type AttributeTemplatesResponse,
   type EntityTemplateResponse,
   type EntityTemplatesResponse,
+  type Entity,
   type EntityResponse,
   type EntitiesResponse,
   type ApiErrorResponse,
@@ -64,6 +65,8 @@ const attributeTemplateUniqueConflictResponse: ApiErrorResponse = {
     message: "Name and description not unique"
   }
 };
+const publicAccessLevelId = 1;
+const maskedAttributeValue = "******";
 
 function getErrorProperty(error: unknown, property: string): unknown {
   if (typeof error !== "object" || error === null) {
@@ -152,8 +155,26 @@ function canManageData(user: User): boolean {
   return hasPermission(user, PermissionName.Admin) || hasPermission(user, PermissionName.Editor);
 }
 
+function canViewData(user: User): boolean {
+  return canManageData(user) || hasPermission(user, PermissionName.Viewer);
+}
+
 function canManageSecurity(user: User): boolean {
   return hasPermission(user, PermissionName.Admin);
+}
+
+function maskRestrictedEntityValues(entity: Entity): Entity {
+  return {
+    ...entity,
+    attributes: entity.attributes.map((attribute) => ({
+      ...attribute,
+      value: attribute.accessLevelId === publicAccessLevelId ? attribute.value : maskedAttributeValue
+    }))
+  };
+}
+
+function getVisibleEntity(user: User, entity: Entity): Entity {
+  return canManageData(user) ? entity : maskRestrictedEntityValues(entity);
 }
 
 async function getAuthenticatedUser(request: Request): Promise<User | undefined> {
@@ -229,6 +250,20 @@ async function requireDataManager(request: Request): Promise<Response | User> {
   }
 
   if (!canManageData(user)) {
+    return authorizationRequiredResponse();
+  }
+
+  return user;
+}
+
+async function requireDataViewer(request: Request): Promise<Response | User> {
+  const user = await requireAuthenticatedUser(request);
+
+  if (user instanceof Response) {
+    return user;
+  }
+
+  if (!canViewData(user)) {
     return authorizationRequiredResponse();
   }
 
@@ -665,6 +700,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "GET" && url.pathname === apiRoutes.accessLevels) {
+      const authenticatedUser = await requireDataViewer(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const response: AccessLevelsResponse = {
           data: await listAccessLevels()
@@ -750,6 +791,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "GET" && url.pathname === apiRoutes.attributeTemplates) {
+      const authenticatedUser = await requireDataViewer(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const response: AttributeTemplatesResponse = {
           data: await listAttributeTemplates()
@@ -846,6 +893,12 @@ const server = Bun.serve({
     }
 
     if (request.method === "GET" && url.pathname === apiRoutes.entityTemplates) {
+      const authenticatedUser = await requireDataViewer(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const response: EntityTemplatesResponse = {
           data: await listEntityTemplates()
@@ -934,9 +987,15 @@ const server = Bun.serve({
     }
 
     if (request.method === "GET" && url.pathname === apiRoutes.entities) {
+      const authenticatedUser = await requireDataViewer(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const response: EntitiesResponse = {
-          data: await listEntities()
+          data: (await listEntities()).map((entity) => getVisibleEntity(authenticatedUser, entity))
         };
 
         return Response.json(response, {
@@ -1030,6 +1089,12 @@ const server = Bun.serve({
     const userMatch = /^\/users\/([0-9a-f-]+)$/i.exec(url.pathname);
 
     if (request.method === "GET" && entityMatch) {
+      const authenticatedUser = await requireDataViewer(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
       try {
         const id = entityMatch[1] ?? "";
 
@@ -1060,7 +1125,7 @@ const server = Bun.serve({
         }
 
         const response: EntityResponse = {
-          data: entity
+          data: getVisibleEntity(authenticatedUser, entity)
         };
 
         return Response.json(response, {

@@ -1060,6 +1060,9 @@ export function SecurityView() {
 		try {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.accessLevels}`,
+				{
+					headers: getAuthHeaders(),
+				},
 			)
 
 			if (!response.ok) {

@@ -663,6 +663,9 @@ function CreateEntityModal({
 		try {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.attributeTemplates}`,
+				{
+					headers: getAuthHeaders(),
+				},
 			)
 
 			if (!response.ok) {
@@ -2269,6 +2272,7 @@ interface EntityDetailsModalProps {
 	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
 	windowId: string
 	zIndex?: number
+	canEdit?: boolean
 	onDelete: (entity: Entity) => void
 	onOpenEntity: (
 		entityId: string,
@@ -2295,6 +2299,7 @@ function EntityDetailsModal({
 	initialPosition,
 	windowId,
 	zIndex = 1,
+	canEdit = true,
 	onDelete,
 	onEdit,
 	onActivate,
@@ -2555,88 +2560,100 @@ function EntityDetailsModal({
 								) : null}
 							</div>
 						) : null}
-						<div
-							className="draggable-modal-delete-action"
-							data-no-drag="true"
-						>
-							<button
-								aria-expanded={isDeleteConfirmOpen}
-								aria-label={`Delete ${modalTitle}`}
-								className="draggable-modal-titlebar-button"
-								data-no-drag="true"
-								data-tooltip={
-									isDeleteBlocked
-										? 'Cannot delete while referenced'
-										: isDeleteConfirmOpen
-											? undefined
-											: 'Delete'
-								}
-								disabled={isDeleteBlocked}
-								type="button"
-								onPointerDown={(event) =>
-									event.stopPropagation()
-								}
-								onClick={() => setIsDeleteConfirmOpen(true)}
-							>
-								<Trash2 aria-hidden="true" />
-							</button>
-							{isDeleteConfirmOpen ? (
+						{canEdit ? (
+							<>
 								<div
-									className="delete-confirm-popover"
+									className="draggable-modal-delete-action"
 									data-no-drag="true"
-									role="dialog"
-									aria-label={`Confirm delete ${modalTitle}`}
+								>
+									<button
+										aria-expanded={isDeleteConfirmOpen}
+										aria-label={`Delete ${modalTitle}`}
+										className="draggable-modal-titlebar-button"
+										data-no-drag="true"
+										data-tooltip={
+											isDeleteBlocked
+												? 'Cannot delete while referenced'
+												: isDeleteConfirmOpen
+													? undefined
+													: 'Delete'
+										}
+										disabled={isDeleteBlocked}
+										type="button"
+										onPointerDown={(event) =>
+											event.stopPropagation()
+										}
+										onClick={() =>
+											setIsDeleteConfirmOpen(true)
+										}
+									>
+										<Trash2 aria-hidden="true" />
+									</button>
+									{isDeleteConfirmOpen ? (
+										<div
+											className="delete-confirm-popover"
+											data-no-drag="true"
+											role="dialog"
+											aria-label={`Confirm delete ${modalTitle}`}
+											onPointerDown={(event) =>
+												event.stopPropagation()
+											}
+										>
+											<p>Delete this entity?</p>
+											<div>
+												<button
+													className="delete-confirm-secondary"
+													type="button"
+													onClick={() =>
+														setIsDeleteConfirmOpen(
+															false,
+														)
+													}
+												>
+													Cancel
+												</button>
+												<button
+													className="delete-confirm-danger"
+													type="button"
+													onClick={() => {
+														setIsDeleteConfirmOpen(
+															false,
+														)
+														if (entity) {
+															onDelete(entity)
+														}
+													}}
+												>
+													Delete
+												</button>
+											</div>
+										</div>
+									) : null}
+								</div>
+								<button
+									aria-label={`Edit ${modalTitle}`}
+									className="draggable-modal-titlebar-button"
+									data-no-drag="true"
+									data-tooltip="Edit"
+									type="button"
 									onPointerDown={(event) =>
 										event.stopPropagation()
 									}
+									onClick={() => {
+										if (entity) {
+											onEdit(
+												entity,
+												position,
+												windowId,
+												activeTab,
+											)
+										}
+									}}
 								>
-									<p>Delete this entity?</p>
-									<div>
-										<button
-											className="delete-confirm-secondary"
-											type="button"
-											onClick={() =>
-												setIsDeleteConfirmOpen(false)
-											}
-										>
-											Cancel
-										</button>
-										<button
-											className="delete-confirm-danger"
-											type="button"
-											onClick={() => {
-												setIsDeleteConfirmOpen(false)
-												if (entity) {
-													onDelete(entity)
-												}
-											}}
-										>
-											Delete
-										</button>
-									</div>
-								</div>
-							) : null}
-						</div>
-						<button
-							aria-label={`Edit ${modalTitle}`}
-							className="draggable-modal-titlebar-button"
-							data-no-drag="true"
-							data-tooltip="Edit"
-							type="button"
-							onPointerDown={(event) => event.stopPropagation()}
-							onClick={() => {
-								if (entity) {
-									onEdit(
-										entity,
-										position,
-										windowId,
-										activeTab,
-									)
-								}
-							}}
-						>
-							<Pencil aria-hidden="true" />
-						</button>
+									<Pencil aria-hidden="true" />
+								</button>
+							</>
+						) : null}
 						<button
 							aria-label={`Close ${modalTitle}`}
 							className="draggable-modal-titlebar-button draggable-modal-close"
@@ -3053,9 +3070,12 @@ export function DataExplorerView() {
 	const entityDetailsLoadRequestIds = useRef(new Map<string, number>())
 	const modalZIndexRef = useRef(1)
 	const isAuthenticated = storedAuth !== null
-	const isAuthorized =
+	const canManageData =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor)
+	const isAuthorized =
+		canManageData ||
+		hasStoredPermission(storedAuth, PermissionName.Viewer)
 
 	const getEntityDetailsPosition = useCallback(
 		(pointerX: number, pointerY: number) => {
@@ -3096,7 +3116,9 @@ export function DataExplorerView() {
 		setIsLoadingEntities(true)
 
 		try {
-			const response = await fetch(`${apiBaseUrl}${apiRoutes.entities}`)
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.entities}`, {
+				headers: getAuthHeaders(),
+			})
 
 			if (!response.ok) {
 				throw new Error('Unable to load entities')
@@ -3128,6 +3150,9 @@ export function DataExplorerView() {
 		try {
 			const response = await fetch(
 				`${apiBaseUrl}${apiRoutes.entityTemplates}`,
+				{
+					headers: getAuthHeaders(),
+				},
 			)
 
 			if (!response.ok) {
@@ -3165,9 +3190,9 @@ export function DataExplorerView() {
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
 		try {
-			const response = await fetch(
-				`${apiBaseUrl}${apiRoutes.accessLevels}`,
-			)
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`, {
+				headers: getAuthHeaders(),
+			})
 
 			if (!response.ok) {
 				throw new Error('Unable to load access levels')
@@ -3187,6 +3212,10 @@ export function DataExplorerView() {
 
 	const openCreateEntityChoice = useCallback(
 		(event: ReactMouseEvent<HTMLButtonElement>) => {
+			if (!canManageData) {
+				return
+			}
+
 			const rect = event.currentTarget.getBoundingClientRect()
 			const popoverWidth = 176
 
@@ -3201,22 +3230,30 @@ export function DataExplorerView() {
 			setIsCreateChoiceOpen((current) => !current)
 			setCreateChoiceSource(null)
 		},
-		[],
+		[canManageData],
 	)
 
 	const selectCreateChoiceSource = useCallback(
 		(source: 'template' | 'scratch') => {
+			if (!canManageData) {
+				return
+			}
+
 			setCreateChoiceSource(source)
 
 			if (source === 'template') {
 				void loadEntityTemplates()
 			}
 		},
-		[loadEntityTemplates],
+		[canManageData, loadEntityTemplates],
 	)
 
 	const openCreateEntityModal = useCallback(
 		(mode: 'template' | 'scratch') => {
+			if (!canManageData) {
+				return
+			}
+
 			setCreateEntityMode(mode)
 			setCreateEntityError(null)
 			setIsCreateChoiceOpen(false)
@@ -3234,6 +3271,7 @@ export function DataExplorerView() {
 			entityTemplates.length,
 			loadAccessLevels,
 			loadEntityTemplates,
+			canManageData,
 		],
 	)
 
@@ -3248,6 +3286,10 @@ export function DataExplorerView() {
 			windowId: string,
 			activeTab: 'attributes' | 'links' | 'inlinks',
 		) => {
+			if (!canManageData) {
+				return
+			}
+
 			const zIndex = getNextModalZIndex()
 
 			setCreateEntityError(null)
@@ -3296,10 +3338,15 @@ export function DataExplorerView() {
 			entityTemplates.length,
 			loadAccessLevels,
 			loadEntityTemplates,
+			canManageData,
 		],
 	)
 
 	const deleteEntity = useCallback(async (entity: Entity): Promise<void> => {
+		if (!canManageData) {
+			return
+		}
+
 		setEntityDetailsWindows((current) =>
 			current.map((window) =>
 				window.entityId === entity.id
@@ -3354,7 +3401,7 @@ export function DataExplorerView() {
 				)
 			}
 		}
-	}, [])
+	}, [canManageData])
 
 	const loadEntityDetails = useCallback(
 		async (windowId: string, entityId: string) => {
@@ -3377,6 +3424,9 @@ export function DataExplorerView() {
 			try {
 				const response = await fetch(
 					`${apiBaseUrl}${apiRoutes.entity(entityId)}`,
+					{
+						headers: getAuthHeaders(),
+					},
 				)
 
 				if (!response.ok) {
@@ -3571,6 +3621,10 @@ export function DataExplorerView() {
 
 	const createEntity = useCallback(
 		async (input: CreateEntityInput): Promise<void> => {
+			if (!canManageData) {
+				return
+			}
+
 			setIsSavingEntity(true)
 			setCreateEntityError(null)
 
@@ -3616,7 +3670,7 @@ export function DataExplorerView() {
 				}
 			}
 		},
-		[],
+		[canManageData],
 	)
 
 	const updateEntityRecord = useCallback(
@@ -3627,6 +3681,10 @@ export function DataExplorerView() {
 			editWindowActiveTab?: 'attributes' | 'links' | 'inlinks',
 			editWindowId?: string,
 		): Promise<void> => {
+			if (!canManageData) {
+				return
+			}
+
 			setIsSavingEntity(true)
 			setCreateEntityError(null)
 
@@ -3714,7 +3772,7 @@ export function DataExplorerView() {
 				}
 			}
 		},
-		[],
+		[canManageData, getNextModalZIndex],
 	)
 
 	useEffect(() => {
@@ -3785,20 +3843,24 @@ export function DataExplorerView() {
 										className="data-table-action-heading"
 										colSpan={2}
 									>
-										<span className="entity-create-action">
-											<button
-												aria-expanded={
-													isCreateChoiceOpen
-												}
-												aria-label="Create entity"
-												className="section-action-button"
-												data-tooltip="Add an entity"
-												type="button"
-												onClick={openCreateEntityChoice}
-											>
-												<Plus aria-hidden="true" />
-											</button>
-										</span>
+										{canManageData ? (
+											<span className="entity-create-action">
+												<button
+													aria-expanded={
+														isCreateChoiceOpen
+													}
+													aria-label="Create entity"
+													className="section-action-button"
+													data-tooltip="Add an entity"
+													type="button"
+													onClick={
+														openCreateEntityChoice
+													}
+												>
+													<Plus aria-hidden="true" />
+												</button>
+											</span>
+										) : null}
 									</th>
 								</tr>
 							</thead>
@@ -3879,7 +3941,7 @@ export function DataExplorerView() {
 					</div>
 				)}
 			</div>
-			{isCreateChoiceOpen ? (
+			{canManageData && isCreateChoiceOpen ? (
 				<div
 					className="include-attribute-popover entity-create-popover"
 					style={{
@@ -3980,7 +4042,7 @@ export function DataExplorerView() {
 					) : null}
 				</div>
 			) : null}
-			{isCreateEntityModalOpen ? (
+			{canManageData && isCreateEntityModalOpen ? (
 				<CreateEntityModal
 					accessLevels={accessLevels}
 					creationMode={createEntityMode}
@@ -4002,7 +4064,7 @@ export function DataExplorerView() {
 					zIndex={createEntityModalZIndex}
 				/>
 			) : null}
-			{entityEditWindows.map((window) => (
+			{canManageData && entityEditWindows.map((window) => (
 				<CreateEntityModal
 					key={window.id}
 					accessLevels={accessLevels}
@@ -4074,6 +4136,7 @@ export function DataExplorerView() {
 					onActivate={activateEntityDetailsWindow}
 					onDelete={deleteEntity}
 					onEdit={openEntityEditModal}
+					canEdit={canManageData}
 					onOpenEntity={openEntityDetails}
 					onClose={() => closeEntityDetails(window.id)}
 					windowId={window.id}
