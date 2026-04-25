@@ -52,7 +52,7 @@ async function seedPermissions(
 		INSERT INTO permissions (id, name, description)
 		VALUES
 			(1, 'Admin', 'Can manage users, security (access levels, permissions), templates and data.'),
-			(2, 'Manager', 'Can create, update, and delete templates and data.'),
+			(2, 'Editor', 'Can create, update, and delete templates and data.'),
 			(3, 'Viewer', 'Can view managed data with public access (level).')
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,

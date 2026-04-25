@@ -149,7 +149,7 @@ function hasPermission(user: User, permission: PermissionName): boolean {
 }
 
 function canManageData(user: User): boolean {
-  return hasPermission(user, PermissionName.Admin) || hasPermission(user, PermissionName.Manager);
+  return hasPermission(user, PermissionName.Admin) || hasPermission(user, PermissionName.Editor);
 }
 
 function canManageSecurity(user: User): boolean {

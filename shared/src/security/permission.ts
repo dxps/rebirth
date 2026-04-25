@@ -2,13 +2,13 @@ export type PermissionId = number
 
 export enum PermissionName {
 	Admin = 'Admin',
-	Manager = 'Manager',
+	Editor = 'Editor',
 	Viewer = 'Viewer',
 }
 
 export const permissionNames = [
 	PermissionName.Admin,
-	PermissionName.Manager,
+	PermissionName.Editor,
 	PermissionName.Viewer,
 ] as const
 

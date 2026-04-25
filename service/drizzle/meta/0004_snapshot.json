@@ -703,7 +703,7 @@
       "schema": "public",
       "values": [
         "Admin",
-        "Manager",
+        "Editor",
         "Viewer"
       ]
     }

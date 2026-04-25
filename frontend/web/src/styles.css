@@ -2003,10 +2003,27 @@ button.security-user-permissions-trigger:focus-visible {
 	gap: 0.42rem;
 	line-height: 1.2;
 	padding: 0.26rem 0.32rem;
+	position: relative;
 }
 
 .access-level-edit-form .security-user-permission-option:hover {
 	background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.security-user-permission-tooltip {
+	background: var(--tooltip-bg);
+	border-radius: 5px;
+	color: var(--tooltip-fg);
+	font-size: 0.72rem;
+	line-height: 1.25;
+	max-width: min(17rem, 56vw);
+	padding: 0.32rem 0.44rem;
+	pointer-events: none;
+	position: absolute;
+	transform: translate(-50%, 0.75rem);
+	white-space: normal;
+	width: max-content;
+	z-index: 1000;
 }
 
 .access-level-edit-form .security-user-permission-option input {

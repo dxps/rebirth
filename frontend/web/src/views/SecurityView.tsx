@@ -704,6 +704,11 @@ function UserEditForm({
 	const [password, setPassword] = useState('')
 	const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 	const [isPermissionMenuOpen, setIsPermissionMenuOpen] = useState(false)
+	const [permissionTooltip, setPermissionTooltip] = useState<{
+		description: string
+		x: number
+		y: number
+	} | null>(null)
 	const [permissionIds, setPermissionIds] = useState<number[]>(() => {
 		const existingPermissionIds =
 			user?.permissions.map((permission) => permission.id) ?? []
@@ -724,6 +729,7 @@ function UserEditForm({
 	const [isSaving, setIsSaving] = useState(false)
 	const firstNameInputRef = useRef<HTMLInputElement>(null)
 	const permissionPickerRef = useRef<HTMLSpanElement>(null)
+	const permissionMenuRef = useRef<HTMLDivElement>(null)
 	const selectedPermissionNames = permissions
 		.filter((permission) => permissionIds.includes(permission.id))
 		.map((permission) => permission.name)
@@ -771,6 +777,12 @@ function UserEditForm({
 	}, [permissionIds, permissions])
 
 	useEffect(() => {
+		if (!isPermissionMenuOpen) {
+			setPermissionTooltip(null)
+		}
+	}, [isPermissionMenuOpen])
+
+	useEffect(() => {
 		function closePermissionMenu(event: PointerEvent): void {
 			const target = event.target
 
@@ -795,6 +807,23 @@ function UserEditForm({
 				? current.filter((currentId) => currentId !== permissionId)
 				: [...current, permissionId],
 		)
+	}
+
+	function movePermissionTooltip(
+		event: ReactPointerEvent,
+		description: string,
+	): void {
+		const menuRect = permissionMenuRef.current?.getBoundingClientRect()
+
+		if (!menuRect) {
+			return
+		}
+
+		setPermissionTooltip({
+			description,
+			x: event.clientX - menuRect.left,
+			y: event.clientY - menuRect.top,
+		})
 	}
 
 	async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -908,6 +937,7 @@ function UserEditForm({
 						</button>
 						{isPermissionMenuOpen ? (
 							<div
+								ref={permissionMenuRef}
 								className="security-user-permissions-menu"
 								role="listbox"
 								aria-multiselectable="true"
@@ -916,6 +946,21 @@ function UserEditForm({
 									<label
 										key={permission.id}
 										className="security-user-permission-option"
+										onPointerEnter={(event) =>
+											movePermissionTooltip(
+												event,
+												permission.description,
+											)
+										}
+										onPointerLeave={() =>
+											setPermissionTooltip(null)
+										}
+										onPointerMove={(event) =>
+											movePermissionTooltip(
+												event,
+												permission.description,
+											)
+										}
 									>
 										<input
 											checked={permissionIds.includes(
@@ -929,6 +974,17 @@ function UserEditForm({
 										<span>{permission.name}</span>
 									</label>
 								))}
+								{permissionTooltip ? (
+									<div
+										className="security-user-permission-tooltip"
+										style={{
+											left: permissionTooltip.x,
+											top: permissionTooltip.y,
+										}}
+									>
+										{permissionTooltip.description}
+									</div>
+								) : null}
 							</div>
 						) : null}
 					</span>

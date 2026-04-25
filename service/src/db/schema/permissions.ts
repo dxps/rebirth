@@ -22,7 +22,7 @@ export const seededPermissions = [
 	},
 	{
 		id: 2,
-		name: PermissionName.Manager,
+		name: PermissionName.Editor,
 		description: 'Can create, update, and delete templates and data.',
 	},
 	{

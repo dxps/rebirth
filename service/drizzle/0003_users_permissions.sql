@@ -1,4 +1,4 @@
-CREATE TYPE "public"."permission_name" AS ENUM('Admin', 'Manager', 'Viewer');--> statement-breakpoint
+CREATE TYPE "public"."permission_name" AS ENUM('Admin', 'Editor', 'Viewer');--> statement-breakpoint
 CREATE TABLE "permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" "permission_name" NOT NULL,
@@ -32,9 +32,9 @@ ALTER TABLE "user_permissions" ADD CONSTRAINT "user_permissions_user_id_users_id
 ALTER TABLE "user_permissions" ADD CONSTRAINT "user_permissions_permission_id_permissions_id_fk" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 INSERT INTO "permissions" ("id", "name", "description")
 VALUES
-	(1, 'Admin', 'Can manage users, permissions, security data, and templates'),
-	(2, 'Manager', 'Can create, update, and delete managed data'),
-	(3, 'Viewer', 'Can view managed data')
+	(1, 'Admin', 'Can manage users, permissions, security data, and templates.'),
+	(2, 'Editor', 'Can create, update, and delete managed data, besides viewing it.'),
+	(3, 'Viewer', 'Can view managed data.')
 ON CONFLICT ("id") DO UPDATE SET
 	"name" = EXCLUDED."name",
 	"description" = EXCLUDED."description";

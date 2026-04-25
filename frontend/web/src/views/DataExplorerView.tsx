@@ -3055,7 +3055,7 @@ export function DataExplorerView() {
 	const isAuthenticated = storedAuth !== null
 	const isAuthorized =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
-		hasStoredPermission(storedAuth, PermissionName.Manager)
+		hasStoredPermission(storedAuth, PermissionName.Editor)
 
 	const getEntityDetailsPosition = useCallback(
 		(pointerX: number, pointerY: number) => {
