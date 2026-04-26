@@ -10,6 +10,7 @@ import {
 	type CreateEntityInput,
 	type EntitiesResponse,
 	type Entity,
+	type EntityAttribute,
 	type EntityLink,
 	type EntityResponse,
 	type EntityTemplate,
@@ -18,8 +19,11 @@ import {
 } from '@rebirth/shared'
 import {
 	ArrowLeft,
+	Clipboard,
 	ExternalLink,
 	GripVertical,
+	Eye,
+	EyeOff,
 	Info,
 	Pencil,
 	Plus,
@@ -2311,6 +2315,9 @@ function EntityDetailsModal({
 	const [activeTab, setActiveTab] = useState<
 		'attributes' | 'links' | 'inlinks'
 	>(initialActiveTab)
+	const [revealedAttributeIds, setRevealedAttributeIds] = useState<
+		Set<string>
+	>(() => new Set())
 	const [position, setPosition] = useState(() => ({
 		x:
 			initialPosition?.x ??
@@ -2371,6 +2378,15 @@ function EntityDetailsModal({
 	const getAccessLevelName = (accessLevelId: number): string =>
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
 			?.name ?? String(accessLevelId)
+	const isPublicAccessLevel = (accessLevelId: number): boolean => {
+		const accessLevel = accessLevels.find(
+			(candidate) => candidate.id === accessLevelId,
+		)
+
+		return accessLevel
+			? accessLevel.name.toLowerCase() === 'public'
+			: accessLevelId === 1
+	}
 	const getLinkTargetLabel = (link: EntityLink): string => {
 		const targetEntity = getLinkTargetEntity(link)
 
@@ -2409,6 +2425,95 @@ function EntityDetailsModal({
 	useEffect(() => {
 		setActiveTab(initialActiveTab)
 	}, [initialActiveTab])
+
+	useEffect(() => {
+		setRevealedAttributeIds(new Set())
+	}, [entity?.id])
+
+	function toggleAttributeValueVisibility(attributeId: string): void {
+		setRevealedAttributeIds((current) => {
+			const next = new Set(current)
+
+			if (next.has(attributeId)) {
+				next.delete(attributeId)
+			} else {
+				next.add(attributeId)
+			}
+
+			return next
+		})
+	}
+
+	async function copyAttributeValue(value: string): Promise<void> {
+		await navigator.clipboard.writeText(value)
+	}
+
+	function renderAttributeValue(
+		attribute: EntityAttribute | null,
+		className?: string,
+	) {
+		if (!attribute) {
+			return <span className={className ?? undefined} />
+		}
+
+		const shouldMask = !isPublicAccessLevel(attribute.accessLevelId)
+		const isRevealed = revealedAttributeIds.has(attribute.id)
+		const visibleValue = shouldMask && !isRevealed ? '******' : attribute.value
+
+		return (
+			<span
+				className={[
+					'entity-attribute-value-view',
+					shouldMask ? 'entity-attribute-value-view-sensitive' : '',
+					className ?? '',
+				]
+					.filter(Boolean)
+					.join(' ')}
+			>
+				<span className="entity-attribute-value-text">
+					{visibleValue}
+				</span>
+				{shouldMask ? (
+					<span className="entity-attribute-value-actions">
+						<button
+							aria-label={`${isRevealed ? 'Hide' : 'Show'} ${attribute.name || 'attribute'} value`}
+							className="icon-only-button entity-attribute-value-action"
+							data-no-drag="true"
+							data-tooltip={isRevealed ? 'Hide' : 'Show'}
+							type="button"
+							onPointerDown={(event) => event.stopPropagation()}
+							onClick={(event) => {
+								toggleAttributeValueVisibility(attribute.id)
+								event.currentTarget.blur()
+							}}
+						>
+							{isRevealed ? (
+								<EyeOff aria-hidden="true" />
+							) : (
+								<Eye aria-hidden="true" />
+							)}
+						</button>
+						<button
+							aria-label={`Copy ${attribute.name || 'attribute'} value`}
+							className="icon-only-button entity-attribute-value-action"
+							data-no-drag="true"
+							data-tooltip="Copy"
+							type="button"
+							onPointerDown={(event) => event.stopPropagation()}
+							onClick={(event) => {
+								void copyAttributeValue(attribute.value).catch(
+									() => undefined,
+								)
+								event.currentTarget.blur()
+							}}
+						>
+							<Clipboard aria-hidden="true" />
+						</button>
+					</span>
+				) : null}
+			</span>
+		)
+	}
 
 	const startDrag = useCallback(
 		(event: ReactPointerEvent<HTMLElement>) => {
@@ -2688,10 +2793,10 @@ function EntityDetailsModal({
 												</span>
 											</td>
 											<td>
-												<span className="entity-create-summary-value">
-													{listingAttribute?.value ??
-														''}
-												</span>
+												{renderAttributeValue(
+													listingAttribute,
+													'entity-create-summary-value',
+												)}
 											</td>
 										</tr>
 									</tbody>
@@ -2802,9 +2907,9 @@ function EntityDetailsModal({
 																	}
 																</td>
 																<td>
-																	{
-																		attribute.value
-																	}
+																	{renderAttributeValue(
+																		attribute,
+																	)}
 																</td>
 																<td>
 																	{

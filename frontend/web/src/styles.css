@@ -1362,6 +1362,67 @@ button.access-level-refresh-button:hover {
 	width: 6.3rem;
 }
 
+.entity-attribute-value-view {
+	align-items: center;
+	display: flex;
+	gap: 0.35rem;
+	min-width: 0;
+	width: 100%;
+}
+
+.entity-attribute-value-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.entity-attribute-value-view-sensitive .entity-attribute-value-text {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+		'Liberation Mono', 'Courier New', monospace;
+	letter-spacing: 0;
+}
+
+.entity-attribute-value-actions {
+	align-items: center;
+	display: inline-flex;
+	flex: 0 0 auto;
+	gap: 0.12rem;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.entity-attribute-value-view:hover .entity-attribute-value-actions {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.entity-attribute-value-action,
+button.entity-attribute-value-action {
+	height: 1.2rem;
+	min-height: 1.2rem;
+	width: 1.2rem;
+}
+
+.entity-attribute-value-action svg {
+	height: 0.72rem;
+	width: 0.72rem;
+}
+
+.entity-attribute-value-action.icon-only-button[data-tooltip]::after {
+	left: auto;
+	right: 0;
+	top: calc(100% + 0.28rem);
+	transform: translateY(-0.1rem);
+}
+
+.entity-attribute-value-action.icon-only-button[data-tooltip]:hover::after,
+.entity-attribute-value-action.icon-only-button[data-tooltip]:focus-visible::after {
+	transform: translateY(0);
+}
+
 .entity-create-two-column-row {
 	display: grid;
 	gap: 0.65rem;
