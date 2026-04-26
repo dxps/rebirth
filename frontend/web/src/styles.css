@@ -1105,6 +1105,58 @@ button.access-level-refresh-button:hover {
 	text-align: right;
 }
 
+.entity-search-field {
+	display: block;
+	margin-bottom: 0.6rem;
+	position: relative;
+	width: min(100%, 22rem);
+}
+
+.entity-search-field input {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.82rem;
+	height: 1.9rem;
+	padding: 0.2rem 0.55rem;
+	width: 100%;
+}
+
+.entity-search-field input:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.entity-search-field[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.entity-search-field[data-tooltip]:hover::after,
+.entity-search-field[data-tooltip]:focus-within::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
 .entities-table td {
 	padding-left: 0.7rem;
 	padding-right: 0.7rem;

@@ -3162,6 +3162,7 @@ export function DataExplorerView() {
 	const [entities, setEntities] = useState<Entity[]>([])
 	const [entityTemplates, setEntityTemplates] = useState<EntityTemplate[]>([])
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
+	const [entitySearchTerm, setEntitySearchTerm] = useState('')
 	const [entitiesError, setEntitiesError] = useState<string | null>(null)
 	const [createEntityError, setCreateEntityError] = useState<string | null>(
 		null,
@@ -3239,14 +3240,20 @@ export function DataExplorerView() {
 		return modalZIndexRef.current
 	}, [])
 
-	const loadEntities = useCallback(async (): Promise<void> => {
+	const loadEntities = useCallback(async (searchTerm = ''): Promise<void> => {
 		const requestId = loadRequestId.current + 1
 		loadRequestId.current = requestId
+		const trimmedSearchTerm = searchTerm.trim()
+		const entitiesUrl = new URL(`${apiBaseUrl}${apiRoutes.entities}`)
+
+		if (trimmedSearchTerm.length >= 3) {
+			entitiesUrl.searchParams.set('search', trimmedSearchTerm)
+		}
 
 		setIsLoadingEntities(true)
 
 		try {
-			const response = await fetch(`${apiBaseUrl}${apiRoutes.entities}`, {
+			const response = await fetch(entitiesUrl.toString(), {
 				headers: getAuthHeaders(),
 			})
 
@@ -3924,9 +3931,9 @@ export function DataExplorerView() {
 
 	useEffect(() => {
 		if (isAuthorized) {
-			void loadEntities()
+			void loadEntities(entitySearchTerm)
 		}
-	}, [isAuthorized, loadEntities])
+	}, [entitySearchTerm, isAuthorized, loadEntities])
 
 	if (!isAuthorized) {
 		return (
@@ -3946,6 +3953,20 @@ export function DataExplorerView() {
 				<div className="section-heading">
 					<p>Entities</p>
 				</div>
+				<label
+					className="entity-search-field"
+					data-tooltip="Search by attributes names and values"
+				>
+					<input
+						aria-label="Search entities"
+						placeholder="Search"
+						type="search"
+						value={entitySearchTerm}
+						onChange={(event) =>
+							setEntitySearchTerm(event.target.value)
+						}
+					/>
+				</label>
 
 				{entitiesError ? (
 					<div className="access-level-unavailable" role="status">
@@ -3955,7 +3976,7 @@ export function DataExplorerView() {
 							className="access-level-refresh-button"
 							data-tooltip="Try again"
 							type="button"
-							onClick={() => void loadEntities()}
+							onClick={() => void loadEntities(entitySearchTerm)}
 						>
 							<RefreshCw aria-hidden="true" />
 						</button>

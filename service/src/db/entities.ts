@@ -220,12 +220,32 @@ async function validateRequiredAttributes(
 async function readEntityRows(
 	client: ReturnType<typeof createDatabase>['client'],
 	id?: string,
+	searchTerm?: string,
 ): Promise<Entity[]> {
+	const normalizedSearchTerm = searchTerm?.trim()
+	const searchPattern =
+		normalizedSearchTerm && normalizedSearchTerm.length >= 3
+			? `%${normalizedSearchTerm}%`
+			: null
 	const rows = id
 		? await client<EntityRow[]>`
 			SELECT id, entity_template_id, listing_attribute_id
 			FROM entities
 			WHERE id = ${id}
+		`
+		: searchPattern
+			? await client<EntityRow[]>`
+			SELECT id, entity_template_id, listing_attribute_id
+			FROM entities
+			WHERE EXISTS (
+				SELECT 1
+				FROM entity_attributes
+				WHERE entity_attributes.entity_id = entities.id
+					AND (
+						entity_attributes.name ILIKE ${searchPattern}
+						OR entity_attributes.value ILIKE ${searchPattern}
+					)
+			)
 		`
 		: await client<EntityRow[]>`
 			SELECT id, entity_template_id, listing_attribute_id
@@ -441,7 +461,7 @@ async function buildEntityFromTemplate(
 	}
 }
 
-export async function listEntities() {
+export async function listEntities(searchTerm?: string) {
 	const databaseUrl = getDatabaseUrl()
 
 	if (!databaseUrl) {
@@ -451,7 +471,7 @@ export async function listEntities() {
 	const { client } = createDatabase(databaseUrl)
 
 	try {
-		return await readEntityRows(client)
+		return await readEntityRows(client, undefined, searchTerm)
 	} finally {
 		await client.end()
 	}

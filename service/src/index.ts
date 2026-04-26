@@ -994,8 +994,9 @@ const server = Bun.serve({
       }
 
       try {
+        const searchTerm = url.searchParams.get("search") ?? undefined;
         const response: EntitiesResponse = {
-          data: (await listEntities()).map((entity) => getVisibleEntity(authenticatedUser, entity))
+          data: (await listEntities(searchTerm)).map((entity) => getVisibleEntity(authenticatedUser, entity))
         };
 
         return Response.json(response, {
