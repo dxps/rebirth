@@ -2444,14 +2444,10 @@ button.security-user-permissions-trigger:focus-visible {
 	overflow: hidden;
 }
 
-.entity-edit-form .entity-template-tabs > .entity-attributes-tabpanel,
-.entity-edit-form .entity-template-tabs > .entity-links-tabpanel,
-.entity-edit-form .entity-template-tabs > .entity-inlinks-tabpanel {
+.entity-form .entity-template-tabs > .entity-attributes-tabpanel,
+.entity-form .entity-template-tabs > .entity-links-tabpanel,
+.entity-form .entity-template-tabs > .entity-inlinks-tabpanel {
 	overflow: hidden;
-}
-
-.entity-edit-form .entity-template-tabs > .entity-attributes-tabpanel {
-	overflow: visible;
 }
 
 .entity-form .entity-template-tabs > .entity-attributes-tabpanel {
@@ -2611,7 +2607,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	min-height: 0;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2633,7 +2629,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	display: none;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2661,14 +2657,14 @@ button.entity-template-tab[aria-selected='true']:hover {
 	min-width: 0;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	thead,
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2692,7 +2688,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	scrollbar-width: thin;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2722,26 +2718,26 @@ button.entity-template-tab[aria-selected='true']:hover {
 	grid-template-columns: minmax(0, 32%) minmax(0, 24%) minmax(0, 1fr);
 }
 
-.entity-edit-form .entity-attributes-tabpanel .entity-attributes-table tr {
+.entity-form .entity-attributes-tabpanel .entity-attributes-table tr {
 	display: grid;
 	grid-template-columns:
 		minmax(0, 1fr) minmax(0, 1fr) 5.2rem 6.6rem
 		3.25rem;
 }
 
-.entity-edit-form .entity-links-tabpanel .entity-entity-links-table tr {
+.entity-form .entity-links-tabpanel .entity-entity-links-table tr {
 	display: grid;
 	grid-template-columns:
 		minmax(0, 24%) minmax(0, 1fr) minmax(0, 10.25rem)
 		3.25rem;
 }
 
-.entity-edit-form .entity-inlinks-tabpanel .entity-template-view-inlinks-table tr {
+.entity-form .entity-inlinks-tabpanel .entity-template-view-inlinks-table tr {
 	display: grid;
 	grid-template-columns: minmax(0, 32%) minmax(0, 24%) minmax(0, 1fr);
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2761,7 +2757,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	width: 0.35rem;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2782,7 +2778,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	border-radius: 999px;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
@@ -2803,7 +2799,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	background: transparent;
 }
 
-.entity-edit-form
+.entity-form
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-entity-links-table,
