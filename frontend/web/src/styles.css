@@ -1244,6 +1244,11 @@ button.access-level-refresh-button:hover {
 	width: 16rem;
 }
 
+.entity-form .entity-include-attribute-popover {
+	right: calc(100% + 0.45rem);
+	top: -3rem;
+}
+
 .entity-create-fields {
 	display: grid;
 	gap: 0.65rem;
@@ -2443,6 +2448,14 @@ button.security-user-permissions-trigger:focus-visible {
 .entity-edit-form .entity-template-tabs > .entity-links-tabpanel,
 .entity-edit-form .entity-template-tabs > .entity-inlinks-tabpanel {
 	overflow: hidden;
+}
+
+.entity-edit-form .entity-template-tabs > .entity-attributes-tabpanel {
+	overflow: visible;
+}
+
+.entity-form .entity-template-tabs > .entity-attributes-tabpanel {
+	overflow: visible;
 }
 
 .entity-template-tabs > [role='tabpanel'] {

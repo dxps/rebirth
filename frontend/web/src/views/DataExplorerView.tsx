@@ -1332,6 +1332,7 @@ function CreateEntityModal({
 							id={formId}
 							className={[
 								'entity-template-edit-form',
+								'entity-form',
 								mode === 'edit' ? 'entity-edit-form' : '',
 							]
 								.filter(Boolean)
