@@ -1741,6 +1741,7 @@ button.delete-confirm-danger:hover {
 .draggable-modal-content {
 	cursor: grab;
 	flex: 1;
+	min-height: 0;
 	overflow: hidden;
 	padding: 0.55rem 0.9rem 1rem;
 	user-select: none;
@@ -1825,6 +1826,7 @@ button.draggable-modal-resize:hover {
 .access-level-details {
 	display: grid;
 	gap: 0.85rem;
+	min-height: 0;
 }
 
 .access-level-details p {
@@ -2128,6 +2130,10 @@ button.security-user-permissions-trigger:focus-visible {
 	min-height: 0;
 }
 
+.entity-details-view-form {
+	grid-template-rows: auto minmax(0, 1fr);
+}
+
 .access-level-edit-form label,
 .entity-template-edit-form label {
 	color: var(--muted);
@@ -2382,6 +2388,13 @@ button.security-user-permissions-trigger:focus-visible {
 	white-space: nowrap;
 }
 
+.entity-template-view-form .entity-create-summary-value {
+	overflow: visible;
+	overflow-wrap: anywhere;
+	text-overflow: clip;
+	white-space: normal;
+}
+
 .entity-create-summary-table th:first-child,
 .entity-create-summary-table td:first-child {
 	padding-left: 0;
@@ -2391,6 +2404,7 @@ button.security-user-permissions-trigger:focus-visible {
 .entity-create-summary-table td:last-child {
 	padding-left: 0;
 	padding-right: 0;
+	width: auto;
 }
 
 .entity-create-summary-table td:last-child {
@@ -2414,8 +2428,21 @@ button.security-user-permissions-trigger:focus-visible {
 }
 
 .entity-template-view-form .entity-template-tabs > [role='tabpanel'] {
-	overflow-y: auto;
+	min-height: 0;
+	overflow-y: hidden;
 	padding-right: 0.24rem;
+}
+
+.entity-details-view-form .entity-template-tabs > .entity-attributes-tabpanel,
+.entity-details-view-form .entity-template-tabs > .entity-links-tabpanel,
+.entity-details-view-form .entity-template-tabs > .entity-inlinks-tabpanel {
+	overflow: hidden;
+}
+
+.entity-edit-form .entity-template-tabs > .entity-attributes-tabpanel,
+.entity-edit-form .entity-template-tabs > .entity-links-tabpanel,
+.entity-edit-form .entity-template-tabs > .entity-inlinks-tabpanel {
+	overflow: hidden;
 }
 
 .entity-template-tabs > [role='tabpanel'] {
@@ -2557,6 +2584,220 @@ button.entity-template-tab[aria-selected='true']:hover {
 .entity-template-attributes-table {
 	table-layout: fixed;
 	width: 100%;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	) {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	height: 100%;
+	min-height: 0;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	) {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	height: 100%;
+	min-height: 0;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	colgroup {
+	display: none;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	colgroup {
+	display: none;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	thead,
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody {
+	display: block;
+	min-width: 0;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	thead,
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody {
+	display: block;
+	min-width: 0;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody {
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-color: color-mix(in srgb, var(--fg) 28%, transparent) transparent;
+	scrollbar-width: thin;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody {
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-color: color-mix(in srgb, var(--fg) 28%, transparent) transparent;
+	scrollbar-width: thin;
+}
+
+.entity-details-view-form .entity-attributes-tabpanel .entity-attributes-table tr {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1fr) minmax(0, 1fr) 5.2rem
+		6.6rem;
+}
+
+.entity-details-view-form .entity-links-tabpanel .entity-template-view-links-table tr {
+	display: grid;
+	grid-template-columns: minmax(0, 24%) minmax(0, 1fr) minmax(0, 10.25rem);
+}
+
+.entity-details-view-form .entity-inlinks-tabpanel .entity-template-view-inlinks-table tr {
+	display: grid;
+	grid-template-columns: minmax(0, 32%) minmax(0, 24%) minmax(0, 1fr);
+}
+
+.entity-edit-form .entity-attributes-tabpanel .entity-attributes-table tr {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1fr) minmax(0, 1fr) 5.2rem 6.6rem
+		3.25rem;
+}
+
+.entity-edit-form .entity-links-tabpanel .entity-entity-links-table tr {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 24%) minmax(0, 1fr) minmax(0, 10.25rem)
+		3.25rem;
+}
+
+.entity-edit-form .entity-inlinks-tabpanel .entity-template-view-inlinks-table tr {
+	display: grid;
+	grid-template-columns: minmax(0, 32%) minmax(0, 24%) minmax(0, 1fr);
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	.data-table-empty-cell {
+	grid-column: 1 / -1;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar {
+	width: 0.35rem;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar {
+	width: 0.35rem;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--fg) 28%, transparent);
+	border-radius: 999px;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--fg) 28%, transparent);
+	border-radius: 999px;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.entity-edit-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-entity-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar-track {
+	background: transparent;
 }
 
 .entity-template-attributes-table td {

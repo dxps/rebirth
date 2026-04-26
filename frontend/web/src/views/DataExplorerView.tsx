@@ -1330,7 +1330,12 @@ function CreateEntityModal({
 					>
 						<form
 							id={formId}
-							className="entity-template-edit-form"
+							className={[
+								'entity-template-edit-form',
+								mode === 'edit' ? 'entity-edit-form' : '',
+							]
+								.filter(Boolean)
+								.join(' ')}
 							onSubmit={handleSubmit}
 						>
 							<div className="entity-view-summary entity-create-summary">
@@ -1439,7 +1444,10 @@ function CreateEntityModal({
 								</div>
 
 								{activeTab === 'attributes' ? (
-									<div role="tabpanel">
+									<div
+										className="entity-attributes-tabpanel"
+										role="tabpanel"
+									>
 										<table className="data-table entity-template-modal-table entity-template-attributes-table entity-attributes-table">
 											<colgroup>
 												<col className="entity-attribute-name-column" />
@@ -1897,7 +1905,10 @@ function CreateEntityModal({
 										</table>
 									</div>
 								) : activeTab === 'links' ? (
-									<div role="tabpanel">
+									<div
+										className="entity-links-tabpanel"
+										role="tabpanel"
+									>
 										<table className="data-table entity-template-modal-table entity-template-links-table entity-entity-links-table">
 											<colgroup>
 												<col className="entity-template-link-name-column" />
@@ -2169,7 +2180,10 @@ function CreateEntityModal({
 										</table>
 									</div>
 								) : (
-									<div role="tabpanel">
+									<div
+										className="entity-inlinks-tabpanel"
+										role="tabpanel"
+									>
 										<table className="data-table entity-template-modal-table entity-template-view-inlinks-table">
 											<colgroup>
 												<col className="entity-template-inlink-source-column" />
@@ -2776,7 +2790,7 @@ function EntityDetailsModal({
 						className="draggable-modal-content"
 						onPointerDown={startDrag}
 					>
-						<div className="entity-template-edit-form entity-template-view-form access-level-details">
+						<div className="entity-template-edit-form entity-template-view-form entity-details-view-form access-level-details">
 							<div className="entity-view-summary entity-create-summary">
 								<table className="data-table entity-create-summary-table">
 									<thead>
@@ -2864,7 +2878,10 @@ function EntityDetailsModal({
 								</div>
 
 								{activeTab === 'attributes' ? (
-									<div role="tabpanel">
+									<div
+										className="entity-attributes-tabpanel"
+										role="tabpanel"
+									>
 										<table className="data-table entity-template-modal-table entity-template-attributes-table entity-attributes-table">
 											<colgroup>
 												<col className="entity-attribute-name-column" />
@@ -2930,7 +2947,10 @@ function EntityDetailsModal({
 										</table>
 									</div>
 								) : activeTab === 'links' ? (
-									<div role="tabpanel">
+									<div
+										className="entity-links-tabpanel"
+										role="tabpanel"
+									>
 										<table className="data-table entity-template-modal-table entity-template-view-links-table">
 											<colgroup>
 												<col className="entity-template-link-name-column" />
@@ -3020,7 +3040,10 @@ function EntityDetailsModal({
 										</table>
 									</div>
 								) : (
-									<div role="tabpanel">
+									<div
+										className="entity-inlinks-tabpanel"
+										role="tabpanel"
+									>
 										<table className="data-table entity-template-modal-table entity-template-view-inlinks-table">
 											<colgroup>
 												<col className="entity-template-inlink-source-column" />

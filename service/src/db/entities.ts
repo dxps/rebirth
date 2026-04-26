@@ -80,7 +80,7 @@ function normalizeAttributes(
 			entityTemplateAttributeId: attribute.entityTemplateAttributeId ?? null,
 			listingIndex: attribute.listingIndex ?? index,
 			name: attribute.name.trim(),
-			value: attribute.value.trim(),
+			value: attribute.value,
 			valueType: attribute.valueType,
 		}))
 		.sort((left, right) => left.listingIndex - right.listingIndex)
