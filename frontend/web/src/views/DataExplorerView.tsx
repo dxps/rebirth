@@ -2458,6 +2458,7 @@ function EntityDetailsModal({
 
 		const shouldMask = !isPublicAccessLevel(attribute.accessLevelId)
 		const isRevealed = revealedAttributeIds.has(attribute.id)
+		const canUseRestrictedValueActions = shouldMask && canEdit
 		const visibleValue = shouldMask && !isRevealed ? '******' : attribute.value
 
 		return (
@@ -2473,7 +2474,7 @@ function EntityDetailsModal({
 				<span className="entity-attribute-value-text">
 					{visibleValue}
 				</span>
-				{shouldMask ? (
+				{canUseRestrictedValueActions ? (
 					<span className="entity-attribute-value-actions">
 						<button
 							aria-label={`${isRevealed ? 'Hide' : 'Show'} ${attribute.name || 'attribute'} value`}
