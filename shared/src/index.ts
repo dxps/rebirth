@@ -34,6 +34,7 @@ import {
 	type CreateEntityInput,
 	type Entity,
 } from './types/entity'
+import { type AuditEvent } from './types/audit-event'
 
 export type ServiceStatus = 'ok' | 'degraded' | 'down'
 
@@ -49,6 +50,10 @@ export interface AccessLevelsResponse {
 
 export interface AccessLevelResponse {
 	data: AccessLevel
+}
+
+export interface AuditEventsResponse {
+	data: AuditEvent[]
 }
 
 export interface AttributeTemplatesResponse {
@@ -128,6 +133,7 @@ export const appInfo = {
 export const apiRoutes = {
 	accessLevel: (id: number) => `/access-levels/${id}`,
 	accessLevels: '/access-levels',
+	auditEvents: '/audit-events',
 	authLogin: '/auth/login',
 	authLogout: '/auth/logout',
 	authMe: '/auth/me',
@@ -439,6 +445,12 @@ export {
 	ValueType,
 	valueTypes,
 } from './types/attribute-template'
+export type {
+	AuditEvent,
+	AuditEventId,
+	CreateAuditEventInput,
+} from './types/audit-event'
+export { auditEventModel } from './types/audit-event'
 export type {
 	AttributeTemplate,
 	AttributeTemplateId,

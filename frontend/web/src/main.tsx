@@ -5,6 +5,7 @@ import "@fontsource/work-sans/latin-400-italic.css";
 import "@fontsource/work-sans/latin-600.css";
 import { Header } from "./components/Header";
 import { getCurrentPath, type AppPath } from "./routing";
+import { AuditView } from "./views/AuditView";
 import { DataExplorerView } from "./views/DataExplorerView";
 import { HomeView } from "./views/HomeView";
 import { LoginView } from "./views/LoginView";
@@ -45,6 +46,8 @@ function App() {
         return <TemplatesView />;
       case "/security":
         return <SecurityView />;
+      case "/audit":
+        return <AuditView />;
       case "/user-profile":
         return <UserProfileView />;
       case "/login":

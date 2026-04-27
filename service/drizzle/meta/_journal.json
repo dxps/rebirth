@@ -50,6 +50,13 @@
 			"when": 1777280400000,
 			"tag": "0006_user_access_levels",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1777284000000,
+			"tag": "0007_audit_events",
+			"breakpoints": true
 		}
 	]
 }

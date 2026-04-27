@@ -8,6 +8,7 @@ import type {
 } from '@rebirth/shared'
 import type postgres from 'postgres'
 
+import { insertAuditEvent } from './audit-events'
 import { createDatabase, getDatabaseUrl } from './client'
 import { createUuidV7 } from './uuid'
 
@@ -36,6 +37,17 @@ interface UserAccessLevelRow {
 	access_level_name: string
 	access_level_description: string
 }
+
+type AuditChangeValue =
+	| {
+			from: string | number[]
+			to: string | number[]
+	  }
+	| {
+			changed: true
+	  }
+
+type AuditChanges = Record<string, AuditChangeValue>
 
 function createSessionKey(): string {
 	const bytes = crypto.getRandomValues(new Uint8Array(32))
@@ -73,6 +85,136 @@ function normalizeUpdateInput(input: UpdateUserInput): UpdateUserInput {
 		permissionIds: input.permissionIds,
 		username: input.username?.trim(),
 	}
+}
+
+function getSortedIds(ids: number[]): number[] {
+	return ids.slice().sort((left, right) => left - right)
+}
+
+function haveSameIds(left: number[], right: number[]): boolean {
+	const sortedLeft = getSortedIds(left)
+	const sortedRight = getSortedIds(right)
+
+	return (
+		sortedLeft.length === sortedRight.length &&
+		sortedLeft.every((id, index) => id === sortedRight[index])
+	)
+}
+
+function stringifyAuditContent(content: unknown): string {
+	return JSON.stringify(content)
+}
+
+function getCreatedUserAuditContent(
+	id: string,
+	input: CreateUserInput,
+): string {
+	return stringifyAuditContent({
+		user: {
+			accessLevelIds: getSortedIds(input.accessLevelIds),
+			email: input.email,
+			firstName: input.firstName,
+			id,
+			lastName: input.lastName,
+			permissionIds: getSortedIds(input.permissionIds),
+			username: input.username,
+		},
+	})
+}
+
+function getUserAuditContent(user: User): string {
+	return stringifyAuditContent({
+		user: {
+			accessLevelIds: getSortedIds(
+				user.accessLevels.map((accessLevel) => accessLevel.id),
+			),
+			email: user.email,
+			firstName: user.firstName,
+			id: user.id,
+			lastName: user.lastName,
+			permissionIds: getSortedIds(
+				user.permissions.map((permission) => permission.id),
+			),
+			username: user.username,
+		},
+	})
+}
+
+function getUserUpdateAuditChanges(
+	existingUser: User,
+	input: UpdateUserInput,
+): AuditChanges {
+	const changes: AuditChanges = {}
+
+	if (input.email !== undefined && input.email !== existingUser.email) {
+		changes.email = { from: existingUser.email, to: input.email }
+	}
+
+	if (
+		input.firstName !== undefined &&
+		input.firstName !== existingUser.firstName
+	) {
+		changes.firstName = {
+			from: existingUser.firstName,
+			to: input.firstName,
+		}
+	}
+
+	if (
+		input.lastName !== undefined &&
+		input.lastName !== existingUser.lastName
+	) {
+		changes.lastName = {
+			from: existingUser.lastName,
+			to: input.lastName,
+		}
+	}
+
+	if (input.username !== undefined && input.username !== existingUser.username) {
+		changes.username = { from: existingUser.username, to: input.username }
+	}
+
+	if (input.password !== undefined) {
+		changes.password = { changed: true }
+	}
+
+	if (input.permissionIds !== undefined) {
+		const existingPermissionIds = existingUser.permissions.map(
+			(permission) => permission.id,
+		)
+
+		if (!haveSameIds(input.permissionIds, existingPermissionIds)) {
+			changes.permissionIds = {
+				from: getSortedIds(existingPermissionIds),
+				to: getSortedIds(input.permissionIds),
+			}
+		}
+	}
+
+	if (input.accessLevelIds !== undefined) {
+		const existingAccessLevelIds = existingUser.accessLevels.map(
+			(accessLevel) => accessLevel.id,
+		)
+
+		if (!haveSameIds(input.accessLevelIds, existingAccessLevelIds)) {
+			changes.accessLevelIds = {
+				from: getSortedIds(existingAccessLevelIds),
+				to: getSortedIds(input.accessLevelIds),
+			}
+		}
+	}
+
+	return changes
+}
+
+function getUpdatedUserAuditContent(
+	userId: string,
+	changes: AuditChanges,
+): string {
+	return stringifyAuditContent({
+		changes,
+		userId,
+	})
 }
 
 function toUser(
@@ -267,6 +409,10 @@ export async function createUser(input: CreateUserInput): Promise<User | undefin
 			`
 			await replaceUserAccessLevels(sql, id, normalizedInput.accessLevelIds)
 			await replaceUserPermissions(sql, id, normalizedInput.permissionIds)
+			await insertAuditEvent(sql, {
+				content: getCreatedUserAuditContent(id, normalizedInput),
+				name: 'user.created',
+			})
 		})
 
 		const [createdUser] = await readUserRows(client, id)
@@ -297,6 +443,10 @@ export async function updateUser(
 			return undefined
 		}
 
+		const auditChanges = getUserUpdateAuditChanges(
+			existingUser,
+			normalizedInput,
+		)
 		const passwordHash =
 			normalizedInput.password === undefined
 				? undefined
@@ -332,6 +482,13 @@ export async function updateUser(
 
 			if (normalizedInput.accessLevelIds !== undefined) {
 				await replaceUserAccessLevels(sql, id, normalizedInput.accessLevelIds)
+			}
+
+			if (Object.keys(auditChanges).length > 0) {
+				await insertAuditEvent(sql, {
+					content: getUpdatedUserAuditContent(id, auditChanges),
+					name: 'user.updated',
+				})
 			}
 		})
 
@@ -379,14 +536,35 @@ export async function updateUserEmail(
 	const { client } = createDatabase(databaseUrl)
 
 	try {
-		await client`
-			UPDATE users
-			SET
-				email = ${normalizedEmail},
-				first_name = ${normalizedFirstName},
-				last_name = ${normalizedLastName}
-			WHERE id = ${id}
-		`
+		const [existingUser] = await readUserRows(client, id)
+
+		if (!existingUser) {
+			return undefined
+		}
+
+		const auditChanges = getUserUpdateAuditChanges(existingUser, {
+			email: normalizedEmail,
+			firstName: normalizedFirstName,
+			lastName: normalizedLastName,
+		})
+
+		await client.begin(async (sql) => {
+			await sql`
+				UPDATE users
+				SET
+					email = ${normalizedEmail},
+					first_name = ${normalizedFirstName},
+					last_name = ${normalizedLastName}
+				WHERE id = ${id}
+			`
+
+			if (Object.keys(auditChanges).length > 0) {
+				await insertAuditEvent(sql, {
+					content: getUpdatedUserAuditContent(id, auditChanges),
+					name: 'user.updated',
+				})
+			}
+		})
 
 		const [updatedUser] = await readUserRows(client, id)
 
@@ -432,11 +610,20 @@ export async function updateUserPassword(
 
 		const passwordHash = await Bun.password.hash(newPassword)
 
-		await client`
-			UPDATE users
-			SET password_hash = ${passwordHash}
-			WHERE id = ${id}
-		`
+		await client.begin(async (sql) => {
+			await sql`
+				UPDATE users
+				SET password_hash = ${passwordHash}
+				WHERE id = ${id}
+			`
+
+			await insertAuditEvent(sql, {
+				content: getUpdatedUserAuditContent(id, {
+					password: { changed: true },
+				}),
+				name: 'user.updated',
+			})
+		})
 
 		const [updatedUser] = await readUserRows(client, id)
 
@@ -462,10 +649,17 @@ export async function deleteUser(id: string): Promise<User | undefined> {
 			return undefined
 		}
 
-		await client`
-			DELETE FROM users
-			WHERE id = ${id}
-		`
+		await client.begin(async (sql) => {
+			await sql`
+				DELETE FROM users
+				WHERE id = ${id}
+			`
+
+			await insertAuditEvent(sql, {
+				content: getUserAuditContent(user),
+				name: 'user.deleted',
+			})
+		})
 
 		return user
 	} finally {

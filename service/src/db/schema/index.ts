@@ -1,3 +1,4 @@
+export { auditEvents } from './audit-events'
 export { accessLevels } from './access-levels'
 export {
 	permissionName,

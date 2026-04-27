@@ -13,6 +13,7 @@ import {
 	LogOut,
 	Menu,
 	Moon,
+	ScrollText,
 	Shapes,
 	Shield,
 	Sun,
@@ -46,6 +47,12 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
 	const canAccessSecurity = hasStoredPermission(
 		storedAuth,
 		PermissionName.Admin,
+	)
+	const canAccessAudit = Boolean(
+		storedAuth?.user.username === 'admin' ||
+		storedAuth?.user.accessLevels.some(
+			(accessLevel) => accessLevel.name.toLowerCase() === 'audit',
+		),
 	)
 
 	useEffect(() => {
@@ -132,6 +139,11 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
 					{canAccessSecurity ? (
 						<HeaderNavLink label="Security" to="/security">
 							<Shield aria-hidden="true" />
+						</HeaderNavLink>
+					) : null}
+					{canAccessAudit ? (
+						<HeaderNavLink label="Audit" to="/audit">
+							<ScrollText aria-hidden="true" />
 						</HeaderNavLink>
 					) : null}
 				</nav>

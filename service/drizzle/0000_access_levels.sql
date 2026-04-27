@@ -9,7 +9,8 @@ INSERT INTO "access_levels" ("id", "name", "description")
 VALUES
 	(1, 'Public', 'Publicly visible'),
 	(2, 'Private', 'Private access needed'),
-	(3, 'Confidential', 'A more restricted access')
+	(3, 'Confidential', 'A more restricted access'),
+	(4, 'Audit', 'Can view audit events')
 ON CONFLICT ("id") DO UPDATE SET
 	"name" = EXCLUDED."name",
 	"description" = EXCLUDED."description";

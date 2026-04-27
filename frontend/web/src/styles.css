@@ -999,6 +999,44 @@ button.access-level-refresh-button:hover {
 	table-layout: fixed;
 }
 
+.audit-table {
+	table-layout: fixed;
+}
+
+.audit-table th:first-child,
+.audit-table td:first-child {
+	width: 22%;
+}
+
+.audit-table th:nth-child(2),
+.audit-table td:nth-child(2) {
+	width: 15%;
+}
+
+.audit-table th:nth-child(3),
+.audit-table td:nth-child(3) {
+	width: 18%;
+}
+
+.audit-table td:first-child {
+	font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+	font-size: 0.76rem;
+	white-space: normal;
+	word-break: break-all;
+}
+
+.audit-table pre {
+	color: var(--fg);
+	font: inherit;
+	font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+	font-size: 0.78rem;
+	line-height: 1.45;
+	margin: 0;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
 .attribute-templates-table th:nth-child(2),
 .attribute-templates-table td:nth-child(2) {
 	min-width: 0;

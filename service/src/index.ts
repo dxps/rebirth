@@ -24,6 +24,7 @@ import {
   PermissionName,
   type AccessLevelResponse,
   type AccessLevelsResponse,
+  type AuditEventsResponse,
   type AttributeTemplateResponse,
   type AttributeTemplatesResponse,
   type EntityTemplateResponse,
@@ -39,6 +40,7 @@ import {
   type UsersResponse
 } from "@rebirth/shared";
 import { createAccessLevel, deleteAccessLevel, listAccessLevels, updateAccessLevel } from "./db/access-levels";
+import { listAuditEvents } from "./db/audit-events";
 import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplates, updateAttributeTemplate } from "./db/attribute-templates";
 import { createEntity, deleteEntity, EntityValidationError, getEntity, listEntities, updateEntity } from "./db/entities";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
@@ -52,6 +54,8 @@ loadEnvFiles();
 const port = Number.parseInt(Bun.env.PORT ?? "9908", 10);
 const uniqueConflictErrorCode = "23505";
 const attributeTemplateUniqueConstraint = "attribute_templates_name_description_unique";
+const auditAccessLevelName = "audit";
+const builtInAccessLevelMaxId = 4;
 const uniqueConflictResponse: ApiErrorResponse = {
   error: {
     code: "unique_conflict",
@@ -161,6 +165,10 @@ function canViewData(user: User): boolean {
 
 function canManageSecurity(user: User): boolean {
   return hasPermission(user, PermissionName.Admin);
+}
+
+function canViewAudit(user: User): boolean {
+  return user.username === "admin" || user.accessLevels.some((accessLevel) => accessLevel.name.toLowerCase() === auditAccessLevelName);
 }
 
 function maskRestrictedEntityValues(entity: Entity): Entity {
@@ -293,6 +301,20 @@ async function requireSecurityManager(request: Request): Promise<Response | User
   }
 
   if (!canManageSecurity(user)) {
+    return authorizationRequiredResponse();
+  }
+
+  return user;
+}
+
+async function requireAuditViewer(request: Request): Promise<Response | User> {
+  const user = await requireAuthenticatedUser(request);
+
+  if (user instanceof Response) {
+    return user;
+  }
+
+  if (!canViewAudit(user)) {
     return authorizationRequiredResponse();
   }
 
@@ -606,6 +628,36 @@ const server = Bun.serve({
         return Response.json(
           {
             error: "Unable to load permissions"
+          },
+          {
+            headers: jsonHeaders,
+            status: 500
+          }
+        );
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === apiRoutes.auditEvents) {
+      const authenticatedUser = await requireAuditViewer(request);
+
+      if (authenticatedUser instanceof Response) {
+        return authenticatedUser;
+      }
+
+      try {
+        const response: AuditEventsResponse = {
+          data: await listAuditEvents()
+        };
+
+        return Response.json(response, {
+          headers: jsonHeaders
+        });
+      } catch (error) {
+        console.error(error);
+
+        return Response.json(
+          {
+            error: "Unable to load audit events"
           },
           {
             headers: jsonHeaders,
@@ -1320,6 +1372,34 @@ const server = Bun.serve({
           );
         }
 
+        if (id <= builtInAccessLevelMaxId && input.name !== undefined) {
+          const existingAccessLevel = (await listAccessLevels()).find((accessLevel) => accessLevel.id === id);
+
+          if (!existingAccessLevel) {
+            return Response.json(
+              {
+                error: "Access level not found"
+              },
+              {
+                headers: jsonHeaders,
+                status: 404
+              }
+            );
+          }
+
+          if (input.name.trim() !== existingAccessLevel.name) {
+            return Response.json(
+              {
+                error: "Built-in access levels cannot be renamed"
+              },
+              {
+                headers: jsonHeaders,
+                status: 403
+              }
+            );
+          }
+        }
+
         const updatedAccessLevel = await updateAccessLevel(id, {
           description: input.description?.trim(),
           name: input.name?.trim()
@@ -1384,6 +1464,18 @@ const server = Bun.serve({
             {
               headers: jsonHeaders,
               status: 400
+            }
+          );
+        }
+
+        if (id <= builtInAccessLevelMaxId) {
+          return Response.json(
+            {
+              error: "Built-in access levels cannot be deleted"
+            },
+            {
+              headers: jsonHeaders,
+              status: 403
             }
           );
         }
@@ -1725,6 +1817,18 @@ const server = Bun.serve({
             {
               headers: jsonHeaders,
               status: 404
+            }
+          );
+        }
+
+        if (existingUser.username === "admin" && input.username !== undefined && input.username.trim() !== "admin") {
+          return Response.json(
+            {
+              error: "The built-in admin username cannot be renamed"
+            },
+            {
+              headers: jsonHeaders,
+              status: 403
             }
           );
         }
