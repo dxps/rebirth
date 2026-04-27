@@ -2279,6 +2279,7 @@ function CreateEntityModal({
 
 interface EntityDetailsModalProps {
 	accessLevels: AccessLevel[]
+	grantedAccessLevelIds: number[]
 	entity: Entity | null
 	entities: Entity[]
 	entityTemplates: EntityTemplate[]
@@ -2309,6 +2310,7 @@ interface EntityDetailsModalProps {
 
 function EntityDetailsModal({
 	accessLevels,
+	grantedAccessLevelIds,
 	entity,
 	entities,
 	entityTemplates,
@@ -2402,6 +2404,10 @@ function EntityDetailsModal({
 			? accessLevel.name.toLowerCase() === 'public'
 			: accessLevelId === 1
 	}
+	const canAccessAttributeValue = (accessLevelId: number): boolean =>
+		canEdit ||
+		isPublicAccessLevel(accessLevelId) ||
+		grantedAccessLevelIds.includes(accessLevelId)
 	const getLinkTargetLabel = (link: EntityLink): string => {
 		const targetEntity = getLinkTargetEntity(link)
 
@@ -2473,8 +2479,12 @@ function EntityDetailsModal({
 
 		const shouldMask = !isPublicAccessLevel(attribute.accessLevelId)
 		const isRevealed = revealedAttributeIds.has(attribute.id)
-		const canUseRestrictedValueActions = shouldMask && canEdit
-		const visibleValue = shouldMask && !isRevealed ? '******' : attribute.value
+		const canUseRestrictedValueActions =
+			shouldMask && canAccessAttributeValue(attribute.accessLevelId)
+		const visibleValue =
+			shouldMask && (!isRevealed || !canUseRestrictedValueActions)
+				? '******'
+				: attribute.value
 
 		return (
 			<span
@@ -3207,6 +3217,8 @@ export function DataExplorerView() {
 	const isAuthorized =
 		canManageData ||
 		hasStoredPermission(storedAuth, PermissionName.Viewer)
+	const grantedAccessLevelIds =
+		storedAuth?.user.accessLevels.map((accessLevel) => accessLevel.id) ?? []
 
 	const getEntityDetailsPosition = useCallback(
 		(pointerX: number, pointerY: number) => {
@@ -4277,6 +4289,7 @@ export function DataExplorerView() {
 				<EntityDetailsModal
 					key={window.id}
 					accessLevels={accessLevels}
+					grantedAccessLevelIds={grantedAccessLevelIds}
 					entity={window.entity}
 					entities={entities}
 					entityTemplates={entityTemplates}
