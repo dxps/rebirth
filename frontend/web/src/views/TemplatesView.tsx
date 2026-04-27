@@ -19,6 +19,7 @@ import {
 } from '@rebirth/shared'
 import {
 	ArrowLeft,
+	ExternalLink,
 	GripVertical,
 	Info,
 	Pencil,
@@ -2418,6 +2419,10 @@ interface EntityTemplateDetailsViewProps {
 	entityTemplates: EntityTemplate[]
 	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
 	onActiveTabChange?: (tab: 'attributes' | 'links' | 'inlinks') => void
+	onOpenEntityTemplate: (
+		entityTemplate: EntityTemplate,
+		point: { clientX: number; clientY: number },
+	) => void
 }
 
 function LinkDescriptionValue({ description }: { description: string | null }) {
@@ -2511,6 +2516,7 @@ function EntityTemplateDetailsView({
 	entityTemplates,
 	initialActiveTab = 'attributes',
 	onActiveTabChange,
+	onOpenEntityTemplate,
 }: EntityTemplateDetailsViewProps) {
 	const [activeTab, setActiveTab] = useState<
 		'attributes' | 'links' | 'inlinks'
@@ -2543,6 +2549,24 @@ function EntityTemplateDetailsView({
 
 			return left.link.listingIndex - right.link.listingIndex
 		})
+	const getLinkedEntityTemplate = useCallback(
+		(targetEntityTemplateId: string) =>
+			entityTemplates.find(
+				(candidate) => candidate.id === targetEntityTemplateId,
+			) ?? null,
+		[entityTemplates],
+	)
+
+	function openReferencedEntityTemplate(
+		referencedEntityTemplate: EntityTemplate,
+		event: ReactMouseEvent<HTMLButtonElement>,
+	): void {
+		event.stopPropagation()
+		onOpenEntityTemplate(referencedEntityTemplate, {
+			clientX: event.clientX,
+			clientY: event.clientY,
+		})
+	}
 
 	useEffect(() => {
 		setActiveTab(initialActiveTab)
@@ -2725,22 +2749,43 @@ function EntityTemplateDetailsView({
 										</td>
 									</tr>
 								) : (
-									orderedLinks.map((link) => (
-										<tr key={link.id}>
-											<td>{link.name}</td>
-											<LinkDescriptionValue
-												description={link.description}
-											/>
-											<td>
-												{entityTemplates.find(
-													(candidate) =>
-														candidate.id ===
-														link.targetEntityTemplateId,
-												)?.name ??
-													link.targetEntityTemplateId}
-											</td>
-										</tr>
-									))
+									orderedLinks.map((link) => {
+										const targetEntityTemplate =
+											getLinkedEntityTemplate(
+												link.targetEntityTemplateId,
+											)
+
+										return (
+											<tr key={link.id}>
+												<td>{link.name}</td>
+												<LinkDescriptionValue
+													description={link.description}
+												/>
+												<td>
+													{targetEntityTemplate ? (
+														<button
+															aria-label={`Open entity template ${targetEntityTemplate.name}`}
+															className="entity-reference-button"
+															type="button"
+															onClick={(event) =>
+																openReferencedEntityTemplate(
+																	targetEntityTemplate,
+																	event,
+																)
+															}
+														>
+															<span>
+																{targetEntityTemplate.name}
+															</span>
+															<ExternalLink aria-hidden="true" />
+														</button>
+													) : (
+														link.targetEntityTemplateId
+													)}
+												</td>
+											</tr>
+										)
+									})
 								)}
 							</tbody>
 						</table>
@@ -2761,19 +2806,30 @@ function EntityTemplateDetailsView({
 								</tr>
 							</thead>
 							<tbody>
-								{incomingLinks.map(
-									({ link, sourceTemplate }) => (
-										<tr
-											key={`${sourceTemplate.id}:${link.id}`}
-										>
-											<td>{sourceTemplate.name}</td>
-											<td>{link.name}</td>
-											<LinkDescriptionValue
-												description={link.description}
-											/>
-										</tr>
-									),
-								)}
+								{incomingLinks.map(({ link, sourceTemplate }) => (
+									<tr key={`${sourceTemplate.id}:${link.id}`}>
+										<td>
+											<button
+												aria-label={`Open entity template ${sourceTemplate.name}`}
+												className="entity-reference-button"
+												type="button"
+												onClick={(event) =>
+													openReferencedEntityTemplate(
+														sourceTemplate,
+														event,
+													)
+												}
+											>
+												<span>{sourceTemplate.name}</span>
+												<ExternalLink aria-hidden="true" />
+											</button>
+										</td>
+										<td>{link.name}</td>
+										<LinkDescriptionValue
+											description={link.description}
+										/>
+									</tr>
+								))}
 							</tbody>
 						</table>
 					</div>
@@ -3859,6 +3915,7 @@ export function TemplatesView() {
 								onActiveTabChange={(tab) =>
 									setEntityTemplateActiveTab(modal.key, tab)
 								}
+								onOpenEntityTemplate={openEntityTemplate}
 							/>
 						) : modal.attributeTemplate ? (
 							<div className="access-level-details access-level-edit-form attribute-template-view-form">
