@@ -34,6 +34,7 @@ export const seededPermissions = [
 	{
 		id: 4,
 		name: PermissionName.Viewer,
-		description: 'Can view managed data with public access (level).',
+		description:
+			'Can view managed data with public (and any other assigned) access levels.',
 	},
 ] as const

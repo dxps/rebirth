@@ -159,6 +159,11 @@ export function UserProfileView() {
 		)
 	}
 
+	const adminUsernameTooltip =
+		storedAuth.user.username === 'admin'
+			? 'Admin user cannot rename its username'
+			: undefined
+
 	return (
 		<section className="profile-view" aria-label="Profile">
 			<div className="profile-forms">
@@ -196,9 +201,20 @@ export function UserProfileView() {
 							onChange={(event) => setEmail(event.target.value)}
 						/>
 					</label>
-					<label>
+					<label
+						className={
+							adminUsernameTooltip
+								? 'profile-tooltip-field'
+								: undefined
+						}
+						data-tooltip={adminUsernameTooltip}
+					>
 						<span>Username</span>
-						<input readOnly type="text" value={storedAuth.user.username} />
+						<input
+							readOnly
+							type="text"
+							value={storedAuth.user.username}
+						/>
 					</label>
 					{userInfoError ? (
 						<p className="form-error">{userInfoError}</p>
@@ -261,27 +277,43 @@ export function UserProfileView() {
 					</div>
 					<label>
 						<span>Permissions</span>
-						<input
-							readOnly
-							type="text"
-							value={
-								storedAuth.user.permissions
-									.map((permission) => permission.name)
-									.join(', ') || 'None'
-							}
-						/>
+						<div className="profile-authorization-list">
+							{storedAuth.user.permissions.length > 0 ? (
+								storedAuth.user.permissions.map((permission) => (
+									<span
+										key={permission.id}
+										className="profile-authorization-item"
+										data-tooltip={permission.description}
+									>
+										{permission.name}
+									</span>
+								))
+							) : (
+								<span className="profile-authorization-empty">
+									None
+								</span>
+							)}
+						</div>
 					</label>
 					<label>
 						<span>Access Levels</span>
-						<input
-							readOnly
-							type="text"
-							value={
-								storedAuth.user.accessLevels
-									.map((accessLevel) => accessLevel.name)
-									.join(', ') || 'None'
-							}
-						/>
+						<div className="profile-authorization-list">
+							{storedAuth.user.accessLevels.length > 0 ? (
+								storedAuth.user.accessLevels.map((accessLevel) => (
+									<span
+										key={accessLevel.id}
+										className="profile-authorization-item"
+										data-tooltip={accessLevel.description}
+									>
+										{accessLevel.name}
+									</span>
+								))
+							) : (
+								<span className="profile-authorization-empty">
+									None
+								</span>
+							)}
+						</div>
 					</label>
 				</section>
 			</div>

@@ -19,7 +19,7 @@ VALUES
 	(1, 'Admin', 'Can manage users, permissions, security data, and templates.'),
 	(2, 'Editor', 'Can create, update, and delete managed data, besides viewing it.'),
 	(3, 'Manage Own Data', 'Allows managing only your own data (entities, entity templates, attribute templates)'),
-	(4, 'Viewer', 'Can view managed data.')
+	(4, 'Viewer', 'Can view managed data with public (and any other assigned) access levels.')
 ON CONFLICT ("id") DO UPDATE SET
 	"name" = EXCLUDED."name",
 	"description" = EXCLUDED."description";

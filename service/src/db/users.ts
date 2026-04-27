@@ -38,6 +38,13 @@ interface UserAccessLevelRow {
 	access_level_description: string
 }
 
+export class UserValidationError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'UserValidationError'
+	}
+}
+
 type AuditChangeValue =
 	| {
 			from: string | number[]
@@ -441,6 +448,16 @@ export async function updateUser(
 
 		if (!existingUser) {
 			return undefined
+		}
+
+		if (
+			existingUser.username === 'admin' &&
+			normalizedInput.username !== undefined &&
+			normalizedInput.username !== existingUser.username
+		) {
+			throw new UserValidationError(
+				'The built-in admin username cannot be renamed',
+			)
 		}
 
 		const auditChanges = getUserUpdateAuditChanges(

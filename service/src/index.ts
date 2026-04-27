@@ -45,7 +45,7 @@ import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplate
 import { createEntity, deleteEntity, EntityValidationError, getEntity, listEntities, updateEntity } from "./db/entities";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { listPermissions } from "./db/permissions";
-import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
+import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword, UserValidationError } from "./db/users";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -779,6 +779,18 @@ const server = Bun.serve({
           status: 201
         });
       } catch (error) {
+        if (error instanceof UserValidationError) {
+          return Response.json(
+            {
+              error: error.message
+            },
+            {
+              headers: jsonHeaders,
+              status: 403
+            }
+          );
+        }
+
         if (isPostgresErrorWithCode(error, uniqueConflictErrorCode)) {
           return Response.json(uniqueConflictResponse, {
             headers: jsonHeaders,

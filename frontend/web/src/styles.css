@@ -650,6 +650,43 @@ button svg,
 	cursor: default;
 }
 
+.profile-tooltip-field {
+	position: relative;
+}
+
+.profile-tooltip-field[data-tooltip],
+.profile-tooltip-field[data-tooltip] input {
+	cursor: help;
+}
+
+.profile-tooltip-field[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1.2;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.profile-tooltip-field[data-tooltip]:hover::after,
+.profile-tooltip-field[data-tooltip]:focus-within::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
 .login-form button {
 	justify-content: center;
 	min-height: 2.35rem;
@@ -668,6 +705,56 @@ button svg,
 .profile-form button:disabled {
 	cursor: default;
 	opacity: 0.6;
+}
+
+.profile-authorization-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.profile-authorization-item {
+	background: color-mix(in srgb, var(--bg) 82%, var(--fg) 18%);
+	border-radius: 8px;
+	cursor: help;
+	font-size: 0.9rem;
+	line-height: 1.2;
+	padding: 0.42rem 0.58rem;
+	position: relative;
+}
+
+.profile-authorization-item[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 0;
+	line-height: 1.2;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.profile-authorization-item[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.profile-authorization-empty {
+	color: var(--muted);
+	font-size: 0.9rem;
+	font-style: italic;
+	padding: 0.42rem 0;
 }
 
 .security-view {
