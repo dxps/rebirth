@@ -51,6 +51,11 @@ interface AttributeTemplateRequirementRow {
 	name: string
 }
 
+interface EntityListResult {
+	data: Entity[]
+	total: number
+}
+
 export class EntityValidationError extends Error {
 	constructor(message: string) {
 		super(message)
@@ -221,6 +226,8 @@ async function readEntityRows(
 	client: ReturnType<typeof createDatabase>['client'],
 	id?: string,
 	searchTerm?: string,
+	page?: number,
+	pageSize?: number,
 ): Promise<Entity[]> {
 	const normalizedSearchTerm = searchTerm?.trim()
 	const searchPattern =
@@ -270,13 +277,21 @@ async function readEntityRows(
 		ORDER BY entity_id, listing_index
 	`
 
-	return rows
+	const entities = rows
 		.map((row) => toEntity(row, attributeRows, linkRows))
 		.sort((left, right) =>
 			getListingAttributeValue(left).localeCompare(
 				getListingAttributeValue(right),
 			),
 		)
+
+	if (page === undefined || pageSize === undefined) {
+		return entities
+	}
+
+	const offset = (page - 1) * pageSize
+
+	return entities.slice(offset, offset + pageSize)
 }
 
 async function insertEntityAttributes(
@@ -461,7 +476,11 @@ async function buildEntityFromTemplate(
 	}
 }
 
-export async function listEntities(searchTerm?: string) {
+export async function listEntities(
+	searchTerm?: string,
+	page = 1,
+	pageSize = 10,
+): Promise<EntityListResult> {
 	const databaseUrl = getDatabaseUrl()
 
 	if (!databaseUrl) {
@@ -471,7 +490,16 @@ export async function listEntities(searchTerm?: string) {
 	const { client } = createDatabase(databaseUrl)
 
 	try {
-		return await readEntityRows(client, undefined, searchTerm)
+		const data = await readEntityRows(
+			client,
+			undefined,
+			searchTerm,
+			page,
+			pageSize,
+		)
+		const total = (await readEntityRows(client, undefined, searchTerm)).length
+
+		return { data, total }
 	} finally {
 		await client.end()
 	}

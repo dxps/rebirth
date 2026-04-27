@@ -797,6 +797,12 @@ button svg,
 	margin: 0;
 }
 
+.data-explorer-view .section-heading {
+	align-items: center;
+	display: flex;
+	justify-content: space-between;
+}
+
 .section-action-button,
 button.section-action-button {
 	background: transparent;
@@ -1227,7 +1233,6 @@ button.access-level-refresh-button:hover {
 
 .entity-search-field {
 	display: block;
-	margin-bottom: 0.6rem;
 	position: relative;
 	width: min(100%, 22rem);
 }
@@ -1271,10 +1276,31 @@ button.access-level-refresh-button:hover {
 	z-index: 2;
 }
 
-.entity-search-field[data-tooltip]:hover::after,
-.entity-search-field[data-tooltip]:focus-within::after {
+.entity-search-field[data-tooltip]:hover::after {
 	opacity: 1;
 	transform: translateY(0);
+}
+
+.entities-pagination {
+	align-items: center;
+	color: var(--muted);
+	display: flex;
+	font-size: 0.82rem;
+	gap: 0.75rem;
+	justify-content: center;
+	padding-top: 0.8rem;
+}
+
+.entities-pagination button {
+	border-radius: 6px;
+	font-size: 0.82rem;
+	min-height: 1.8rem;
+	padding: 0.18rem 0.65rem;
+}
+
+.entities-pagination button:disabled {
+	cursor: default;
+	opacity: 0.45;
 }
 
 .entities-table td {

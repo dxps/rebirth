@@ -54,6 +54,7 @@ const entityModalMinHeight = 300
 const entityModalMinWidth = 400
 const entityModalWidth = 520
 const entityAttributeReorderThreshold = 0.5
+const entitiesPageSize = 10
 
 function clampToRange(value: number, min: number, max: number) {
 	return Math.max(min, Math.min(value, max))
@@ -3173,6 +3174,8 @@ export function DataExplorerView() {
 	const [entityTemplates, setEntityTemplates] = useState<EntityTemplate[]>([])
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
 	const [entitySearchTerm, setEntitySearchTerm] = useState('')
+	const [entitiesPage, setEntitiesPage] = useState(1)
+	const [entitiesTotal, setEntitiesTotal] = useState(0)
 	const [entitiesError, setEntitiesError] = useState<string | null>(null)
 	const [createEntityError, setCreateEntityError] = useState<string | null>(
 		null,
@@ -3219,6 +3222,10 @@ export function DataExplorerView() {
 		hasStoredPermission(storedAuth, PermissionName.Viewer)
 	const grantedAccessLevelIds =
 		storedAuth?.user.accessLevels.map((accessLevel) => accessLevel.id) ?? []
+	const entitiesTotalPages = Math.max(
+		1,
+		Math.ceil(entitiesTotal / entitiesPageSize),
+	)
 
 	const getEntityDetailsPosition = useCallback(
 		(pointerX: number, pointerY: number) => {
@@ -3252,43 +3259,60 @@ export function DataExplorerView() {
 		return modalZIndexRef.current
 	}, [])
 
-	const loadEntities = useCallback(async (searchTerm = ''): Promise<void> => {
-		const requestId = loadRequestId.current + 1
-		loadRequestId.current = requestId
-		const trimmedSearchTerm = searchTerm.trim()
-		const entitiesUrl = new URL(`${apiBaseUrl}${apiRoutes.entities}`)
+	const loadEntities = useCallback(
+		async (searchTerm = '', page = entitiesPage): Promise<void> => {
+			const requestId = loadRequestId.current + 1
+			loadRequestId.current = requestId
+			const trimmedSearchTerm = searchTerm.trim()
+			const entitiesUrl = new URL(`${apiBaseUrl}${apiRoutes.entities}`)
 
-		if (trimmedSearchTerm.length >= 3) {
-			entitiesUrl.searchParams.set('search', trimmedSearchTerm)
-		}
+			entitiesUrl.searchParams.set('page', String(page))
+			entitiesUrl.searchParams.set('pageSize', String(entitiesPageSize))
 
-		setIsLoadingEntities(true)
-
-		try {
-			const response = await fetch(entitiesUrl.toString(), {
-				headers: getAuthHeaders(),
-			})
-
-			if (!response.ok) {
-				throw new Error('Unable to load entities')
+			if (trimmedSearchTerm.length >= 3) {
+				entitiesUrl.searchParams.set('search', trimmedSearchTerm)
 			}
 
-			const data = (await response.json()) as EntitiesResponse
+			setIsLoadingEntities(true)
 
-			if (isMountedRef.current && requestId === loadRequestId.current) {
-				setEntities(data.data)
-				setEntitiesError(null)
+			try {
+				const response = await fetch(entitiesUrl.toString(), {
+					headers: getAuthHeaders(),
+				})
+
+				if (!response.ok) {
+					throw new Error('Unable to load entities')
+				}
+
+				const data = (await response.json()) as EntitiesResponse
+
+				if (
+					isMountedRef.current &&
+					requestId === loadRequestId.current
+				) {
+					setEntities(data.data)
+					setEntitiesPage(data.pagination.page)
+					setEntitiesTotal(data.pagination.total)
+					setEntitiesError(null)
+				}
+			} catch {
+				if (
+					isMountedRef.current &&
+					requestId === loadRequestId.current
+				) {
+					setEntitiesError('Data is unavailable')
+				}
+			} finally {
+				if (
+					isMountedRef.current &&
+					requestId === loadRequestId.current
+				) {
+					setIsLoadingEntities(false)
+				}
 			}
-		} catch {
-			if (isMountedRef.current && requestId === loadRequestId.current) {
-				setEntitiesError('Data is unavailable')
-			}
-		} finally {
-			if (isMountedRef.current && requestId === loadRequestId.current) {
-				setIsLoadingEntities(false)
-			}
-		}
-	}, [])
+		},
+		[entitiesPage],
+	)
 
 	const loadEntityTemplates = useCallback(async (): Promise<void> => {
 		const requestId = createOptionsLoadRequestId.current + 1
@@ -3964,21 +3988,22 @@ export function DataExplorerView() {
 			<div className="types-mgmt-section">
 				<div className="section-heading">
 					<p>Entities</p>
+					<label
+						className="entity-search-field"
+						data-tooltip="Search by attributes names and values"
+					>
+						<input
+							aria-label="Search entities"
+							placeholder="Search"
+							type="search"
+							value={entitySearchTerm}
+							onChange={(event) => {
+								setEntitiesPage(1)
+								setEntitySearchTerm(event.target.value)
+							}}
+						/>
+					</label>
 				</div>
-				<label
-					className="entity-search-field"
-					data-tooltip="Search by attributes names and values"
-				>
-					<input
-						aria-label="Search entities"
-						placeholder="Search"
-						type="search"
-						value={entitySearchTerm}
-						onChange={(event) =>
-							setEntitySearchTerm(event.target.value)
-						}
-					/>
-				</label>
 
 				{entitiesError ? (
 					<div className="access-level-unavailable" role="status">
@@ -3988,7 +4013,9 @@ export function DataExplorerView() {
 							className="access-level-refresh-button"
 							data-tooltip="Try again"
 							type="button"
-							onClick={() => void loadEntities(entitySearchTerm)}
+							onClick={() =>
+								void loadEntities(entitySearchTerm, entitiesPage)
+							}
 						>
 							<RefreshCw aria-hidden="true" />
 						</button>
@@ -4101,6 +4128,44 @@ export function DataExplorerView() {
 								)}
 							</tbody>
 						</table>
+						{entitiesTotal > entitiesPageSize ? (
+							<div className="entities-pagination">
+								<button
+									type="button"
+									disabled={
+										entitiesPage <= 1 ||
+										isLoadingEntities
+									}
+									onClick={() =>
+										setEntitiesPage((current) =>
+											Math.max(1, current - 1),
+										)
+									}
+								>
+									Previous
+								</button>
+								<span>
+									Page {entitiesPage} of {entitiesTotalPages}
+								</span>
+								<button
+									type="button"
+									disabled={
+										entitiesPage >= entitiesTotalPages ||
+										isLoadingEntities
+									}
+									onClick={() =>
+										setEntitiesPage((current) =>
+											Math.min(
+												entitiesTotalPages,
+												current + 1,
+											),
+										)
+									}
+								>
+									Next
+								</button>
+							</div>
+						) : null}
 					</div>
 				)}
 			</div>

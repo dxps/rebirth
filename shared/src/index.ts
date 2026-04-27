@@ -74,6 +74,11 @@ export interface EntityTemplateResponse {
 
 export interface EntitiesResponse {
 	data: Entity[]
+	pagination: {
+		page: number
+		pageSize: number
+		total: number
+	}
 }
 
 export interface EntityResponse {

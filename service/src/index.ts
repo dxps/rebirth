@@ -56,6 +56,8 @@ const uniqueConflictErrorCode = "23505";
 const attributeTemplateUniqueConstraint = "attribute_templates_name_description_unique";
 const auditAccessLevelName = "audit";
 const builtInAccessLevelMaxId = 4;
+const defaultEntitiesPageSize = 10;
+const maxEntitiesPageSize = 50;
 const uniqueConflictResponse: ApiErrorResponse = {
   error: {
     code: "unique_conflict",
@@ -1063,8 +1065,23 @@ const server = Bun.serve({
 
       try {
         const searchTerm = url.searchParams.get("search") ?? undefined;
+        const page = Math.max(
+          Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1,
+          1
+        );
+        const requestedPageSize = Math.max(
+          Number.parseInt(url.searchParams.get("pageSize") ?? String(defaultEntitiesPageSize), 10) || defaultEntitiesPageSize,
+          1
+        );
+        const pageSize = Math.min(requestedPageSize, maxEntitiesPageSize);
+        const entities = await listEntities(searchTerm, page, pageSize);
         const response: EntitiesResponse = {
-          data: (await listEntities(searchTerm)).map((entity) => getVisibleEntity(authenticatedUser, entity))
+          data: entities.data.map((entity) => getVisibleEntity(authenticatedUser, entity)),
+          pagination: {
+            page,
+            pageSize,
+            total: entities.total
+          }
         };
 
         return Response.json(response, {
