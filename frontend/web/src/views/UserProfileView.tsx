@@ -14,6 +14,7 @@ export function UserProfileView() {
 	const [email, setEmail] = useState(storedAuth?.user.email ?? '')
 	const [firstName, setFirstName] = useState(storedAuth?.user.firstName ?? '')
 	const [lastName, setLastName] = useState(storedAuth?.user.lastName ?? '')
+	const [username, setUsername] = useState(storedAuth?.user.username ?? '')
 	const [currentPassword, setCurrentPassword] = useState('')
 	const [newPassword, setNewPassword] = useState('')
 	const [userInfoStatus, setUserInfoStatus] = useState<string | null>(null)
@@ -34,7 +35,41 @@ export function UserProfileView() {
 		setEmail(nextAuth?.user.email ?? '')
 		setFirstName(nextAuth?.user.firstName ?? '')
 		setLastName(nextAuth?.user.lastName ?? '')
+		setUsername(nextAuth?.user.username ?? '')
 	}, [])
+
+	async function getResponseErrorMessage(
+		response: Response,
+		fallback: string,
+	): Promise<string> {
+		try {
+			const payload = (await response.json()) as {
+				error?:
+					| unknown
+					| {
+							message?: unknown
+					  }
+			}
+
+			if (typeof payload.error === 'string' && payload.error.length > 0) {
+				return payload.error
+			}
+
+			if (
+				typeof payload.error === 'object' &&
+				payload.error !== null &&
+				'message' in payload.error &&
+				typeof payload.error.message === 'string' &&
+				payload.error.message.length > 0
+			) {
+				return payload.error.message
+			}
+		} catch {
+			// Ignore invalid error payloads and use the fallback.
+		}
+
+		return fallback
+	}
 
 	async function updateUserInfo(
 		event: FormEvent<HTMLFormElement>,
@@ -52,9 +87,14 @@ export function UserProfileView() {
 
 		try {
 			const response = await fetch(
-				`${apiBaseUrl}${apiRoutes.userEmail}`,
+				`${apiBaseUrl}${apiRoutes.userInfo}`,
 				{
-					body: JSON.stringify({ email, firstName, lastName }),
+					body: JSON.stringify({
+						email,
+						firstName,
+						lastName,
+						username,
+					}),
 					headers: {
 						Authorization: `Bearer ${storedAuth.sessionKey}`,
 						'Content-Type': 'application/json',
@@ -64,7 +104,12 @@ export function UserProfileView() {
 			)
 
 			if (!response.ok) {
-				throw new Error('Unable to update email.')
+				throw new Error(
+					await getResponseErrorMessage(
+						response,
+						'Unable to update user info.',
+					),
+				)
 			}
 
 			const data = (await response.json()) as UserResponse
@@ -78,6 +123,7 @@ export function UserProfileView() {
 			setEmail(data.data.email)
 			setFirstName(data.data.firstName)
 			setLastName(data.data.lastName)
+			setUsername(data.data.username)
 			setUserInfoStatus('User info updated.')
 		} catch (error) {
 			setUserInfoError(
@@ -211,9 +257,12 @@ export function UserProfileView() {
 					>
 						<span>Username</span>
 						<input
-							readOnly
 							type="text"
-							value={storedAuth.user.username}
+							readOnly={storedAuth.user.username === 'admin'}
+							value={username}
+							onChange={(event) =>
+								setUsername(event.target.value)
+							}
 						/>
 					</label>
 					{userInfoError ? (

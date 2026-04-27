@@ -540,6 +540,7 @@ export async function updateUserEmail(
 	email: string,
 	firstName: string,
 	lastName: string,
+	username: string,
 ): Promise<User | undefined> {
 	const databaseUrl = getDatabaseUrl()
 
@@ -550,6 +551,7 @@ export async function updateUserEmail(
 	const normalizedEmail = email.trim().toLowerCase()
 	const normalizedFirstName = firstName.trim()
 	const normalizedLastName = lastName.trim()
+	const normalizedUsername = username.trim()
 	const { client } = createDatabase(databaseUrl)
 
 	try {
@@ -559,10 +561,20 @@ export async function updateUserEmail(
 			return undefined
 		}
 
+		if (
+			existingUser.username === 'admin' &&
+			normalizedUsername !== existingUser.username
+		) {
+			throw new UserValidationError(
+				'The built-in admin username cannot be renamed',
+			)
+		}
+
 		const auditChanges = getUserUpdateAuditChanges(existingUser, {
 			email: normalizedEmail,
 			firstName: normalizedFirstName,
 			lastName: normalizedLastName,
+			username: normalizedUsername,
 		})
 
 		await client.begin(async (sql) => {
@@ -571,7 +583,8 @@ export async function updateUserEmail(
 				SET
 					email = ${normalizedEmail},
 					first_name = ${normalizedFirstName},
-					last_name = ${normalizedLastName}
+					last_name = ${normalizedLastName},
+					username = ${normalizedUsername}
 				WHERE id = ${id}
 			`
 

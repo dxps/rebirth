@@ -18,6 +18,8 @@ import {
 	type CreateAttributeTemplateInput,
 	type UpdateAttributeTemplateInput,
 } from './types/attribute-template'
+import { type AuditEvent } from './types/audit-event'
+import { type Entity } from './types/entity'
 import {
 	hasValidEntityTemplateAttributes,
 	isEntityTemplateId,
@@ -27,14 +29,6 @@ import {
 	type EntityTemplate,
 	type UpdateEntityTemplateInput,
 } from './types/entity-template'
-import {
-	isCreateEntityInput,
-	isEntityId,
-	isUpdateEntityInput,
-	type CreateEntityInput,
-	type Entity,
-} from './types/entity'
-import { type AuditEvent } from './types/audit-event'
 
 export type ServiceStatus = 'ok' | 'degraded' | 'down'
 
@@ -109,10 +103,11 @@ export interface LoginResponse {
 	}
 }
 
-export interface UpdateEmailInput {
+export interface UpdateUserInfoInput {
 	email: string
 	firstName: string
 	lastName: string
+	username: string
 }
 
 export interface UpdatePasswordInput {
@@ -152,7 +147,7 @@ export const apiRoutes = {
 	permission: (id: number) => `/permissions/${id}`,
 	permissions: '/permissions',
 	user: (id: string) => `/users/${id}`,
-	userEmail: '/user/email',
+	userInfo: '/user/info',
 	userPassword: '/user/password',
 	users: '/users',
 } as const
@@ -236,7 +231,9 @@ export function isLoginInput(value: unknown): value is LoginInput {
 	)
 }
 
-export function isUpdateEmailInput(value: unknown): value is UpdateEmailInput {
+export function isUpdateUserInfoInput(
+	value: unknown,
+): value is UpdateUserInfoInput {
 	if (!value || typeof value !== 'object') {
 		return false
 	}
@@ -250,7 +247,9 @@ export function isUpdateEmailInput(value: unknown): value is UpdateEmailInput {
 		typeof input.firstName === 'string' &&
 		input.firstName.trim().length > 0 &&
 		typeof input.lastName === 'string' &&
-		input.lastName.trim().length > 0
+		input.lastName.trim().length > 0 &&
+		typeof input.username === 'string' &&
+		input.username.trim().length > 0
 	)
 }
 
@@ -352,7 +351,8 @@ function isCreateEntityTemplateLinkInput(
 
 	return (
 		(input.id === undefined ||
-			(typeof input.id === 'string' && isEntityTemplateLinkId(input.id))) &&
+			(typeof input.id === 'string' &&
+				isEntityTemplateLinkId(input.id))) &&
 		typeof input.targetEntityTemplateId === 'string' &&
 		isEntityTemplateId(input.targetEntityTemplateId) &&
 		typeof input.name === 'string' &&
@@ -451,17 +451,17 @@ export {
 	valueTypes,
 } from './types/attribute-template'
 export type {
-	AuditEvent,
-	AuditEventId,
-	CreateAuditEventInput,
-} from './types/audit-event'
-export { auditEventModel } from './types/audit-event'
-export type {
 	AttributeTemplate,
 	AttributeTemplateId,
 	CreateAttributeTemplateInput,
 	UpdateAttributeTemplateInput,
 } from './types/attribute-template'
+export { auditEventModel } from './types/audit-event'
+export type {
+	AuditEvent,
+	AuditEventId,
+	CreateAuditEventInput,
+} from './types/audit-event'
 export {
 	entityAttributeModel,
 	entityLinkModel,
