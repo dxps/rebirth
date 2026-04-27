@@ -58,8 +58,31 @@ const entityModalWidth = 520
 const entityAttributeReorderThreshold = 0.5
 const entitiesPageSize = 10
 
+interface ModalPosition {
+	x: number
+	y: number
+}
+
+interface ModalSize {
+	height: number
+	width: number
+}
+
 function clampToRange(value: number, min: number, max: number) {
 	return Math.max(min, Math.min(value, max))
+}
+
+function getDefaultEntityModalSize(): ModalSize {
+	return {
+		height: Math.min(
+			entityModalHeight,
+			window.innerHeight - entityModalMargin * 2,
+		),
+		width: Math.min(
+			entityModalWidth,
+			window.innerWidth - entityModalMargin * 2,
+		),
+	}
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -162,10 +185,8 @@ interface EntityDetailsWindowState {
 	id: string
 	activeTab: 'attributes' | 'links' | 'inlinks'
 	zIndex: number
-	initialPosition: {
-		x: number
-		y: number
-	}
+	initialPosition: ModalPosition
+	initialSize: ModalSize
 	isLoading: boolean
 }
 
@@ -174,10 +195,8 @@ interface EntityEditWindowState {
 	activeTab: 'attributes' | 'links' | 'inlinks'
 	id: string
 	zIndex: number
-	initialPosition: {
-		x: number
-		y: number
-	}
+	initialPosition: ModalPosition
+	initialSize: ModalSize
 }
 
 interface CreateEntityModalProps {
@@ -190,10 +209,8 @@ interface CreateEntityModalProps {
 	mode: 'create' | 'edit'
 	initialEntityTemplateId?: string
 	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
-	initialPosition?: {
-		x: number
-		y: number
-	}
+	initialPosition?: ModalPosition
+	initialSize?: ModalSize
 	isLoadingOptions: boolean
 	isSaving: boolean
 	zIndex?: number
@@ -201,13 +218,15 @@ interface CreateEntityModalProps {
 	onActivate?: () => void
 	onCreate: (input: CreateEntityInput) => Promise<void>
 	onBack?: (
-		position: { x: number; y: number },
+		position: ModalPosition,
+		size: ModalSize,
 		activeTab: 'attributes' | 'links' | 'inlinks',
 	) => void
 	onUpdate: (
 		id: string,
 		input: UpdateEntityInput,
-		position?: { x: number; y: number },
+		position?: ModalPosition,
+		size?: ModalSize,
 		activeTab?: 'attributes' | 'links' | 'inlinks',
 	) => Promise<void>
 }
@@ -245,6 +264,7 @@ function CreateEntityModal({
 	initialEntityTemplateId = '',
 	initialActiveTab = 'attributes',
 	initialPosition,
+	initialSize,
 	isLoadingOptions,
 	isSaving,
 	zIndex = 1,
@@ -295,16 +315,9 @@ function CreateEntityModal({
 			initialPosition?.y ??
 			Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}))
-	const [size, setSize] = useState(() => ({
-		height: Math.min(
-			entityModalHeight,
-			window.innerHeight - entityModalMargin * 2,
-		),
-		width: Math.min(
-			entityModalWidth,
-			window.innerWidth - entityModalMargin * 2,
-		),
-	}))
+	const [size, setSize] = useState(
+		() => initialSize ?? getDefaultEntityModalSize(),
+	)
 	const modalTitle = mode === 'edit' ? 'Entity :: Edit' : 'Entity :: New'
 	const selectedEntityTemplate =
 		entityTemplates.find(
@@ -749,6 +762,7 @@ function CreateEntityModal({
 					})),
 				},
 				position,
+				size,
 				activeTab,
 			)
 			return
@@ -1302,7 +1316,7 @@ function CreateEntityModal({
 								onPointerDown={(event) =>
 									event.stopPropagation()
 								}
-								onClick={() => onBack?.(position, activeTab)}
+								onClick={() => onBack?.(position, size, activeTab)}
 							>
 								<ArrowLeft aria-hidden="true" />
 							</button>
@@ -2292,10 +2306,8 @@ interface EntityDetailsModalProps {
 	entityTemplates: EntityTemplate[]
 	error: string | null
 	isLoading: boolean
-	initialPosition?: {
-		x: number
-		y: number
-	}
+	initialPosition?: ModalPosition
+	initialSize?: ModalSize
 	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
 	windowId: string
 	zIndex?: number
@@ -2307,7 +2319,8 @@ interface EntityDetailsModalProps {
 	) => void
 	onEdit: (
 		entity: Entity,
-		position: { x: number; y: number },
+		position: ModalPosition,
+		size: ModalSize,
 		windowId: string,
 		activeTab: 'attributes' | 'links' | 'inlinks',
 	) => void
@@ -2325,6 +2338,7 @@ function EntityDetailsModal({
 	isLoading,
 	initialActiveTab = 'attributes',
 	initialPosition,
+	initialSize,
 	windowId,
 	zIndex = 1,
 	canEdit = true,
@@ -2358,16 +2372,9 @@ function EntityDetailsModal({
 			initialPosition?.y ??
 			Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}))
-	const [size, setSize] = useState(() => ({
-		height: Math.min(
-			entityModalHeight,
-			window.innerHeight - entityModalMargin * 2,
-		),
-		width: Math.min(
-			entityModalWidth,
-			window.innerWidth - entityModalMargin * 2,
-		),
-	}))
+	const [size, setSize] = useState(
+		() => initialSize ?? getDefaultEntityModalSize(),
+	)
 	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
 	const idPopoverRef = useRef<HTMLDivElement | null>(null)
 	const dragStart = useRef({
@@ -2782,6 +2789,7 @@ function EntityDetailsModal({
 											onEdit(
 												entity,
 												position,
+												size,
 												windowId,
 												activeTab,
 											)
@@ -3461,7 +3469,8 @@ export function DataExplorerView() {
 	const openEntityEditModal = useCallback(
 		(
 			entity: Entity,
-			position: { x: number; y: number },
+			position: ModalPosition,
+			size: ModalSize,
 			windowId: string,
 			activeTab: 'attributes' | 'links' | 'inlinks',
 		) => {
@@ -3494,6 +3503,7 @@ export function DataExplorerView() {
 									entity,
 									activeTab,
 									initialPosition: position,
+									initialSize: size,
 									zIndex,
 								}
 							: window,
@@ -3507,6 +3517,7 @@ export function DataExplorerView() {
 						activeTab,
 						id: crypto.randomUUID(),
 						initialPosition: position,
+						initialSize: size,
 						zIndex,
 					},
 				]
@@ -3735,6 +3746,7 @@ export function DataExplorerView() {
 					error: null,
 					id: windowId,
 					initialPosition,
+					initialSize: getDefaultEntityModalSize(),
 					zIndex: getNextModalZIndex(),
 					isLoading: true,
 				},
@@ -3856,7 +3868,8 @@ export function DataExplorerView() {
 		async (
 			id: string,
 			input: UpdateEntityInput,
-			editWindowPosition?: { x: number; y: number },
+			editWindowPosition?: ModalPosition,
+			editWindowSize?: ModalSize,
 			editWindowActiveTab?: 'attributes' | 'links' | 'inlinks',
 			editWindowId?: string,
 		): Promise<void> => {
@@ -3929,6 +3942,8 @@ export function DataExplorerView() {
 										window.innerHeight * 0.18,
 									),
 								},
+								initialSize:
+									editWindowSize ?? getDefaultEntityModalSize(),
 								zIndex: getNextModalZIndex(),
 								isLoading: false,
 							},
@@ -4350,6 +4365,7 @@ export function DataExplorerView() {
 					}
 					initialActiveTab={window.activeTab}
 					initialPosition={window.initialPosition}
+					initialSize={window.initialSize}
 					isLoadingOptions={isLoadingCreateOptions}
 					isSaving={isSavingEntity}
 					onActivate={() => activateEntityEditWindow(window.id)}
@@ -4359,7 +4375,7 @@ export function DataExplorerView() {
 							current.filter((item) => item.id !== window.id),
 						)
 					}
-					onBack={(position, activeTab) => {
+					onBack={(position, size, activeTab) => {
 						setEntityEditWindows((current) =>
 							current.filter((item) => item.id !== window.id),
 						)
@@ -4374,17 +4390,19 @@ export function DataExplorerView() {
 								error: null,
 								id: crypto.randomUUID(),
 								initialPosition: position,
+								initialSize: size,
 								zIndex: getNextModalZIndex(),
 								isLoading: false,
 							},
 						])
 					}}
 					onCreate={createEntity}
-					onUpdate={(id, input, position, activeTab) =>
+					onUpdate={(id, input, position, size, activeTab) =>
 						updateEntityRecord(
 							id,
 							input,
 							position ?? window.initialPosition,
+							size ?? window.initialSize,
 							activeTab ?? window.activeTab,
 							window.id,
 						)
@@ -4403,6 +4421,7 @@ export function DataExplorerView() {
 					error={window.error}
 					initialActiveTab={window.activeTab}
 					initialPosition={window.initialPosition}
+					initialSize={window.initialSize}
 					isLoading={window.isLoading}
 					onActivate={activateEntityDetailsWindow}
 					onDelete={deleteEntity}
