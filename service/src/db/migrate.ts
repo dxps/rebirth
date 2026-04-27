@@ -102,6 +102,16 @@ async function seedInitialAdminUser(
 		WHERE users.username = 'admin'
 		ON CONFLICT (user_id, permission_id) DO NOTHING
 	`
+
+	await client`
+		INSERT INTO user_access_levels (user_id, access_level_id)
+		SELECT users.id, access_levels.id
+		FROM users
+		CROSS JOIN access_levels
+		WHERE users.username = 'admin'
+			AND access_levels.id IN (1, 2, 3, 4)
+		ON CONFLICT (user_id, access_level_id) DO NOTHING
+	`
 }
 
 export async function runMigrations(): Promise<void> {
