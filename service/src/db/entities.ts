@@ -56,6 +56,11 @@ interface EntityListResult {
 	total: number
 }
 
+interface EntityLinkCountRow {
+	entity_id: string | null
+	total: number
+}
+
 export class EntityValidationError extends Error {
 	constructor(message: string) {
 		super(message)
@@ -294,6 +299,49 @@ async function readEntityRows(
 	return entities.slice(offset, offset + pageSize)
 }
 
+async function hydrateEntityLinkCounts(
+	client: ReturnType<typeof createDatabase>['client'],
+	entities: Entity[],
+): Promise<Entity[]> {
+	if (entities.length === 0) {
+		return entities
+	}
+
+	const entityIds = entities.map((entity) => entity.id)
+	const outgoingCountRows = await client<EntityLinkCountRow[]>`
+		SELECT entity_id, COUNT(*)::int AS total
+		FROM entity_links
+		WHERE entity_id = ANY(${entityIds})
+		GROUP BY entity_id
+	`
+	const incomingCountRows = await client<EntityLinkCountRow[]>`
+		SELECT target_entity_id AS entity_id, COUNT(*)::int AS total
+		FROM entity_links
+		WHERE target_entity_id = ANY(${entityIds})
+		GROUP BY target_entity_id
+	`
+	const outgoingCountByEntityId = new Map(
+		outgoingCountRows
+			.filter((row): row is EntityLinkCountRow & { entity_id: string } =>
+				Boolean(row.entity_id),
+			)
+			.map((row) => [row.entity_id, row.total]),
+	)
+	const incomingCountByEntityId = new Map(
+		incomingCountRows
+			.filter((row): row is EntityLinkCountRow & { entity_id: string } =>
+				Boolean(row.entity_id),
+			)
+			.map((row) => [row.entity_id, row.total]),
+	)
+
+	return entities.map((entity) => ({
+		...entity,
+		incomingLinksCount: incomingCountByEntityId.get(entity.id) ?? 0,
+		outgoingLinksCount: outgoingCountByEntityId.get(entity.id) ?? 0,
+	}))
+}
+
 async function insertEntityAttributes(
 	sql: postgres.TransactionSql,
 	entityId: string,
@@ -498,8 +546,9 @@ export async function listEntities(
 			pageSize,
 		)
 		const total = (await readEntityRows(client, undefined, searchTerm)).length
+		const dataWithCounts = await hydrateEntityLinkCounts(client, data)
 
-		return { data, total }
+		return { data: dataWithCounts, total }
 	} finally {
 		await client.end()
 	}

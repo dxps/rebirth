@@ -105,6 +105,8 @@ export interface Entity {
 	attributes: EntityAttribute[]
 	listingAttributeId: EntityAttributeId
 	links: EntityLink[]
+	incomingLinksCount?: number
+	outgoingLinksCount?: number
 }
 
 export const entityModel = {

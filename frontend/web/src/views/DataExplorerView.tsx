@@ -19,6 +19,8 @@ import {
 } from '@rebirth/shared'
 import {
 	ArrowLeft,
+	ArrowDownLeft,
+	ArrowUpRight,
 	Clipboard,
 	ExternalLink,
 	GripVertical,
@@ -101,6 +103,10 @@ function getEntityListingLabel(entity: Entity): string {
 	return listingAttribute
 		? `${listingAttribute.name}: ${listingAttribute.value}`
 		: entity.id
+}
+
+function getLinkCountTooltip(count: number, direction: 'incoming' | 'outgoing') {
+	return `${count} ${direction} ${count === 1 ? 'link' : 'links'}`
 }
 
 function normalizeEntityAttributeValue(
@@ -4069,6 +4075,11 @@ export function DataExplorerView() {
 									entities.map((entity) => {
 										const listingAttribute =
 											getEntityListingAttribute(entity)
+										const outgoingLinksCount =
+											entity.outgoingLinksCount ??
+											entity.links.length
+										const incomingLinksCount =
+											entity.incomingLinksCount ?? 0
 
 										return (
 											<tr
@@ -4117,10 +4128,41 @@ export function DataExplorerView() {
 													</span>
 												</td>
 												<td className="entity-listing-value-cell">
-													<strong>
-														{listingAttribute?.value ??
-															''}
-													</strong>
+													<div className="entity-listing-value-content">
+														<strong>
+															{listingAttribute?.value ??
+																''}
+														</strong>
+														<span
+															className="entity-link-summary"
+															aria-label={`${outgoingLinksCount} outgoing links, ${incomingLinksCount} incoming links`}
+														>
+														<span
+															className="entity-link-summary-item"
+															data-tooltip={getLinkCountTooltip(
+																outgoingLinksCount,
+																'outgoing',
+															)}
+														>
+															<ArrowUpRight aria-hidden="true" />
+															<span>
+																{outgoingLinksCount}
+															</span>
+														</span>
+														<span
+															className="entity-link-summary-item"
+															data-tooltip={getLinkCountTooltip(
+																incomingLinksCount,
+																'incoming',
+															)}
+														>
+															<ArrowDownLeft aria-hidden="true" />
+															<span>
+																{incomingLinksCount}
+																</span>
+															</span>
+														</span>
+													</div>
 												</td>
 											</tr>
 										)
