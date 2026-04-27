@@ -2863,11 +2863,14 @@ export function TemplatesView() {
 	const loadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
 	const isAuthenticated = storedAuth !== null
+	const canManageOwnData =
+		hasStoredPermission(storedAuth, PermissionName.ManageOwnData)
 	const canManageTemplates =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor)
+	const canCreateManagedData = canManageTemplates || canManageOwnData
 	const isAuthorized =
-		canManageTemplates ||
+		canCreateManagedData ||
 		hasStoredPermission(storedAuth, PermissionName.Viewer)
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
@@ -3407,7 +3410,7 @@ export function TemplatesView() {
 
 	const openCreateAttributeTemplate = useCallback(
 		(point: { clientX: number; clientY: number }) => {
-			if (!canManageTemplates) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3454,12 +3457,12 @@ export function TemplatesView() {
 				]
 			})
 		},
-		[canManageTemplates],
+		[canCreateManagedData],
 	)
 
 	const openCreateEntityTemplate = useCallback(
 		(point: { clientX: number; clientY: number }) => {
-			if (!canManageTemplates) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3506,7 +3509,7 @@ export function TemplatesView() {
 				]
 			})
 		},
-		[canManageTemplates],
+		[canCreateManagedData],
 	)
 
 	if (!isAuthorized) {
@@ -3551,7 +3554,7 @@ export function TemplatesView() {
 									<th>name</th>
 									<th>description</th>
 									<th className="data-table-action-heading">
-										{canManageTemplates ? (
+										{canCreateManagedData ? (
 											<button
 												aria-label="Create entity template"
 												className="section-action-button"
@@ -3660,7 +3663,7 @@ export function TemplatesView() {
 									<th>description</th>
 									<th>value type</th>
 									<th className="data-table-action-heading">
-										{canManageTemplates ? (
+										{canCreateManagedData ? (
 											<button
 												aria-label="Create attribute template"
 												className="section-action-button"
@@ -3753,7 +3756,15 @@ export function TemplatesView() {
 				)}
 			</div>
 			<div className="draggable-modal-layer">
-				{openModals.map((modal) => (
+				{openModals.map((modal) => {
+					const canManageModal =
+						canManageTemplates ||
+						(canManageOwnData &&
+							(modal.entityTemplate?.ownerUserId ??
+								modal.attributeTemplate?.ownerUserId) ===
+								storedAuth?.user.id)
+
+					return (
 					<DraggableModal
 						key={modal.key}
 						id={modal.key}
@@ -3789,7 +3800,7 @@ export function TemplatesView() {
 						}}
 						onClose={closeModal}
 						onDelete={() => {
-							if (!canManageTemplates) {
+							if (!canManageModal) {
 								return
 							}
 
@@ -3802,7 +3813,7 @@ export function TemplatesView() {
 							}
 						}}
 						onEdit={(key) => setModalMode(key, 'edit')}
-						canEdit={canManageTemplates}
+						canEdit={canManageModal}
 						saveDisabledTooltip={
 							modal.templateType === 'entity'
 								? 'An entity template must have a name\nand include at least one attribute'
@@ -4021,7 +4032,8 @@ export function TemplatesView() {
 							</div>
 						) : null}
 					</DraggableModal>
-				))}
+					)
+				})}
 			</div>
 		</section>
 	)

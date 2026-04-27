@@ -29,6 +29,7 @@ CREATE TABLE "entity_template_links" (
 --> statement-breakpoint
 CREATE TABLE "entity_templates" (
 	"id" uuid PRIMARY KEY NOT NULL,
+	"owner_user_id" uuid NOT NULL,
 	"name" text NOT NULL,
 	"description" text NOT NULL,
 	"listing_attribute_id" uuid NOT NULL,
@@ -37,6 +38,7 @@ CREATE TABLE "entity_templates" (
 	CONSTRAINT "entity_tmpls_desc_trimmed_check" CHECK ("entity_templates"."description" = btrim("entity_templates"."description"))
 );
 --> statement-breakpoint
+ALTER TABLE "entity_templates" ADD CONSTRAINT "entity_templates_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entity_template_attributes" ADD CONSTRAINT "entity_tmpl_attrs_entity_tmpl_id_entity_tmpls_id_fk" FOREIGN KEY ("entity_template_id") REFERENCES "public"."entity_templates"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entity_template_attributes" ADD CONSTRAINT "entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk" FOREIGN KEY ("attribute_template_id") REFERENCES "public"."attribute_templates"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entity_template_attributes" ADD CONSTRAINT "entity_tmpl_attrs_access_level_id_access_levels_id_fk" FOREIGN KEY ("access_level_id") REFERENCES "public"."access_levels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

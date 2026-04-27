@@ -1,9 +1,11 @@
 CREATE TABLE "entities" (
 	"id" uuid PRIMARY KEY NOT NULL,
+	"owner_user_id" uuid NOT NULL,
 	"entity_template_id" uuid,
 	"listing_attribute_id" uuid NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "entities" ADD CONSTRAINT "entities_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE TABLE "entity_attributes" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"entity_id" uuid NOT NULL,

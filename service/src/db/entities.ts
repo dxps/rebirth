@@ -17,6 +17,7 @@ import { createUuidV7 } from './uuid'
 
 interface EntityRow {
 	id: string
+	owner_user_id: string
 	entity_template_id: string | null
 	listing_attribute_id: string
 }
@@ -156,6 +157,7 @@ function toEntity(
 			})),
 		entityTemplateId: row.entity_template_id,
 		id: row.id,
+		ownerUserId: row.owner_user_id,
 		links: linkRows
 			.filter((linkRow) => linkRow.entity_id === row.id)
 			.sort((left, right) => left.listing_index - right.listing_index)
@@ -241,13 +243,13 @@ async function readEntityRows(
 			: null
 	const rows = id
 		? await client<EntityRow[]>`
-			SELECT id, entity_template_id, listing_attribute_id
+			SELECT id, owner_user_id, entity_template_id, listing_attribute_id
 			FROM entities
 			WHERE id = ${id}
 		`
 		: searchPattern
 			? await client<EntityRow[]>`
-			SELECT id, entity_template_id, listing_attribute_id
+			SELECT id, owner_user_id, entity_template_id, listing_attribute_id
 			FROM entities
 			WHERE EXISTS (
 				SELECT 1
@@ -260,7 +262,7 @@ async function readEntityRows(
 			)
 		`
 		: await client<EntityRow[]>`
-			SELECT id, entity_template_id, listing_attribute_id
+			SELECT id, owner_user_id, entity_template_id, listing_attribute_id
 			FROM entities
 		`
 
@@ -572,7 +574,7 @@ export async function getEntity(id: string) {
 	}
 }
 
-export async function createEntity(input: CreateEntityInput) {
+export async function createEntity(ownerUserId: string, input: CreateEntityInput) {
 	const databaseUrl = getDatabaseUrl()
 
 	if (!databaseUrl) {
@@ -613,11 +615,13 @@ export async function createEntity(input: CreateEntityInput) {
 			await sql`
 				INSERT INTO entities (
 					id,
+					owner_user_id,
 					entity_template_id,
 					listing_attribute_id
 				)
 				VALUES (
 					${id},
+					${ownerUserId},
 					${normalizedInput.entityTemplateId},
 					${normalizedInput.listingAttributeId}
 				)

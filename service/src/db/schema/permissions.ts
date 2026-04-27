@@ -27,6 +27,12 @@ export const seededPermissions = [
 	},
 	{
 		id: 3,
+		name: PermissionName.ManageOwnData,
+		description:
+			'Allows managing only your own data (entities, entity templates, attribute templates)',
+	},
+	{
+		id: 4,
 		name: PermissionName.Viewer,
 		description: 'Can view managed data with public access (level).',
 	},

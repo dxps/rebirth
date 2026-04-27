@@ -28,6 +28,7 @@ interface NormalizedEntityTemplateLinkInput
 
 interface EntityTemplateRow {
 	id: string
+	owner_user_id: string
 	name: string
 	description: string
 	listing_attribute_id: string
@@ -145,6 +146,7 @@ function toEntityTemplate(
 			})),
 		description: row.description,
 		id: row.id,
+		ownerUserId: row.owner_user_id,
 		links: linkRows
 			.filter((linkRow) => linkRow.entity_template_id === row.id)
 			.map(toEntityTemplateLink),
@@ -168,12 +170,13 @@ export async function readEntityTemplateRows(
 	const rows = id
 		? await client<EntityTemplateRow[]>`
 			SELECT id, name, description, listing_attribute_id
+			, owner_user_id
 			FROM entity_templates
 			WHERE id = ${id}
 			ORDER BY name
 		`
 		: await client<EntityTemplateRow[]>`
-			SELECT id, name, description, listing_attribute_id
+			SELECT id, name, description, listing_attribute_id, owner_user_id
 			FROM entity_templates
 			ORDER BY name
 		`
@@ -347,7 +350,10 @@ export async function listEntityTemplates() {
 	}
 }
 
-export async function createEntityTemplate(input: CreateEntityTemplateInput) {
+export async function createEntityTemplate(
+	ownerUserId: string,
+	input: CreateEntityTemplateInput,
+) {
 	const databaseUrl = getDatabaseUrl()
 
 	if (!databaseUrl) {
@@ -368,12 +374,14 @@ export async function createEntityTemplate(input: CreateEntityTemplateInput) {
 			await sql`
 				INSERT INTO entity_templates (
 					id,
+					owner_user_id,
 					name,
 					description,
 					listing_attribute_id
 				)
 				VALUES (
 					${id},
+					${ownerUserId},
 					${normalizedInput.name},
 					${normalizedInput.description},
 					${normalizedInput.listingAttributeId}

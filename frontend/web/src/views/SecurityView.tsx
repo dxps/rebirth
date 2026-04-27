@@ -737,7 +737,21 @@ function UserEditForm({
 		]
 	})
 	const [accessLevelIds, setAccessLevelIds] = useState<number[]>(
-		() => user?.accessLevels.map((accessLevel) => accessLevel.id) ?? [],
+		() => {
+			const existingAccessLevelIds =
+				user?.accessLevels.map((accessLevel) => accessLevel.id) ?? []
+
+			if (existingAccessLevelIds.length > 0) {
+				return existingAccessLevelIds
+			}
+
+			return [
+				accessLevels.find(
+					(accessLevel) => accessLevel.name === 'Public',
+				)?.id ??
+					1,
+			]
+		},
 	)
 	const [error, setError] = useState<string | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
@@ -818,8 +832,17 @@ function UserEditForm({
 
 		if (validAccessLevelIds.length !== accessLevelIds.length) {
 			setAccessLevelIds(validAccessLevelIds)
+			return
 		}
-	}, [accessLevelIds, accessLevels])
+
+		if (isCreate && validAccessLevelIds.length === 0 && accessLevels[0]) {
+			setAccessLevelIds([
+				accessLevels.find((accessLevel) => accessLevel.name === 'Public')
+					?.id ??
+					accessLevels[0].id,
+			])
+		}
+	}, [accessLevelIds, accessLevels, isCreate])
 
 	useEffect(() => {
 		function closeMenus(event: PointerEvent): void {
@@ -957,7 +980,13 @@ function UserEditForm({
 				/>
 			</label>
 			<div className="security-user-two-column-row">
-				<label>
+				<label
+					data-tooltip={
+						user?.username === 'admin'
+							? 'Admin user cannot rename its username'
+							: undefined
+					}
+				>
 					<span>username</span>
 					<input
 						autoComplete="username"

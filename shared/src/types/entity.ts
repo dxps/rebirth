@@ -5,6 +5,7 @@ import {
 	type ValueType,
 } from './attribute-template'
 import { isAccessLevelId, type AccessLevelId } from '../security/access-level'
+import { type UserId } from '../security/user'
 import {
 	isEntityTemplateAttributeId,
 	isEntityTemplateId,
@@ -101,6 +102,7 @@ export type CreateEntityInput =
 
 export interface Entity {
 	id: EntityId
+	ownerUserId: UserId
 	entityTemplateId: EntityTemplateId | null
 	attributes: EntityAttribute[]
 	listingAttributeId: EntityAttributeId

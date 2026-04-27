@@ -1,4 +1,5 @@
 import { type AccessLevelId } from '../security/access-level'
+import { type UserId } from '../security/user'
 
 export type AttributeTemplateId = string
 
@@ -20,6 +21,7 @@ export const valueTypes = [
 
 export interface AttributeTemplate {
 	id: AttributeTemplateId
+	ownerUserId: UserId
 	name: string
 	description: string
 	valueType: ValueType
@@ -30,7 +32,7 @@ export interface AttributeTemplate {
 
 export type CreateAttributeTemplateInput = Omit<
 	AttributeTemplate,
-	'defaultValue' | 'id'
+	'defaultValue' | 'id' | 'ownerUserId'
 > & {
 	defaultValue?: string | null
 }

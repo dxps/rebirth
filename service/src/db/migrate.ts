@@ -54,7 +54,8 @@ async function seedPermissions(
 		VALUES
 			(1, 'Admin', 'Can manage users, security (access levels, permissions), templates and data.'),
 			(2, 'Editor', 'Can create, update, and delete templates and data.'),
-			(3, 'Viewer', 'Can view managed data with public and assigned access levels.')
+			(3, 'Manage Own Data', 'Allows managing only your own data (entities, entity templates, attribute templates)'),
+			(4, 'Viewer', 'Can view managed data with public and assigned access levels.')
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			description = EXCLUDED.description

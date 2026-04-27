@@ -1204,6 +1204,14 @@ button.access-level-refresh-button:hover {
 	font-style: italic;
 }
 
+.entities-empty-state {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
+	justify-content: center;
+}
+
 .attribute-templates-table th:nth-child(3),
 .attribute-templates-table td:nth-child(3) {
 	color: var(--muted);

@@ -16,6 +16,7 @@ import {
 	uuid,
 } from 'drizzle-orm/pg-core'
 import { accessLevels } from './access-levels'
+import { users } from './users'
 
 export const attributeTemplateValueType = pgEnum(
 	'attribute_template_value_type',
@@ -34,6 +35,7 @@ export const attributeTemplates = pgTable(
 		defaultValue: text('default_value'),
 		isRequired: boolean('is_required').notNull().default(false),
 		accessLevelId: integer('access_level_id').notNull(),
+		ownerUserId: uuid('owner_user_id').notNull(),
 	},
 	(table) => [
 		check(
@@ -52,6 +54,11 @@ export const attributeTemplates = pgTable(
 			columns: [table.accessLevelId],
 			foreignColumns: [accessLevels.id],
 			name: 'attribute_templates_access_level_id_access_levels_id_fk',
+		}),
+		foreignKey({
+			columns: [table.ownerUserId],
+			foreignColumns: [users.id],
+			name: 'attribute_templates_owner_user_id_users_id_fk',
 		}),
 	],
 )

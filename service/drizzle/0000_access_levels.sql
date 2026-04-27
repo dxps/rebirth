@@ -5,6 +5,22 @@ CREATE TABLE "access_levels" (
 	CONSTRAINT "access_levels_name_unique" UNIQUE("name")
 );
 
+CREATE TABLE "users" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"email" text NOT NULL,
+	"first_name" text NOT NULL,
+	"last_name" text NOT NULL,
+	"username" text NOT NULL,
+	"password_hash" text NOT NULL,
+	CONSTRAINT "users_email_unique" UNIQUE("email"),
+	CONSTRAINT "users_username_unique" UNIQUE("username"),
+	CONSTRAINT "users_email_trimmed_check" CHECK ("users"."email" = btrim("users"."email")),
+	CONSTRAINT "users_first_name_trimmed_check" CHECK ("users"."first_name" = btrim("users"."first_name")),
+	CONSTRAINT "users_last_name_trimmed_check" CHECK ("users"."last_name" = btrim("users"."last_name")),
+	CONSTRAINT "users_username_trimmed_check" CHECK ("users"."username" = btrim("users"."username")),
+	CONSTRAINT "users_email_contains_at_check" CHECK (position('@' in "users"."email") > 1)
+);
+
 INSERT INTO "access_levels" ("id", "name", "description")
 VALUES
 	(1, 'Public', 'Publicly visible'),

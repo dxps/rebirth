@@ -19,11 +19,13 @@ import {
 	attributeTemplateValueType,
 	attributeTemplates,
 } from './attribute-templates'
+import { users } from './users'
 
 export const entityTemplates = pgTable(
 	entityTemplateModel.tableName,
 	{
 		id: uuid('id').primaryKey(),
+		ownerUserId: uuid('owner_user_id').notNull(),
 		name: text('name').notNull(),
 		description: text('description').notNull(),
 		listingAttributeId: uuid('listing_attribute_id').notNull(),
@@ -38,6 +40,11 @@ export const entityTemplates = pgTable(
 			sql`${table.description} = btrim(${table.description})`,
 		),
 		unique('entity_tmpls_name_unique').on(table.name),
+		foreignKey({
+			columns: [table.ownerUserId],
+			foreignColumns: [users.id],
+			name: 'entity_templates_owner_user_id_users_id_fk',
+		}),
 	],
 )
 

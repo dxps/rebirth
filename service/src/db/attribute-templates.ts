@@ -58,6 +58,7 @@ export async function listAttributeTemplates() {
 }
 
 export async function createAttributeTemplate(
+	ownerUserId: string,
 	input: CreateAttributeTemplateInput,
 ) {
 	const databaseUrl = getDatabaseUrl()
@@ -74,6 +75,7 @@ export async function createAttributeTemplate(
 			.values({
 				...normalizeCreateInput(input),
 				id: createUuidV7(),
+				ownerUserId,
 			})
 			.returning()
 

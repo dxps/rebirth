@@ -157,12 +157,20 @@ function hasPermission(user: User, permission: PermissionName): boolean {
   return user.permissions.some((userPermission) => userPermission.name === permission);
 }
 
+function canManageOwnData(user: User): boolean {
+  return hasPermission(user, PermissionName.ManageOwnData);
+}
+
 function canManageData(user: User): boolean {
   return hasPermission(user, PermissionName.Admin) || hasPermission(user, PermissionName.Editor);
 }
 
+function canCreateManagedData(user: User): boolean {
+  return canManageData(user) || canManageOwnData(user);
+}
+
 function canViewData(user: User): boolean {
-  return canManageData(user) || hasPermission(user, PermissionName.Viewer);
+  return canCreateManagedData(user) || hasPermission(user, PermissionName.Viewer);
 }
 
 function canManageSecurity(user: User): boolean {
@@ -171,6 +179,15 @@ function canManageSecurity(user: User): boolean {
 
 function canViewAudit(user: User): boolean {
   return user.username === "admin" || user.accessLevels.some((accessLevel) => accessLevel.name.toLowerCase() === auditAccessLevelName);
+}
+
+function canManageOwnedRecord(
+  user: User,
+  record: {
+    ownerUserId: string;
+  },
+): boolean {
+  return canManageData(user) || (canManageOwnData(user) && record.ownerUserId === user.id);
 }
 
 function maskRestrictedEntityValues(entity: Entity): Entity {
@@ -184,7 +201,7 @@ function maskRestrictedEntityValues(entity: Entity): Entity {
 }
 
 function getVisibleEntity(user: User, entity: Entity): Entity {
-  if (canManageData(user)) {
+  if (canManageOwnedRecord(user, entity)) {
     return entity;
   }
 
@@ -275,6 +292,20 @@ async function requireDataManager(request: Request): Promise<Response | User> {
   }
 
   if (!canManageData(user)) {
+    return authorizationRequiredResponse();
+  }
+
+  return user;
+}
+
+async function requireManagedDataCreator(request: Request): Promise<Response | User> {
+  const user = await requireAuthenticatedUser(request);
+
+  if (user instanceof Response) {
+    return user;
+  }
+
+  if (!canCreateManagedData(user)) {
     return authorizationRequiredResponse();
   }
 
@@ -891,7 +922,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "POST" && url.pathname === apiRoutes.attributeTemplates) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireManagedDataCreator(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -912,7 +943,7 @@ const server = Bun.serve({
           );
         }
 
-        const createdAttributeTemplate = await createAttributeTemplate({
+        const createdAttributeTemplate = await createAttributeTemplate(authenticatedUser.id, {
           accessLevelId: input.accessLevelId,
           defaultValue: normalizeDefaultValue(input.defaultValue) ?? null,
           description: input.description.trim(),
@@ -993,7 +1024,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "POST" && url.pathname === apiRoutes.entityTemplates) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireManagedDataCreator(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1014,7 +1045,7 @@ const server = Bun.serve({
           );
         }
 
-        const createdEntityTemplate = await createEntityTemplate({
+        const createdEntityTemplate = await createEntityTemplate(authenticatedUser.id, {
           attributes: input.attributes,
           description: input.description.trim(),
           links: input.links,
@@ -1103,7 +1134,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "POST" && url.pathname === apiRoutes.entities) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireManagedDataCreator(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1124,7 +1155,7 @@ const server = Bun.serve({
           );
         }
 
-        const createdEntity = await createEntity(input);
+        const createdEntity = await createEntity(authenticatedUser.id, input);
 
         if (!createdEntity) {
           return Response.json(
@@ -1233,7 +1264,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "PUT" && entityMatch) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireAuthenticatedUser(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1253,6 +1284,24 @@ const server = Bun.serve({
               status: 400
             }
           );
+        }
+
+        const existingEntity = await getEntity(id);
+
+        if (!existingEntity) {
+          return Response.json(
+            {
+              error: "Entity not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (!canManageOwnedRecord(authenticatedUser, existingEntity)) {
+          return authorizationRequiredResponse();
         }
 
         const updatedEntity = await updateEntity(id, {
@@ -1297,7 +1346,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "DELETE" && entityMatch) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireAuthenticatedUser(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1316,6 +1365,24 @@ const server = Bun.serve({
               status: 400
             }
           );
+        }
+
+        const existingEntity = await getEntity(id);
+
+        if (!existingEntity) {
+          return Response.json(
+            {
+              error: "Entity not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (!canManageOwnedRecord(authenticatedUser, existingEntity)) {
+          return authorizationRequiredResponse();
         }
 
         const deletedEntity = await deleteEntity(id);
@@ -1534,7 +1601,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "PATCH" && attributeTemplateMatch) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireAuthenticatedUser(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1554,6 +1621,24 @@ const server = Bun.serve({
               status: 400
             }
           );
+        }
+
+        const existingAttributeTemplate = (await listAttributeTemplates()).find((attributeTemplate) => attributeTemplate.id === id);
+
+        if (!existingAttributeTemplate) {
+          return Response.json(
+            {
+              error: "Attribute template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (!canManageOwnedRecord(authenticatedUser, existingAttributeTemplate)) {
+          return authorizationRequiredResponse();
         }
 
         const updatedAttributeTemplate = await updateAttributeTemplate(id, {
@@ -1614,7 +1699,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "DELETE" && attributeTemplateMatch) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireAuthenticatedUser(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1633,6 +1718,24 @@ const server = Bun.serve({
               status: 400
             }
           );
+        }
+
+        const existingAttributeTemplate = (await listAttributeTemplates()).find((attributeTemplate) => attributeTemplate.id === id);
+
+        if (!existingAttributeTemplate) {
+          return Response.json(
+            {
+              error: "Attribute template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (!canManageOwnedRecord(authenticatedUser, existingAttributeTemplate)) {
+          return authorizationRequiredResponse();
         }
 
         const deletedAttributeTemplate = await deleteAttributeTemplate(id);
@@ -1672,7 +1775,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "PATCH" && entityTemplateMatch) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireAuthenticatedUser(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1692,6 +1795,24 @@ const server = Bun.serve({
               status: 400
             }
           );
+        }
+
+        const existingEntityTemplate = (await listEntityTemplates()).find((entityTemplate) => entityTemplate.id === id);
+
+        if (!existingEntityTemplate) {
+          return Response.json(
+            {
+              error: "Entity template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (!canManageOwnedRecord(authenticatedUser, existingEntityTemplate)) {
+          return authorizationRequiredResponse();
         }
 
         const updatedEntityTemplate = await updateEntityTemplate(id, {
@@ -1744,7 +1865,7 @@ const server = Bun.serve({
     }
 
     if (request.method === "DELETE" && entityTemplateMatch) {
-      const authenticatedUser = await requireDataManager(request);
+      const authenticatedUser = await requireAuthenticatedUser(request);
 
       if (authenticatedUser instanceof Response) {
         return authenticatedUser;
@@ -1763,6 +1884,24 @@ const server = Bun.serve({
               status: 400
             }
           );
+        }
+
+        const existingEntityTemplate = (await listEntityTemplates()).find((entityTemplate) => entityTemplate.id === id);
+
+        if (!existingEntityTemplate) {
+          return Response.json(
+            {
+              error: "Entity template not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (!canManageOwnedRecord(authenticatedUser, existingEntityTemplate)) {
+          return authorizationRequiredResponse();
         }
 
         const deletedEntityTemplate = await deleteEntityTemplate(id);

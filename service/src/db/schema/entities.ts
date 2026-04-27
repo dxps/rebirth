@@ -24,11 +24,13 @@ import {
 	entityTemplateLinks,
 	entityTemplates,
 } from './entity-templates'
+import { users } from './users'
 
 export const entities = pgTable(
 	entityModel.tableName,
 	{
 		id: uuid('id').primaryKey(),
+		ownerUserId: uuid('owner_user_id').notNull(),
 		entityTemplateId: uuid('entity_template_id'),
 		listingAttributeId: uuid('listing_attribute_id').notNull(),
 	},
@@ -37,6 +39,11 @@ export const entities = pgTable(
 			columns: [table.entityTemplateId],
 			foreignColumns: [entityTemplates.id],
 			name: 'entities_entity_tmpl_id_entity_tmpls_id_fk',
+		}),
+		foreignKey({
+			columns: [table.ownerUserId],
+			foreignColumns: [users.id],
+			name: 'entities_owner_user_id_users_id_fk',
 		}),
 	],
 )

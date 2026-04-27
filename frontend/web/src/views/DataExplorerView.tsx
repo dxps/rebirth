@@ -3228,11 +3228,14 @@ export function DataExplorerView() {
 	const entityDetailsLoadRequestIds = useRef(new Map<string, number>())
 	const modalZIndexRef = useRef(1)
 	const isAuthenticated = storedAuth !== null
+	const canManageOwnData =
+		hasStoredPermission(storedAuth, PermissionName.ManageOwnData)
 	const canManageData =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor)
+	const canCreateManagedData = canManageData || canManageOwnData
 	const isAuthorized =
-		canManageData ||
+		canCreateManagedData ||
 		hasStoredPermission(storedAuth, PermissionName.Viewer)
 	const grantedAccessLevelIds =
 		storedAuth?.user.accessLevels.map((accessLevel) => accessLevel.id) ?? []
@@ -3399,7 +3402,7 @@ export function DataExplorerView() {
 
 	const openCreateEntityChoice = useCallback(
 		(event: ReactMouseEvent<HTMLButtonElement>) => {
-			if (!canManageData) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3417,12 +3420,12 @@ export function DataExplorerView() {
 			setIsCreateChoiceOpen((current) => !current)
 			setCreateChoiceSource(null)
 		},
-		[canManageData],
+		[canCreateManagedData],
 	)
 
 	const selectCreateChoiceSource = useCallback(
 		(source: 'template' | 'scratch') => {
-			if (!canManageData) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3432,12 +3435,12 @@ export function DataExplorerView() {
 				void loadEntityTemplates()
 			}
 		},
-		[canManageData, loadEntityTemplates],
+		[canCreateManagedData, loadEntityTemplates],
 	)
 
 	const openCreateEntityModal = useCallback(
 		(mode: 'template' | 'scratch') => {
-			if (!canManageData) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3458,7 +3461,7 @@ export function DataExplorerView() {
 			entityTemplates.length,
 			loadAccessLevels,
 			loadEntityTemplates,
-			canManageData,
+			canCreateManagedData,
 		],
 	)
 
@@ -3474,7 +3477,7 @@ export function DataExplorerView() {
 			windowId: string,
 			activeTab: 'attributes' | 'links' | 'inlinks',
 		) => {
-			if (!canManageData) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3528,12 +3531,12 @@ export function DataExplorerView() {
 			entityTemplates.length,
 			loadAccessLevels,
 			loadEntityTemplates,
-			canManageData,
+			canCreateManagedData,
 		],
 	)
 
 	const deleteEntity = useCallback(async (entity: Entity): Promise<void> => {
-		if (!canManageData) {
+		if (!canCreateManagedData) {
 			return
 		}
 
@@ -3591,7 +3594,7 @@ export function DataExplorerView() {
 				)
 			}
 		}
-	}, [canManageData])
+	}, [canCreateManagedData])
 
 	const loadEntityDetails = useCallback(
 		async (windowId: string, entityId: string) => {
@@ -3812,7 +3815,7 @@ export function DataExplorerView() {
 
 	const createEntity = useCallback(
 		async (input: CreateEntityInput): Promise<void> => {
-			if (!canManageData) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3861,7 +3864,7 @@ export function DataExplorerView() {
 				}
 			}
 		},
-		[canManageData],
+		[canCreateManagedData],
 	)
 
 	const updateEntityRecord = useCallback(
@@ -3873,7 +3876,7 @@ export function DataExplorerView() {
 			editWindowActiveTab?: 'attributes' | 'links' | 'inlinks',
 			editWindowId?: string,
 		): Promise<void> => {
-			if (!canManageData) {
+			if (!canCreateManagedData) {
 				return
 			}
 
@@ -3966,7 +3969,7 @@ export function DataExplorerView() {
 				}
 			}
 		},
-		[canManageData, getNextModalZIndex],
+		[canCreateManagedData, getNextModalZIndex],
 	)
 
 	useEffect(() => {
@@ -4054,7 +4057,7 @@ export function DataExplorerView() {
 										className="data-table-action-heading"
 										colSpan={2}
 									>
-										{canManageData ? (
+										{canCreateManagedData ? (
 											<span className="entity-create-action">
 												<button
 													aria-expanded={
@@ -4082,8 +4085,27 @@ export function DataExplorerView() {
 									</tr>
 								) : entities.length === 0 ? (
 									<tr>
-										<td className="data-table-empty-cell">
-											<span>There are no entries</span>
+										<td
+											className="data-table-empty-cell"
+											colSpan={2}
+										>
+											<div className="entities-empty-state">
+												<span>There are no entries</span>
+												<button
+													aria-label="Refresh entities"
+													className="access-level-refresh-button"
+													data-tooltip="Try again"
+													type="button"
+													onClick={() =>
+														void loadEntities(
+															entitySearchTerm,
+															entitiesPage,
+														)
+													}
+												>
+													<RefreshCw aria-hidden="true" />
+												</button>
+											</div>
 										</td>
 									</tr>
 								) : (
@@ -4226,7 +4248,7 @@ export function DataExplorerView() {
 					</div>
 				)}
 			</div>
-			{canManageData && isCreateChoiceOpen ? (
+			{canCreateManagedData && isCreateChoiceOpen ? (
 				<div
 					className="include-attribute-popover entity-create-popover"
 					style={{
@@ -4327,7 +4349,7 @@ export function DataExplorerView() {
 					) : null}
 				</div>
 			) : null}
-			{canManageData && isCreateEntityModalOpen ? (
+			{canCreateManagedData && isCreateEntityModalOpen ? (
 				<CreateEntityModal
 					accessLevels={accessLevels}
 					creationMode={createEntityMode}
@@ -4349,7 +4371,7 @@ export function DataExplorerView() {
 					zIndex={createEntityModalZIndex}
 				/>
 			) : null}
-			{canManageData && entityEditWindows.map((window) => (
+			{canCreateManagedData && entityEditWindows.map((window) => (
 				<CreateEntityModal
 					key={window.id}
 					accessLevels={accessLevels}
@@ -4426,7 +4448,11 @@ export function DataExplorerView() {
 					onActivate={activateEntityDetailsWindow}
 					onDelete={deleteEntity}
 					onEdit={openEntityEditModal}
-					canEdit={canManageData}
+					canEdit={
+						canManageData ||
+						(canManageOwnData &&
+							window.entity?.ownerUserId === storedAuth?.user.id)
+					}
 					onOpenEntity={openEntityDetails}
 					onClose={() => closeEntityDetails(window.id)}
 					windowId={window.id}

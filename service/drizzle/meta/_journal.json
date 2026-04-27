@@ -13,42 +13,42 @@
 			"idx": 1,
 			"version": "7",
 			"when": 1776669067759,
-			"tag": "0001_attribute_templates",
+			"tag": "0001_users_permissions",
 			"breakpoints": true
 		},
 		{
 			"idx": 2,
 			"version": "7",
 			"when": 1776673900000,
-			"tag": "0002_entity_templates",
+			"tag": "0002_user_sessions",
 			"breakpoints": true
 		},
 		{
 			"idx": 3,
 			"version": "7",
 			"when": 1776748860000,
-			"tag": "0003_users_permissions",
+			"tag": "0003_user_access_levels",
 			"breakpoints": true
 		},
 		{
 			"idx": 4,
 			"version": "7",
 			"when": 1776776960635,
-			"tag": "0004_user_sessions",
+			"tag": "0004_attribute_templates",
 			"breakpoints": true
 		},
 		{
 			"idx": 5,
 			"version": "7",
 			"when": 1776922301981,
-			"tag": "0005_entities",
+			"tag": "0005_entity_templates",
 			"breakpoints": true
 		},
 		{
 			"idx": 6,
 			"version": "7",
 			"when": 1777280400000,
-			"tag": "0006_user_access_levels",
+			"tag": "0006_entities",
 			"breakpoints": true
 		},
 		{

@@ -5,6 +5,7 @@ import {
 	type ValueType,
 } from './attribute-template'
 import { isAccessLevelId, type AccessLevelId } from '../security/access-level'
+import { type UserId } from '../security/user'
 
 export type EntityTemplateId = string
 export type EntityTemplateAttributeId = string
@@ -41,6 +42,7 @@ export interface EntityTemplateLink {
 
 export interface EntityTemplate {
 	id: EntityTemplateId
+	ownerUserId: UserId
 	name: string
 	description: string
 	attributes: EntityTemplateAttribute[]
