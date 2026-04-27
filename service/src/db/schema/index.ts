@@ -14,4 +14,4 @@ export {
 	entityTemplates,
 } from './entity-templates'
 export { entities, entityAttributes, entityLinks } from './entities'
-export { userPermissions, userSessions, users } from './users'
+export { userAccessLevels, userPermissions, userSessions, users } from './users'

@@ -544,7 +544,7 @@ button svg,
 	min-width: 0;
 }
 
-.profile-permissions-section {
+.profile-authorization-section {
 	margin-top: 1.25rem;
 }
 
@@ -740,17 +740,22 @@ button svg,
 .security-access-levels-table td:first-child,
 .security-users-table .security-users-username-column,
 .security-users-table td:first-child {
-	width: 24%;
+	width: 18%;
 }
 
 .security-users-table .security-users-email-column,
 .security-users-table td:nth-child(2) {
-	width: 36%;
+	width: 30%;
 }
 
 .security-users-table .security-users-permissions-column,
 .security-users-table td:nth-child(3) {
-	width: 38%;
+	width: 23%;
+}
+
+.security-users-table .security-users-access-levels-column,
+.security-users-table td:nth-child(4) {
+	width: 26%;
 }
 
 .security-users-table th.data-table-action-heading,

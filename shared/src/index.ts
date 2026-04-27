@@ -6,6 +6,7 @@ import {
 } from './security/access-level'
 import { type Permission } from './security/permission'
 import {
+	hasValidAccessLevelIds,
 	hasValidPermissionIds,
 	type CreateUserInput,
 	type UpdateUserInput,
@@ -204,6 +205,7 @@ export function isCreateUserInput(value: unknown): value is CreateUserInput {
 		typeof input.username === 'string' &&
 		typeof input.password === 'string' &&
 		input.password.length >= 8 &&
+		hasValidAccessLevelIds(input.accessLevelIds) &&
 		hasValidPermissionIds(input.permissionIds)
 	)
 }
@@ -274,6 +276,8 @@ export function isUpdateUserInput(value: unknown): value is UpdateUserInput {
 		(input.password === undefined ||
 			(typeof input.password === 'string' &&
 				input.password.length >= 8)) &&
+		(input.accessLevelIds === undefined ||
+			hasValidAccessLevelIds(input.accessLevelIds)) &&
 		(input.permissionIds === undefined ||
 			hasValidPermissionIds(input.permissionIds))
 	)
@@ -414,8 +418,10 @@ export {
 } from './security/permission'
 export type { Permission, PermissionId } from './security/permission'
 export {
+	hasValidAccessLevelIds,
 	hasValidPermissionIds,
 	isUserId,
+	userAccessLevelModel,
 	userModel,
 	userPermissionModel,
 	userSessionModel,

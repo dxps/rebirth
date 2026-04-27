@@ -43,7 +43,7 @@ import { createAttributeTemplate, deleteAttributeTemplate, listAttributeTemplate
 import { createEntity, deleteEntity, EntityValidationError, getEntity, listEntities, updateEntity } from "./db/entities";
 import { createEntityTemplate, deleteEntityTemplate, listEntityTemplates, updateEntityTemplate } from "./db/entity-templates";
 import { listPermissions } from "./db/permissions";
-import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
+import { authenticateUser, countUsers, createUser, createUserSession, deleteUser, getUser, getUserBySessionKey, listUsers, revokeUserSession, updateUser, updateUserEmail, updateUserPassword } from "./db/users";
 import { runMigrations } from "./db/migrate";
 import { loadEnvFiles } from "./env";
 
@@ -174,7 +174,22 @@ function maskRestrictedEntityValues(entity: Entity): Entity {
 }
 
 function getVisibleEntity(user: User, entity: Entity): Entity {
-  return canManageData(user) ? entity : maskRestrictedEntityValues(entity);
+  if (canManageData(user)) {
+    return entity;
+  }
+
+  const visibleAccessLevelIds = new Set([
+    publicAccessLevelId,
+    ...user.accessLevels.map((accessLevel) => accessLevel.id)
+  ]);
+
+  return {
+    ...entity,
+    attributes: entity.attributes.map((attribute) => ({
+      ...attribute,
+      value: visibleAccessLevelIds.has(attribute.accessLevelId) ? attribute.value : maskedAttributeValue
+    }))
+  };
 }
 
 async function getAuthenticatedUser(request: Request): Promise<User | undefined> {
@@ -657,6 +672,7 @@ const server = Bun.serve({
         }
 
         const createdUser = await createUser({
+          accessLevelIds: input.accessLevelIds,
           email: input.email.trim(),
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
@@ -1699,7 +1715,34 @@ const server = Bun.serve({
           );
         }
 
+        const existingUser = await getUser(id);
+
+        if (!existingUser) {
+          return Response.json(
+            {
+              error: "User not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (existingUser.username === "admin") {
+          return Response.json(
+            {
+              error: "The built-in admin user cannot be managed"
+            },
+            {
+              headers: jsonHeaders,
+              status: 403
+            }
+          );
+        }
+
         const updatedUser = await updateUser(id, {
+          accessLevelIds: input.accessLevelIds,
           email: input.email?.trim(),
           firstName: input.firstName?.trim(),
           lastName: input.lastName?.trim(),
@@ -1767,6 +1810,32 @@ const server = Bun.serve({
             {
               headers: jsonHeaders,
               status: 400
+            }
+          );
+        }
+
+        const existingUser = await getUser(id);
+
+        if (!existingUser) {
+          return Response.json(
+            {
+              error: "User not found"
+            },
+            {
+              headers: jsonHeaders,
+              status: 404
+            }
+          );
+        }
+
+        if (existingUser.username === "admin") {
+          return Response.json(
+            {
+              error: "The built-in admin user cannot be managed"
+            },
+            {
+              headers: jsonHeaders,
+              status: 403
             }
           );
         }

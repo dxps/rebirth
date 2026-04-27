@@ -254,10 +254,10 @@ export function UserProfileView() {
 							: 'Update Password'}
 					</button>
 				</form>
-				<section className="profile-form profile-permissions-section">
+				<section className="profile-form profile-authorization-section">
 					<div className="profile-form-heading">
 						<Shield aria-hidden="true" />
-						<h2>Permissions</h2>
+						<h2>Authorization</h2>
 					</div>
 					<label>
 						<span>Permissions</span>
@@ -267,6 +267,18 @@ export function UserProfileView() {
 							value={
 								storedAuth.user.permissions
 									.map((permission) => permission.name)
+									.join(', ') || 'None'
+							}
+						/>
+					</label>
+					<label>
+						<span>Access Levels</span>
+						<input
+							readOnly
+							type="text"
+							value={
+								storedAuth.user.accessLevels
+									.map((accessLevel) => accessLevel.name)
 									.join(', ') || 'None'
 							}
 						/>

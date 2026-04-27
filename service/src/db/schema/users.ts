@@ -1,5 +1,6 @@
 import {
 	userModel,
+	userAccessLevelModel,
 	userPermissionModel,
 	userSessionModel,
 } from '@rebirth/shared'
@@ -17,6 +18,7 @@ import {
 	uuid,
 } from 'drizzle-orm/pg-core'
 
+import { accessLevels } from './access-levels'
 import { permissions } from './permissions'
 
 export const users = pgTable(
@@ -60,6 +62,30 @@ export const userPermissions = pgTable(
 			columns: [table.permissionId],
 			foreignColumns: [permissions.id],
 			name: 'user_permissions_permission_id_permissions_id_fk',
+		}).onDelete('cascade'),
+	],
+)
+
+export const userAccessLevels = pgTable(
+	userAccessLevelModel.tableName,
+	{
+		userId: uuid('user_id').notNull(),
+		accessLevelId: integer('access_level_id').notNull(),
+	},
+	(table) => [
+		primaryKey({
+			columns: [table.userId, table.accessLevelId],
+			name: 'user_access_levels_user_id_access_level_id_pk',
+		}),
+		foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: 'user_access_levels_user_id_users_id_fk',
+		}).onDelete('cascade'),
+		foreignKey({
+			columns: [table.accessLevelId],
+			foreignColumns: [accessLevels.id],
+			name: 'user_access_levels_access_level_id_access_levels_id_fk',
 		}).onDelete('cascade'),
 	],
 )

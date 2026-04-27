@@ -54,7 +54,8 @@ const draggableModalMinHeights: Record<OpenAccessLevelModal['mode'], number> = {
 const draggableModalMinWidth = 280
 const accessLevelModalWidth = 360
 const userModalWidth = 460
-const userModalHeight = 300
+const userDetailsModalHeight = 300
+const userEditModalHeight = 360
 const userCreateModalYOffset = 64
 const builtInAccessLevelMaxId = 3
 const builtInAccessLevelDeleteTooltip =
@@ -183,6 +184,10 @@ function isBuiltInAccessLevel(accessLevel?: AccessLevel | null): boolean {
 	return Boolean(accessLevel && accessLevel.id <= builtInAccessLevelMaxId)
 }
 
+function getUserModalHeight(mode: SecurityModalMode): number {
+	return mode === 'details' ? userDetailsModalHeight : userEditModalHeight
+}
+
 function DraggableModal({
 	children,
 	deleteTooltip = 'Delete',
@@ -204,7 +209,7 @@ function DraggableModal({
 }: DraggableModalProps) {
 	const [position, setPosition] = useState(initialPosition)
 	const defaultHeight = id.startsWith('user')
-		? userModalHeight
+		? getUserModalHeight(mode)
 		: draggableModalHeight
 	const defaultWidth = id.startsWith('user')
 		? userModalWidth
@@ -219,7 +224,7 @@ function DraggableModal({
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false)
 	const minHeight = id.startsWith('user')
-		? userModalHeight
+		? getUserModalHeight(mode)
 		: draggableModalMinHeights[mode]
 	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
 	const infoPopoverRef = useRef<HTMLDivElement>(null)
@@ -227,7 +232,7 @@ function DraggableModal({
 	useEffect(() => {
 		setSize((current) => ({
 			...current,
-			height: Math.min(current.height, minHeight),
+			height: minHeight,
 		}))
 	}, [minHeight])
 
@@ -456,7 +461,10 @@ function DraggableModal({
 				<div className="draggable-modal-header">
 					<h2>{title}</h2>
 					{infoText ? (
-						<div className="draggable-modal-info-action" ref={infoPopoverRef}>
+						<div
+							className="draggable-modal-info-action"
+							ref={infoPopoverRef}
+						>
 							<button
 								aria-expanded={isInfoPopoverOpen}
 								aria-label="Show id"
@@ -678,6 +686,7 @@ function AccessLevelEditForm({
 }
 
 interface UserEditFormProps {
+	accessLevels: AccessLevel[]
 	autoFocusFirstName?: boolean
 	formId: string
 	modalKey: string
@@ -688,6 +697,7 @@ interface UserEditFormProps {
 }
 
 function UserEditForm({
+	accessLevels,
 	autoFocusFirstName = false,
 	formId,
 	modalKey,
@@ -704,6 +714,7 @@ function UserEditForm({
 	const [password, setPassword] = useState('')
 	const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 	const [isPermissionMenuOpen, setIsPermissionMenuOpen] = useState(false)
+	const [isAccessLevelMenuOpen, setIsAccessLevelMenuOpen] = useState(false)
 	const [permissionTooltip, setPermissionTooltip] = useState<{
 		description: string
 		x: number
@@ -725,15 +736,23 @@ function UserEditForm({
 				1,
 		]
 	})
+	const [accessLevelIds, setAccessLevelIds] = useState<number[]>(
+		() => user?.accessLevels.map((accessLevel) => accessLevel.id) ?? [],
+	)
 	const [error, setError] = useState<string | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
 	const firstNameInputRef = useRef<HTMLInputElement>(null)
 	const permissionPickerRef = useRef<HTMLSpanElement>(null)
 	const permissionMenuRef = useRef<HTMLDivElement>(null)
+	const accessLevelPickerRef = useRef<HTMLSpanElement>(null)
 	const selectedPermissionNames = permissions
 		.filter((permission) => permissionIds.includes(permission.id))
 		.map((permission) => permission.name)
 	const permissionSummary = selectedPermissionNames.join(', ')
+	const selectedAccessLevelNames = accessLevels
+		.filter((accessLevel) => accessLevelIds.includes(accessLevel.id))
+		.map((accessLevel) => accessLevel.name)
+	const accessLevelSummary = selectedAccessLevelNames.join(', ')
 	const hasEmptyRequiredField =
 		email.trim().length === 0 ||
 		firstName.trim().length === 0 ||
@@ -743,7 +762,15 @@ function UserEditForm({
 		permissionIds.length === 0 ||
 		permissionIds.some(
 			(permissionId) =>
-				!permissions.some((permission) => permission.id === permissionId),
+				!permissions.some(
+					(permission) => permission.id === permissionId,
+				),
+		) ||
+		accessLevelIds.some(
+			(accessLevelId) =>
+				!accessLevels.some(
+					(accessLevel) => accessLevel.id === accessLevelId,
+				),
 		)
 	const hasInvalidPassword = password.length > 0 && password.length < 8
 	const isValid = !hasEmptyRequiredField && !hasInvalidPassword
@@ -783,7 +810,19 @@ function UserEditForm({
 	}, [isPermissionMenuOpen])
 
 	useEffect(() => {
-		function closePermissionMenu(event: PointerEvent): void {
+		const validAccessLevelIds = accessLevelIds.filter((accessLevelId) =>
+			accessLevels.some(
+				(accessLevel) => accessLevel.id === accessLevelId,
+			),
+		)
+
+		if (validAccessLevelIds.length !== accessLevelIds.length) {
+			setAccessLevelIds(validAccessLevelIds)
+		}
+	}, [accessLevelIds, accessLevels])
+
+	useEffect(() => {
+		function closeMenus(event: PointerEvent): void {
 			const target = event.target
 
 			if (
@@ -792,12 +831,19 @@ function UserEditForm({
 			) {
 				setIsPermissionMenuOpen(false)
 			}
+
+			if (
+				target instanceof Node &&
+				!accessLevelPickerRef.current?.contains(target)
+			) {
+				setIsAccessLevelMenuOpen(false)
+			}
 		}
 
-		document.addEventListener('pointerdown', closePermissionMenu)
+		document.addEventListener('pointerdown', closeMenus)
 
 		return () => {
-			document.removeEventListener('pointerdown', closePermissionMenu)
+			document.removeEventListener('pointerdown', closeMenus)
 		}
 	}, [])
 
@@ -806,6 +852,14 @@ function UserEditForm({
 			current.includes(permissionId)
 				? current.filter((currentId) => currentId !== permissionId)
 				: [...current, permissionId],
+		)
+	}
+
+	function toggleAccessLevel(accessLevelId: number): void {
+		setAccessLevelIds((current) =>
+			current.includes(accessLevelId)
+				? current.filter((currentId) => currentId !== accessLevelId)
+				: [...current, accessLevelId],
 		)
 	}
 
@@ -839,6 +893,7 @@ function UserEditForm({
 
 		try {
 			const input = {
+				accessLevelIds,
 				email,
 				firstName,
 				lastName,
@@ -990,6 +1045,53 @@ function UserEditForm({
 					</span>
 				</label>
 			</div>
+			<label>
+				<span>access levels</span>
+				<span
+					ref={accessLevelPickerRef}
+					className="security-user-permissions-picker"
+				>
+					<button
+						aria-expanded={isAccessLevelMenuOpen}
+						aria-haspopup="listbox"
+						className="security-user-permissions-trigger"
+						data-empty={
+							accessLevelSummary.length === 0 ? 'true' : undefined
+						}
+						type="button"
+						onClick={() =>
+							setIsAccessLevelMenuOpen((current) => !current)
+						}
+					>
+						<span>{accessLevelSummary || 'No access levels'}</span>
+					</button>
+					{isAccessLevelMenuOpen ? (
+						<div
+							className="security-user-permissions-menu"
+							role="listbox"
+							aria-multiselectable="true"
+						>
+							{accessLevels.map((accessLevel) => (
+								<label
+									key={accessLevel.id}
+									className="security-user-permission-option"
+								>
+									<input
+										checked={accessLevelIds.includes(
+											accessLevel.id,
+										)}
+										type="checkbox"
+										onChange={() =>
+											toggleAccessLevel(accessLevel.id)
+										}
+									/>
+									<span>{accessLevel.name}</span>
+								</label>
+							))}
+						</div>
+					) : null}
+				</span>
+			</label>
 			<label>
 				<span>{isCreate ? 'password' : 'new password'}</span>
 				<span className="security-user-password-wrap">
@@ -1597,7 +1699,7 @@ export function SecurityView() {
 								point.clientY - userCreateModalYOffset,
 								draggableModalMargin,
 								window.innerHeight -
-									userModalHeight -
+									userDetailsModalHeight -
 									draggableModalMargin,
 							),
 						},
@@ -1649,7 +1751,7 @@ export function SecurityView() {
 								point.clientY - userCreateModalYOffset,
 								draggableModalMargin,
 								window.innerHeight -
-									userModalHeight -
+									userEditModalHeight -
 									draggableModalMargin,
 							),
 						},
@@ -1786,16 +1888,19 @@ export function SecurityView() {
 					<div className="data-table-wrap security-table-wrap">
 						<table className="data-table security-users-table">
 							<thead>
-							<tr>
-								<th className="security-users-username-column">
-									username
-								</th>
-								<th className="security-users-email-column">
-									email
-								</th>
-								<th className="security-users-permissions-column">
-									permissions
-								</th>
+								<tr>
+									<th className="security-users-username-column">
+										username
+									</th>
+									<th className="security-users-email-column">
+										email
+									</th>
+									<th className="security-users-permissions-column">
+										permissions
+									</th>
+									<th className="security-users-access-levels-column">
+										access levels
+									</th>
 									<th className="data-table-action-heading">
 										<button
 											aria-label="Create user"
@@ -1814,13 +1919,13 @@ export function SecurityView() {
 							<tbody>
 								{isUsersLoading ? (
 									<tr>
-										<td colSpan={4}>Loading users</td>
+										<td colSpan={5}>Loading users</td>
 									</tr>
 								) : users.length === 0 ? (
 									<tr>
 										<td
 											className="data-table-empty-cell"
-											colSpan={4}
+											colSpan={5}
 										>
 											<span>There are no entries</span>
 										</td>
@@ -1856,6 +1961,14 @@ export function SecurityView() {
 													.map(
 														(permission) =>
 															permission.name,
+													)
+													.join(', ')}
+											</td>
+											<td>
+												{user.accessLevels
+													.map(
+														(accessLevel) =>
+															accessLevel.name,
 													)
 													.join(', ')}
 											</td>
@@ -1987,6 +2100,7 @@ export function SecurityView() {
 							</div>
 						) : modal.kind === 'user' && modal.mode === 'create' ? (
 							<UserEditForm
+								accessLevels={accessLevels}
 								autoFocusFirstName
 								formId={`${modal.key}-edit-form`}
 								modalKey={modal.key}
@@ -2000,6 +2114,7 @@ export function SecurityView() {
 						  modal.mode === 'edit' &&
 						  modal.user ? (
 							<UserEditForm
+								accessLevels={accessLevels}
 								autoFocusFirstName
 								formId={`${modal.key}-edit-form`}
 								modalKey={modal.key}
@@ -2071,6 +2186,19 @@ export function SecurityView() {
 										/>
 									</label>
 								</div>
+								<label>
+									<span>access levels</span>
+									<input
+										readOnly
+										type="text"
+										value={modal.user.accessLevels
+											.map(
+												(accessLevel) =>
+													accessLevel.name,
+											)
+											.join(', ')}
+									/>
+								</label>
 							</div>
 						) : null}
 					</DraggableModal>

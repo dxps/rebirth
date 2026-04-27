@@ -3,11 +3,17 @@ import {
 	type Permission,
 	type PermissionId,
 } from './permission'
+import {
+	isAccessLevelId,
+	type AccessLevel,
+	type AccessLevelId,
+} from './access-level'
 
 export type UserId = string
 
 export interface User {
 	id: UserId
+	accessLevels: AccessLevel[]
 	email: string
 	firstName: string
 	lastName: string
@@ -21,6 +27,7 @@ export interface CreateUserInput {
 	lastName: string
 	username: string
 	password: string
+	accessLevelIds: AccessLevelId[]
 	permissionIds: PermissionId[]
 }
 
@@ -35,6 +42,11 @@ export const userModel = {
 export const userPermissionModel = {
 	entityName: 'UserPermission',
 	tableName: 'user_permissions',
+} as const
+
+export const userAccessLevelModel = {
+	entityName: 'UserAccessLevel',
+	tableName: 'user_access_levels',
 } as const
 
 export const userSessionModel = {
@@ -59,6 +71,20 @@ export function hasValidPermissionIds(
 			(permissionId) =>
 				typeof permissionId === 'number' &&
 				isPermissionId(permissionId),
+		)
+	)
+}
+
+export function hasValidAccessLevelIds(
+	value: unknown,
+): value is AccessLevelId[] {
+	return (
+		Array.isArray(value) &&
+		new Set(value).size === value.length &&
+		value.every(
+			(accessLevelId) =>
+				typeof accessLevelId === 'number' &&
+				isAccessLevelId(accessLevelId),
 		)
 	)
 }

@@ -1,4 +1,5 @@
 import type {
+	AccessLevel,
 	CreateUserInput,
 	Permission,
 	PermissionName,
@@ -29,6 +30,13 @@ interface UserPermissionRow {
 	permission_description: string
 }
 
+interface UserAccessLevelRow {
+	user_id: string
+	access_level_id: number
+	access_level_name: string
+	access_level_description: string
+}
+
 function createSessionKey(): string {
 	const bytes = crypto.getRandomValues(new Uint8Array(32))
 	let binary = ''
@@ -49,6 +57,7 @@ function normalizeCreateInput(input: CreateUserInput): CreateUserInput {
 		firstName: input.firstName.trim(),
 		lastName: input.lastName.trim(),
 		password: input.password,
+		accessLevelIds: input.accessLevelIds,
 		permissionIds: input.permissionIds,
 		username: input.username.trim(),
 	}
@@ -60,13 +69,25 @@ function normalizeUpdateInput(input: UpdateUserInput): UpdateUserInput {
 		firstName: input.firstName?.trim(),
 		lastName: input.lastName?.trim(),
 		password: input.password,
+		accessLevelIds: input.accessLevelIds,
 		permissionIds: input.permissionIds,
 		username: input.username?.trim(),
 	}
 }
 
-function toUser(row: UserRow, permissionRows: UserPermissionRow[]): User {
+function toUser(
+	row: UserRow,
+	permissionRows: UserPermissionRow[],
+	accessLevelRows: UserAccessLevelRow[],
+): User {
 	return {
+		accessLevels: accessLevelRows
+			.filter((accessLevelRow) => accessLevelRow.user_id === row.id)
+			.map((accessLevelRow): AccessLevel => ({
+				description: accessLevelRow.access_level_description,
+				id: accessLevelRow.access_level_id,
+				name: accessLevelRow.access_level_name,
+			})),
 		email: row.email,
 		firstName: row.first_name,
 		id: row.id,
@@ -85,8 +106,9 @@ function toUser(row: UserRow, permissionRows: UserPermissionRow[]): User {
 function toUsers(
 	rows: UserRow[],
 	permissionRows: UserPermissionRow[],
+	accessLevelRows: UserAccessLevelRow[],
 ): User[] {
-	return rows.map((row) => toUser(row, permissionRows))
+	return rows.map((row) => toUser(row, permissionRows, accessLevelRows))
 }
 
 async function readUserRows(
@@ -123,7 +145,19 @@ async function readUserRows(
 		ORDER BY permissions.id
 	`
 
-	return toUsers(rows, permissionRows)
+	const accessLevelRows = await client<UserAccessLevelRow[]>`
+		SELECT
+			user_access_levels.user_id,
+			access_levels.id AS access_level_id,
+			access_levels.name AS access_level_name,
+			access_levels.description AS access_level_description
+		FROM user_access_levels
+		INNER JOIN access_levels ON access_levels.id = user_access_levels.access_level_id
+		WHERE user_access_levels.user_id = ANY(${ids})
+		ORDER BY access_levels.id
+	`
+
+	return toUsers(rows, permissionRows, accessLevelRows)
 }
 
 async function replaceUserPermissions(
@@ -140,6 +174,24 @@ async function replaceUserPermissions(
 		await sql`
 			INSERT INTO user_permissions (user_id, permission_id)
 			VALUES (${userId}, ${permissionId})
+		`
+	}
+}
+
+async function replaceUserAccessLevels(
+	sql: postgres.TransactionSql,
+	userId: string,
+	accessLevelIds: number[],
+): Promise<void> {
+	await sql`
+		DELETE FROM user_access_levels
+		WHERE user_id = ${userId}
+	`
+
+	for (const accessLevelId of accessLevelIds) {
+		await sql`
+			INSERT INTO user_access_levels (user_id, access_level_id)
+			VALUES (${userId}, ${accessLevelId})
 		`
 	}
 }
@@ -213,6 +265,7 @@ export async function createUser(input: CreateUserInput): Promise<User | undefin
 					${passwordHash}
 				)
 			`
+			await replaceUserAccessLevels(sql, id, normalizedInput.accessLevelIds)
 			await replaceUserPermissions(sql, id, normalizedInput.permissionIds)
 		})
 
@@ -276,11 +329,33 @@ export async function updateUser(
 			if (normalizedInput.permissionIds !== undefined) {
 				await replaceUserPermissions(sql, id, normalizedInput.permissionIds)
 			}
+
+			if (normalizedInput.accessLevelIds !== undefined) {
+				await replaceUserAccessLevels(sql, id, normalizedInput.accessLevelIds)
+			}
 		})
 
 		const [updatedUser] = await readUserRows(client, id)
 
 		return updatedUser
+	} finally {
+		await client.end()
+	}
+}
+
+export async function getUser(id: string): Promise<User | undefined> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		const [user] = await readUserRows(client, id)
+
+		return user
 	} finally {
 		await client.end()
 	}

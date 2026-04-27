@@ -43,6 +43,13 @@
 			"when": 1776922301981,
 			"tag": "0005_entities",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1777280400000,
+			"tag": "0006_user_access_levels",
+			"breakpoints": true
 		}
 	]
 }
