@@ -5,6 +5,7 @@ export enum PermissionName {
 	Editor = 'Editor',
 	ManageOwnData = 'Manage Own Data',
 	Viewer = 'Viewer',
+	Audit = 'Audit',
 }
 
 export const permissionNames = [
@@ -12,6 +13,7 @@ export const permissionNames = [
 	PermissionName.Editor,
 	PermissionName.ManageOwnData,
 	PermissionName.Viewer,
+	PermissionName.Audit,
 ] as const
 
 export interface Permission {

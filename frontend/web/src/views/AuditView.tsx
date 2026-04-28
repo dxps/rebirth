@@ -1,5 +1,6 @@
 import {
 	apiRoutes,
+	PermissionName,
 	type AuditEvent,
 	type AuditEventsResponse,
 } from '@rebirth/shared'
@@ -12,7 +13,12 @@ import {
 	type PointerEvent as ReactPointerEvent,
 } from 'react'
 
-import { authChangedEventName, getStoredAuth, type StoredAuth } from '../auth'
+import {
+	authChangedEventName,
+	getStoredAuth,
+	hasStoredPermission,
+	type StoredAuth,
+} from '../auth'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const auditModalMargin = 16
@@ -36,10 +42,8 @@ function getAuthHeaders(): Record<string, string> {
 
 function hasAuditAccess(auth: StoredAuth | null): boolean {
 	return Boolean(
-		auth?.user.username === 'admin' ||
-		auth?.user.accessLevels.some(
-			(accessLevel) => accessLevel.name.toLowerCase() === 'audit',
-		),
+		hasStoredPermission(auth, PermissionName.Admin) ||
+			hasStoredPermission(auth, PermissionName.Audit),
 	)
 }
 

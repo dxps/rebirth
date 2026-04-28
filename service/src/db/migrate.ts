@@ -30,11 +30,15 @@ async function seedAccessLevels(
 		VALUES
 			(1, 'Public', 'Publicly visible'),
 			(2, 'Private', 'Private access needed'),
-			(3, 'Confidential', 'A more restricted access'),
-			(4, 'Audit', 'Can view audit events')
+			(3, 'Confidential', 'A more restricted access')
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			description = EXCLUDED.description
+	`
+
+	await client`
+		DELETE FROM access_levels
+		WHERE name = 'Audit'
 	`
 
 	await client`
@@ -55,7 +59,8 @@ async function seedPermissions(
 			(1, 'Admin', 'Can manage users, security (access levels, permissions), templates and data.'),
 			(2, 'Editor', 'Can create, update, and delete templates and data.'),
 			(3, 'Manage Own Data', 'Allows managing only your own data (entities, entity templates, attribute templates)'),
-			(4, 'Viewer', 'Can view managed data with public (and any other assigned) access levels.')
+			(4, 'Viewer', 'Can view managed data with public (and any other assigned) access levels.'),
+			(5, 'Audit', 'Can view audit events.')
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			description = EXCLUDED.description
@@ -67,6 +72,22 @@ async function seedPermissions(
 			GREATEST((SELECT MAX(id) FROM permissions), 1),
 			true
 		)
+	`
+}
+
+async function migrateAuditAccessLevelPermission(
+	client: ReturnType<typeof createDatabase>['client'],
+): Promise<void> {
+	await client`
+		INSERT INTO user_permissions (user_id, permission_id)
+		SELECT user_access_levels.user_id, permissions.id
+		FROM user_access_levels
+		INNER JOIN access_levels
+			ON access_levels.id = user_access_levels.access_level_id
+		INNER JOIN permissions
+			ON permissions.name = 'Audit'
+		WHERE access_levels.name = 'Audit'
+		ON CONFLICT (user_id, permission_id) DO NOTHING
 	`
 }
 
@@ -110,7 +131,7 @@ async function seedInitialAdminUser(
 		FROM users
 		CROSS JOIN access_levels
 		WHERE users.username = 'admin'
-			AND access_levels.id IN (1, 2, 3, 4)
+			AND access_levels.id IN (1, 2, 3)
 		ON CONFLICT (user_id, access_level_id) DO NOTHING
 	`
 }
@@ -129,8 +150,9 @@ export async function runMigrations(): Promise<void> {
 
 	try {
 		await migrate(db, { migrationsFolder: getMigrationsFolder() })
-		await seedAccessLevels(client)
 		await seedPermissions(client)
+		await migrateAuditAccessLevelPermission(client)
+		await seedAccessLevels(client)
 		await seedInitialAdminUser(client)
 	} finally {
 		await client.end()

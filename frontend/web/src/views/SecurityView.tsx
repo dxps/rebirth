@@ -57,7 +57,7 @@ const userModalWidth = 460
 const userDetailsModalHeight = 300
 const userEditModalHeight = 360
 const userCreateModalYOffset = 64
-const builtInAccessLevelMaxId = 4
+const builtInAccessLevelMaxId = 3
 const builtInAccessLevelDeleteTooltip =
 	'This built-in access level cannot be deleted.'
 const builtInAccessLevelRenameTooltip =

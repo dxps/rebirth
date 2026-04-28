@@ -49,10 +49,8 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
 		PermissionName.Admin,
 	)
 	const canAccessAudit = Boolean(
-		storedAuth?.user.username === 'admin' ||
-		storedAuth?.user.accessLevels.some(
-			(accessLevel) => accessLevel.name.toLowerCase() === 'audit',
-		),
+		hasStoredPermission(storedAuth, PermissionName.Admin) ||
+			hasStoredPermission(storedAuth, PermissionName.Audit),
 	)
 
 	useEffect(() => {

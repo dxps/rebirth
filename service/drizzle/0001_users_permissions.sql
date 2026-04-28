@@ -1,4 +1,4 @@
-CREATE TYPE "public"."permission_name" AS ENUM('Admin', 'Editor', 'Manage Own Data', 'Viewer');--> statement-breakpoint
+CREATE TYPE "public"."permission_name" AS ENUM('Admin', 'Editor', 'Manage Own Data', 'Viewer', 'Audit');--> statement-breakpoint
 CREATE TABLE "permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" "permission_name" NOT NULL,
@@ -19,7 +19,8 @@ VALUES
 	(1, 'Admin', 'Can manage users, permissions, security data, and templates.'),
 	(2, 'Editor', 'Can create, update, and delete managed data, besides viewing it.'),
 	(3, 'Manage Own Data', 'Allows managing only your own data (entities, entity templates, attribute templates)'),
-	(4, 'Viewer', 'Can view managed data with public (and any other assigned) access levels.')
+	(4, 'Viewer', 'Can view managed data with public (and any other assigned) access levels.'),
+	(5, 'Audit', 'Can view audit events.')
 ON CONFLICT ("id") DO UPDATE SET
 	"name" = EXCLUDED."name",
 	"description" = EXCLUDED."description";

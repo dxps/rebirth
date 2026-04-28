@@ -60,7 +60,6 @@ const entityModalMinWidth = 400
 const entityModalWidth = 520
 const entityAttributeReorderThreshold = 0.5
 const entitiesPageSize = 10
-const auditAccessLevelName = 'Audit'
 
 interface ModalPosition {
 	x: number
@@ -90,9 +89,7 @@ function getDefaultEntityModalSize(): ModalSize {
 }
 
 function getSelectableAttributeAccessLevels(accessLevels: AccessLevel[]) {
-	return accessLevels.filter(
-		(accessLevel) => accessLevel.name !== auditAccessLevelName,
-	)
+	return accessLevels
 }
 
 function getSelectableAttributeAccessLevelId(

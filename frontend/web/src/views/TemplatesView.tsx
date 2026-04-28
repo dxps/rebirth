@@ -61,12 +61,9 @@ const draggableModalDefaultWidth = 360
 const entityTemplateModalHeight = 440
 const entityTemplateModalWidth = 520
 const entityTemplateAttributeReorderThreshold = 0.5
-const auditAccessLevelName = 'Audit'
 
 function getSelectableAttributeAccessLevels(accessLevels: AccessLevel[]) {
-	return accessLevels.filter(
-		(accessLevel) => accessLevel.name !== auditAccessLevelName,
-	)
+	return accessLevels
 }
 
 function getSelectableAttributeAccessLevelId(

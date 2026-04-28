@@ -91,8 +91,7 @@ const port = Number.parseInt(Bun.env.PORT ?? '9908', 10)
 const uniqueConflictErrorCode = '23505'
 const attributeTemplateUniqueConstraint =
 	'attribute_templates_name_description_unique'
-const auditAccessLevelName = 'audit'
-const builtInAccessLevelMaxId = 4
+const builtInAccessLevelMaxId = 3
 const defaultEntitiesPageSize = 10
 const maxEntitiesPageSize = 50
 const uniqueConflictResponse: ApiErrorResponse = {
@@ -246,11 +245,8 @@ function canManageSecurity(user: User): boolean {
 
 function canViewAudit(user: User): boolean {
 	return (
-		user.username === 'admin' ||
-		user.accessLevels.some(
-			(accessLevel) =>
-				accessLevel.name.toLowerCase() === auditAccessLevelName,
-		)
+		hasPermission(user, PermissionName.Admin) ||
+		hasPermission(user, PermissionName.Audit)
 	)
 }
 
