@@ -46,6 +46,7 @@ import {
 	getStoredAuth,
 	hasStoredPermission,
 } from '../auth'
+import { DraggableModal as BaseDraggableModal } from '../components/ui/draggable-modal'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const draggableModalHeight = 362
@@ -241,28 +242,11 @@ function DraggableModal({
 	title,
 	zIndex,
 }: DraggableModalProps) {
-	const [position, setPosition] = useState(initialPosition)
-	const [size, setSize] = useState({
-		height: initialHeight,
-		width: Math.min(
-			id.startsWith('entity-template')
-				? entityTemplateModalWidth
-				: draggableModalDefaultWidth,
-			Math.max(draggableModalMinWidth, window.innerWidth * 0.86),
-		),
-	})
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false)
 	const minHeight = minHeightOverride ?? draggableModalMinHeights[mode]
 	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
 	const infoPopoverRef = useRef<HTMLDivElement>(null)
-
-	useEffect(() => {
-		setSize((current) => ({
-			...current,
-			height: Math.max(current.height, minHeight),
-		}))
-	}, [minHeight])
 
 	useEffect(() => {
 		if (isDeleteConfirmOpen) {
@@ -299,113 +283,6 @@ function DraggableModal({
 	useEffect(() => {
 		setIsDeleteConfirmOpen(false)
 	}, [mode])
-
-	const dragStart = useRef({
-		pointerX: 0,
-		pointerY: 0,
-		x: initialPosition.x,
-		y: initialPosition.y,
-	})
-	const resizeStart = useRef({
-		height: size.height,
-		pointerX: 0,
-		pointerY: 0,
-		width: size.width,
-	})
-
-	const startDrag = useCallback(
-		(event: ReactPointerEvent<HTMLElement>) => {
-			const target = event.target
-
-			if (
-				target instanceof HTMLElement &&
-				(target.closest('[data-no-drag="true"]') ||
-					target.closest('[data-selectable="true"]'))
-			) {
-				return
-			}
-
-			event.preventDefault()
-			onActivate(id)
-			dragStart.current = {
-				pointerX: event.clientX,
-				pointerY: event.clientY,
-				x: position.x,
-				y: position.y,
-			}
-
-			function move(pointerEvent: PointerEvent): void {
-				setPosition({
-					x:
-						dragStart.current.x +
-						pointerEvent.clientX -
-						dragStart.current.pointerX,
-					y:
-						dragStart.current.y +
-						pointerEvent.clientY -
-						dragStart.current.pointerY,
-				})
-			}
-
-			function stop(): void {
-				window.removeEventListener('pointermove', move)
-				window.removeEventListener('pointerup', stop)
-			}
-
-			window.addEventListener('pointermove', move)
-			window.addEventListener('pointerup', stop)
-		},
-		[id, onActivate, position.x, position.y],
-	)
-
-	const startResize = useCallback(
-		(event: ReactPointerEvent<HTMLButtonElement>) => {
-			event.preventDefault()
-			onActivate(id)
-			resizeStart.current = {
-				height: size.height,
-				pointerX: event.clientX,
-				pointerY: event.clientY,
-				width: size.width,
-			}
-
-			function move(pointerEvent: PointerEvent): void {
-				setSize({
-					height: clampToRange(
-						resizeStart.current.height +
-							pointerEvent.clientY -
-							resizeStart.current.pointerY,
-						minHeight,
-						window.innerHeight - position.y - draggableModalMargin,
-					),
-					width: clampToRange(
-						resizeStart.current.width +
-							pointerEvent.clientX -
-							resizeStart.current.pointerX,
-						draggableModalMinWidth,
-						window.innerWidth - position.x - draggableModalMargin,
-					),
-				})
-			}
-
-			function stop(): void {
-				window.removeEventListener('pointermove', move)
-				window.removeEventListener('pointerup', stop)
-			}
-
-			window.addEventListener('pointermove', move)
-			window.addEventListener('pointerup', stop)
-		},
-		[
-			id,
-			minHeight,
-			onActivate,
-			position.x,
-			position.y,
-			size.height,
-			size.width,
-		],
-	)
 
 	const saveTooltip = isSaveDisabled ? saveDisabledTooltip : 'Save'
 	const deleteButton = (
@@ -457,22 +334,29 @@ function DraggableModal({
 	)
 
 	return (
-		<div
-			className="draggable-modal"
-			role="dialog"
-			aria-modal="false"
-			aria-label={title}
-			style={{
-				height: size.height,
-				transform: `translate(${position.x}px, ${position.y}px)`,
-				width: size.width,
-				zIndex,
+		<BaseDraggableModal
+			defaultSize={{
+				height: initialHeight,
+				width: Math.min(
+					id.startsWith('entity-template')
+						? entityTemplateModalWidth
+						: draggableModalDefaultWidth,
+					Math.max(draggableModalMinWidth, window.innerWidth * 0.86),
+				),
 			}}
-			onPointerDown={() => onActivate(id)}
-		>
-			<div className="draggable-modal-body" onPointerDown={startDrag}>
-				<div className="draggable-modal-header">
-					<h2>{title}</h2>
+			id={id}
+			initialPosition={initialPosition}
+			minSize={{
+				height: minHeight,
+				width: draggableModalMinWidth,
+			}}
+			title={title}
+			useLayer={false}
+			viewportMargin={draggableModalMargin}
+			zIndex={zIndex}
+			onActivate={() => onActivate(id)}
+			renderTitlebarActions={() => (
+				<>
 					{infoText ? (
 						<div
 							className="draggable-modal-info-action"
@@ -581,24 +465,11 @@ function DraggableModal({
 					>
 						<X aria-hidden="true" />
 					</button>
-				</div>
-				<div className="draggable-modal-content">{children}</div>
-				<button
-					aria-label={`Resize ${title}`}
-					className="draggable-modal-resize"
-					data-no-drag="true"
-					type="button"
-					onPointerDown={startResize}
-				>
-					<span />
-					<span />
-					<span />
-					<span />
-					<span />
-					<span />
-				</button>
-			</div>
-		</div>
+				</>
+			)}
+		>
+			{children}
+		</BaseDraggableModal>
 	)
 }
 

@@ -49,6 +49,7 @@ import {
 	hasStoredPermission,
 } from '../auth'
 import { DateTimeInput } from '../components/ui/date-time-input'
+import { DraggableModal as BaseDraggableModal } from '../components/ui/draggable-modal'
 import { Skeleton } from '../components/ui/skeleton'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
@@ -377,7 +378,7 @@ function CreateEntityModal({
 		useState('')
 	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
 	const idPopoverRef = useRef<HTMLDivElement | null>(null)
-	const [position, setPosition] = useState(() => ({
+	const defaultPosition = {
 		x:
 			initialPosition?.x ??
 			Math.max(
@@ -392,10 +393,12 @@ function CreateEntityModal({
 		y:
 			initialPosition?.y ??
 			Math.max(entityModalMargin, window.innerHeight * 0.18),
-	}))
-	const [size, setSize] = useState(
-		() => initialSize ?? getDefaultEntityModalSize(),
-	)
+	}
+	const defaultSize = initialSize ?? getDefaultEntityModalSize()
+	const modalStateRef = useRef({
+		position: defaultPosition,
+		size: defaultSize,
+	})
 	const modalTitle = mode === 'edit' ? 'Entity :: Edit' : 'Entity :: New'
 	const selectedEntityTemplate =
 		entityTemplates.find(
@@ -653,18 +656,6 @@ function CreateEntityModal({
 		}
 	}, [firstListingAttributeId, includedAttributes, listingAttributeId, mode])
 
-	const dragStart = useRef({
-		pointerX: 0,
-		pointerY: 0,
-		x: position.x,
-		y: position.y,
-	})
-	const resizeStart = useRef({
-		height: size.height,
-		pointerX: 0,
-		pointerY: 0,
-		width: size.width,
-	})
 	const [draggedAttributeId, setDraggedAttributeId] = useState<string | null>(
 		null,
 	)
@@ -672,95 +663,6 @@ function CreateEntityModal({
 	const [draggedLinkId, setDraggedLinkId] = useState<string | null>(null)
 	const draggedLinkIdRef = useRef<string | null>(null)
 	const attributeTemplatesLoadRequestId = useRef(0)
-
-	const startDrag = useCallback(
-		(event: ReactPointerEvent<HTMLElement>) => {
-			const target = event.target
-
-			if (
-				target instanceof HTMLElement &&
-				target.closest('[data-no-drag="true"]')
-			) {
-				return
-			}
-
-			event.preventDefault()
-			dragStart.current = {
-				pointerX: event.clientX,
-				pointerY: event.clientY,
-				x: position.x,
-				y: position.y,
-			}
-
-			function move(pointerEvent: PointerEvent): void {
-				setPosition({
-					x: clampToRange(
-						dragStart.current.x +
-							pointerEvent.clientX -
-							dragStart.current.pointerX,
-						entityModalMargin - size.width + 48,
-						window.innerWidth - entityModalMargin,
-					),
-					y: clampToRange(
-						dragStart.current.y +
-							pointerEvent.clientY -
-							dragStart.current.pointerY,
-						entityModalMargin,
-						window.innerHeight - entityModalMargin,
-					),
-				})
-			}
-
-			function stop(): void {
-				window.removeEventListener('pointermove', move)
-				window.removeEventListener('pointerup', stop)
-			}
-
-			window.addEventListener('pointermove', move)
-			window.addEventListener('pointerup', stop)
-		},
-		[position.x, position.y, size.width],
-	)
-
-	const startResize = useCallback(
-		(event: ReactPointerEvent<HTMLButtonElement>) => {
-			event.preventDefault()
-			resizeStart.current = {
-				height: size.height,
-				pointerX: event.clientX,
-				pointerY: event.clientY,
-				width: size.width,
-			}
-
-			function move(pointerEvent: PointerEvent): void {
-				setSize({
-					height: clampToRange(
-						resizeStart.current.height +
-							pointerEvent.clientY -
-							resizeStart.current.pointerY,
-						entityModalMinHeight,
-						window.innerHeight - position.y - entityModalMargin,
-					),
-					width: clampToRange(
-						resizeStart.current.width +
-							pointerEvent.clientX -
-							resizeStart.current.pointerX,
-						entityModalMinWidth,
-						window.innerWidth - position.x - entityModalMargin,
-					),
-				})
-			}
-
-			function stop(): void {
-				window.removeEventListener('pointermove', move)
-				window.removeEventListener('pointerup', stop)
-			}
-
-			window.addEventListener('pointermove', move)
-			window.addEventListener('pointerup', stop)
-		},
-		[position.x, position.y, size.height, size.width],
-	)
 
 	const loadAttributeTemplates = useCallback(async (): Promise<void> => {
 		const requestId = attributeTemplatesLoadRequestId.current + 1
@@ -844,11 +746,11 @@ function CreateEntityModal({
 						targetEntityId: link.targetEntityId,
 						targetEntityTemplateId: link.targetEntityTemplateId,
 					})),
-				},
-				position,
-				size,
-				activeTab,
-			)
+					},
+					modalStateRef.current.position,
+					modalStateRef.current.size,
+					activeTab,
+				)
 			return
 		}
 
@@ -1333,25 +1235,27 @@ function CreateEntityModal({
 	}
 
 	return (
-		<div className="draggable-modal-layer" style={{ zIndex }}>
-			<div
-				aria-label={modalTitle}
-				aria-modal="false"
-				className="draggable-modal"
-				role="dialog"
-				onPointerDown={() => onActivate?.()}
-				style={{
-					height: size.height,
-					transform: `translate(${position.x}px, ${position.y}px)`,
-					width: size.width,
-				}}
-			>
-				<div className="draggable-modal-body">
-					<div
-						className="draggable-modal-header"
-						onPointerDown={startDrag}
-					>
-						<h2>{modalTitle}</h2>
+		<BaseDraggableModal
+			defaultSize={defaultSize}
+			dragBounds={{
+				margin: entityModalMargin,
+				minVisibleWidth: 48,
+			}}
+			initialPosition={defaultPosition}
+			initialSize={initialSize}
+			minSize={{
+				height: entityModalMinHeight,
+				width: entityModalMinWidth,
+			}}
+			title={modalTitle}
+			viewportMargin={entityModalMargin}
+			zIndex={zIndex}
+			onActivate={onActivate}
+			onStateChange={(state) => {
+				modalStateRef.current = state
+			}}
+			renderTitlebarActions={({ position, size }) => (
+				<>
 						{mode === 'edit' && entity ? (
 							<div
 								className="draggable-modal-info-action"
@@ -1431,13 +1335,11 @@ function CreateEntityModal({
 							onPointerDown={(event) => event.stopPropagation()}
 							onClick={onClose}
 						>
-							<X aria-hidden="true" />
-						</button>
-					</div>
-					<div
-						className="draggable-modal-content"
-						onPointerDown={startDrag}
-					>
+								<X aria-hidden="true" />
+							</button>
+				</>
+			)}
+		>
 						<form
 							id={formId}
 							className={[
@@ -2394,24 +2296,7 @@ function CreateEntityModal({
 								</p>
 							) : null}
 						</form>
-					</div>
-					<button
-						aria-label={`Resize ${modalTitle}`}
-						className="draggable-modal-resize"
-						data-no-drag="true"
-						type="button"
-						onPointerDown={startResize}
-					>
-						<span />
-						<span />
-						<span />
-						<span />
-						<span />
-						<span />
-					</button>
-				</div>
-			</div>
-		</div>
+		</BaseDraggableModal>
 	)
 }
 
@@ -2473,7 +2358,7 @@ function EntityDetailsModal({
 	const [revealedAttributeIds, setRevealedAttributeIds] = useState<
 		Set<string>
 	>(() => new Set())
-	const [position, setPosition] = useState(() => ({
+	const defaultPosition = {
 		x:
 			initialPosition?.x ??
 			Math.max(
@@ -2488,24 +2373,9 @@ function EntityDetailsModal({
 		y:
 			initialPosition?.y ??
 			Math.max(entityModalMargin, window.innerHeight * 0.18),
-	}))
-	const [size, setSize] = useState(
-		() => initialSize ?? getDefaultEntityModalSize(),
-	)
+	}
 	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
 	const idPopoverRef = useRef<HTMLDivElement | null>(null)
-	const dragStart = useRef({
-		pointerX: 0,
-		pointerY: 0,
-		x: position.x,
-		y: position.y,
-	})
-	const resizeStart = useRef({
-		height: size.height,
-		pointerX: 0,
-		pointerY: 0,
-		width: size.width,
-	})
 	const orderedAttributes = (entity?.attributes ?? [])
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
@@ -2672,115 +2542,25 @@ function EntityDetailsModal({
 		)
 	}
 
-	const startDrag = useCallback(
-		(event: ReactPointerEvent<HTMLElement>) => {
-			const target = event.target
-
-			if (
-				target instanceof HTMLElement &&
-				target.closest('[data-no-drag="true"]')
-			) {
-				return
-			}
-
-			event.preventDefault()
-			dragStart.current = {
-				pointerX: event.clientX,
-				pointerY: event.clientY,
-				x: position.x,
-				y: position.y,
-			}
-
-			function move(pointerEvent: PointerEvent): void {
-				setPosition({
-					x: clampToRange(
-						dragStart.current.x +
-							pointerEvent.clientX -
-							dragStart.current.pointerX,
-						entityModalMargin - size.width + 48,
-						window.innerWidth - entityModalMargin,
-					),
-					y: clampToRange(
-						dragStart.current.y +
-							pointerEvent.clientY -
-							dragStart.current.pointerY,
-						entityModalMargin,
-						window.innerHeight - entityModalMargin,
-					),
-				})
-			}
-
-			function stop(): void {
-				window.removeEventListener('pointermove', move)
-				window.removeEventListener('pointerup', stop)
-			}
-
-			window.addEventListener('pointermove', move)
-			window.addEventListener('pointerup', stop)
-		},
-		[position.x, position.y, size.width],
-	)
-
-	const startResize = useCallback(
-		(event: ReactPointerEvent<HTMLButtonElement>) => {
-			event.preventDefault()
-			resizeStart.current = {
-				height: size.height,
-				pointerX: event.clientX,
-				pointerY: event.clientY,
-				width: size.width,
-			}
-
-			function move(pointerEvent: PointerEvent): void {
-				setSize({
-					height: clampToRange(
-						resizeStart.current.height +
-							pointerEvent.clientY -
-							resizeStart.current.pointerY,
-						entityModalMinHeight,
-						window.innerHeight - position.y - entityModalMargin,
-					),
-					width: clampToRange(
-						resizeStart.current.width +
-							pointerEvent.clientX -
-							resizeStart.current.pointerX,
-						entityModalMinWidth,
-						window.innerWidth - position.x - entityModalMargin,
-					),
-				})
-			}
-
-			function stop(): void {
-				window.removeEventListener('pointermove', move)
-				window.removeEventListener('pointerup', stop)
-			}
-
-			window.addEventListener('pointermove', move)
-			window.addEventListener('pointerup', stop)
-		},
-		[position.x, position.y, size.height, size.width],
-	)
-
 	return (
-		<div className="draggable-modal-layer" style={{ zIndex }}>
-			<div
-				aria-label={modalTitle}
-				aria-modal="false"
-				className="draggable-modal"
-				role="dialog"
-				onPointerDown={() => onActivate(windowId)}
-				style={{
-					height: size.height,
-					transform: `translate(${position.x}px, ${position.y}px)`,
-					width: size.width,
-				}}
-			>
-				<div className="draggable-modal-body">
-					<div
-						className="draggable-modal-header"
-						onPointerDown={startDrag}
-					>
-						<h2>{modalTitle}</h2>
+		<BaseDraggableModal
+			defaultSize={getDefaultEntityModalSize()}
+			dragBounds={{
+				margin: entityModalMargin,
+				minVisibleWidth: 48,
+			}}
+			initialPosition={defaultPosition}
+			initialSize={initialSize}
+			minSize={{
+				height: entityModalMinHeight,
+				width: entityModalMinWidth,
+			}}
+			title={modalTitle}
+			viewportMargin={entityModalMargin}
+			zIndex={zIndex}
+			onActivate={() => onActivate(windowId)}
+			renderTitlebarActions={({ position, size }) => (
+				<>
 						{entity ? (
 							<div
 								className="draggable-modal-info-action"
@@ -2926,13 +2706,11 @@ function EntityDetailsModal({
 							onPointerDown={(event) => event.stopPropagation()}
 							onClick={onClose}
 						>
-							<X aria-hidden="true" />
-						</button>
-					</div>
-					<div
-						className="draggable-modal-content"
-						onPointerDown={startDrag}
-					>
+								<X aria-hidden="true" />
+							</button>
+				</>
+			)}
+		>
 						<div className="entity-template-edit-form entity-template-view-form entity-details-view-form access-level-details">
 							<div className="entity-view-summary entity-create-summary">
 								<table className="data-table entity-create-summary-table">
@@ -3278,24 +3056,7 @@ function EntityDetailsModal({
 								</p>
 							) : null}
 						</div>
-					</div>
-					<button
-						aria-label={`Resize ${modalTitle}`}
-						className="draggable-modal-resize"
-						data-no-drag="true"
-						type="button"
-						onPointerDown={startResize}
-					>
-						<span />
-						<span />
-						<span />
-						<span />
-						<span />
-						<span />
-					</button>
-				</div>
-			</div>
-		</div>
+		</BaseDraggableModal>
 	)
 }
 
