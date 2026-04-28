@@ -3024,6 +3024,10 @@ button.template-name-lookup-option:focus-visible {
 	scrollbar-width: thin;
 }
 
+.entity-template-tabs > [role='tabpanel']:has(.include-attribute-popover) {
+	overflow: visible;
+}
+
 .entity-template-tabs > [role='tabpanel'][data-scrollable='true']:hover,
 .entity-template-tabs > [role='tabpanel'][data-scrollable='true']:focus-within {
 	overflow-y: auto;
@@ -3593,7 +3597,7 @@ button.entity-template-tab[aria-selected='true']:hover {
 	right: 0;
 	text-align: left;
 	top: calc(100% + 0.45rem);
-	z-index: 20;
+	z-index: 1000;
 }
 
 .include-attribute-close-button,
