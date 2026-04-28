@@ -160,6 +160,18 @@ function clampToRange(value: number, min: number, max: number) {
 	return Math.max(min, Math.min(value, max))
 }
 
+function sortTemplatesByName<T extends { id: string; name: string }>(
+	templates: T[],
+): T[] {
+	return templates.slice().sort((left, right) => {
+		const nameComparison = left.name.localeCompare(right.name)
+
+		return nameComparison === 0
+			? left.id.localeCompare(right.id)
+			: nameComparison
+	})
+}
+
 function getAttributeTemplateModalTitle(mode: OpenTemplateModal['mode']) {
 	if (mode === 'create') {
 		return 'Attribute Template :: New'
@@ -3065,7 +3077,7 @@ export function TemplatesView() {
 			const data = (await response.json()) as AttributeTemplatesResponse
 
 			if (isMountedRef.current && requestId === loadRequestId.current) {
-				setAttributeTemplates(data.data)
+				setAttributeTemplates(sortTemplatesByName(data.data))
 				setError(null)
 			}
 		} catch {
@@ -3210,8 +3222,12 @@ export function TemplatesView() {
 	const updateAttributeTemplateInState = useCallback(
 		(attributeTemplate: AttributeTemplate) => {
 			setAttributeTemplates((current) =>
-				current.map((item) =>
-					item.id === attributeTemplate.id ? attributeTemplate : item,
+				sortTemplatesByName(
+					current.map((item) =>
+						item.id === attributeTemplate.id
+							? attributeTemplate
+							: item,
+					),
 				),
 			)
 			setOpenModals((current) =>
@@ -3280,7 +3296,9 @@ export function TemplatesView() {
 			}
 
 			const data = (await response.json()) as AttributeTemplateResponse
-			setAttributeTemplates((current) => [...current, data.data])
+			setAttributeTemplates((current) =>
+				sortTemplatesByName([...current, data.data]),
+			)
 			setOpenModals((current) =>
 				current.filter(
 					(modal) => modal.key !== 'attribute-template-create',
