@@ -39,6 +39,7 @@ import {
 	type MouseEvent as ReactMouseEvent,
 	type ReactNode,
 	type PointerEvent as ReactPointerEvent,
+	type RefObject,
 } from 'react'
 import {
 	authChangedEventName,
@@ -593,7 +594,27 @@ interface AttributeTemplateEditFormProps {
 	onValidityChange: (key: string, isValid: boolean) => void
 }
 
-function highlightAttributeTemplateNameMatch(
+interface TemplateNameLookupItem {
+	id: string
+	description: string
+	name: string
+}
+
+interface TemplateNameLookupInputProps<TItem extends TemplateNameLookupItem> {
+	closeAriaLabel: string
+	currentItemId?: string
+	inputRef: RefObject<HTMLInputElement | null>
+	items: TItem[]
+	minimumQueryLength: number
+	onChange: (value: string) => void
+	onOpenItem: (
+		item: TItem,
+		point: { clientX: number; clientY: number },
+	) => void
+	value: string
+}
+
+function highlightTemplateNameMatch(
 	value: string,
 	query: string,
 ): ReactNode {
@@ -629,6 +650,107 @@ function highlightAttributeTemplateNameMatch(
 	return chunks
 }
 
+function TemplateNameLookupInput<TItem extends TemplateNameLookupItem>({
+	closeAriaLabel,
+	currentItemId,
+	inputRef,
+	items,
+	minimumQueryLength,
+	onChange,
+	onOpenItem,
+	value,
+}: TemplateNameLookupInputProps<TItem>) {
+	const [isOpen, setIsOpen] = useState(false)
+	const normalizedQuery = value.trim().toLocaleLowerCase()
+	const matchingItems =
+		normalizedQuery.length >= minimumQueryLength
+			? items.filter(
+					(item) =>
+						item.id !== currentItemId &&
+						item.name
+							.toLocaleLowerCase()
+							.includes(normalizedQuery),
+				)
+			: []
+	const shouldShowLookup = isOpen && matchingItems.length > 0
+
+	return (
+		<span className="template-name-lookup">
+			<input
+				ref={inputRef}
+				type="text"
+				value={value}
+				aria-autocomplete="list"
+				aria-expanded={shouldShowLookup}
+				onBlur={() => setIsOpen(false)}
+				onChange={(event) => {
+					onChange(event.target.value)
+					setIsOpen(true)
+				}}
+				onFocus={() => setIsOpen(true)}
+				onKeyDown={(event) => {
+					if (event.key === 'Escape') {
+						setIsOpen(false)
+					}
+				}}
+			/>
+			{shouldShowLookup ? (
+				<span
+					className="template-name-lookup-popover"
+					role="listbox"
+				>
+					<span className="template-name-lookup-header">
+						<span>Existing entries</span>
+						<button
+							type="button"
+							className="template-name-lookup-close"
+							aria-label={closeAriaLabel}
+							onMouseDown={(event) => {
+								event.preventDefault()
+							}}
+							onClick={() => setIsOpen(false)}
+						>
+							<X aria-hidden="true" />
+						</button>
+					</span>
+					{matchingItems.map((item) => (
+						<button
+							key={item.id}
+							type="button"
+							className="template-name-lookup-option"
+							onMouseDown={(event) => {
+								event.preventDefault()
+							}}
+							onClick={(event) => {
+								setIsOpen(false)
+								onOpenItem(item, {
+									clientX: event.clientX,
+									clientY: event.clientY,
+								})
+							}}
+						>
+							<span className="template-name-lookup-copy">
+								<strong>
+									{highlightTemplateNameMatch(
+										item.name,
+										normalizedQuery,
+									)}
+								</strong>
+								<span>
+									{item.description.trim().length > 0
+										? item.description
+										: '-'}
+								</span>
+							</span>
+							<ExternalLink aria-hidden="true" />
+						</button>
+					))}
+				</span>
+			) : null}
+		</span>
+	)
+}
+
 function AttributeTemplateEditForm({
 	accessLevels,
 	attributeTemplate,
@@ -652,7 +774,6 @@ function AttributeTemplateEditForm({
 	)
 	const [isSaving, setIsSaving] = useState(false)
 	const [name, setName] = useState(attributeTemplate?.name ?? '')
-	const [isNameLookupOpen, setIsNameLookupOpen] = useState(false)
 	const [accessLevelId, setAccessLevelId] = useState(
 		attributeTemplate?.accessLevelId ?? accessLevels[0]?.id ?? 1,
 	)
@@ -660,19 +781,6 @@ function AttributeTemplateEditForm({
 		attributeTemplate?.valueType ?? ValueType.Text,
 	)
 	const nameInputRef = useRef<HTMLInputElement>(null)
-	const normalizedNameQuery = name.trim().toLocaleLowerCase()
-	const matchingAttributeTemplates =
-		normalizedNameQuery.length >= 2
-			? attributeTemplates.filter(
-					(candidate) =>
-						candidate.id !== attributeTemplate?.id &&
-						candidate.name
-							.toLocaleLowerCase()
-							.includes(normalizedNameQuery),
-				)
-			: []
-	const shouldShowNameLookup =
-		isNameLookupOpen && matchingAttributeTemplates.length > 0
 
 	useEffect(() => {
 		onValidityChange(modalKey, name.trim().length > 0)
@@ -729,80 +837,16 @@ function AttributeTemplateEditForm({
 		>
 			<label data-selectable="true">
 				<span>name</span>
-				<span className="attribute-template-name-lookup">
-					<input
-						ref={nameInputRef}
-						type="text"
-						value={name}
-						aria-autocomplete="list"
-						aria-expanded={shouldShowNameLookup}
-						onBlur={() => setIsNameLookupOpen(false)}
-						onChange={(event) => {
-							setName(event.target.value)
-							setIsNameLookupOpen(true)
-						}}
-						onFocus={() => setIsNameLookupOpen(true)}
-						onKeyDown={(event) => {
-							if (event.key === 'Escape') {
-								setIsNameLookupOpen(false)
-							}
-						}}
-					/>
-					{shouldShowNameLookup ? (
-						<span
-							className="attribute-template-name-lookup-popover"
-							role="listbox"
-						>
-							<span className="attribute-template-name-lookup-header">
-								<span>Existing entries</span>
-								<button
-									type="button"
-									className="attribute-template-name-lookup-close"
-									aria-label="Close attribute template matches"
-									onMouseDown={(event) => {
-										event.preventDefault()
-									}}
-									onClick={() => setIsNameLookupOpen(false)}
-								>
-									<X aria-hidden="true" />
-								</button>
-							</span>
-							{matchingAttributeTemplates.map((candidate) => (
-								<button
-									key={candidate.id}
-									type="button"
-									className="attribute-template-name-lookup-option"
-									onMouseDown={(event) => {
-										event.preventDefault()
-									}}
-									onClick={(event) => {
-										setIsNameLookupOpen(false)
-										onOpenAttributeTemplate(candidate, {
-											clientX: event.clientX,
-											clientY: event.clientY,
-										})
-									}}
-								>
-									<span className="attribute-template-name-lookup-copy">
-										<strong>
-											{highlightAttributeTemplateNameMatch(
-												candidate.name,
-												normalizedNameQuery,
-											)}
-										</strong>
-										<span>
-											{candidate.description.trim()
-												.length > 0
-												? candidate.description
-												: '-'}
-										</span>
-									</span>
-									<ExternalLink aria-hidden="true" />
-								</button>
-							))}
-						</span>
-					) : null}
-				</span>
+				<TemplateNameLookupInput
+					closeAriaLabel="Close attribute template matches"
+					currentItemId={attributeTemplate?.id}
+					inputRef={nameInputRef}
+					items={attributeTemplates}
+					minimumQueryLength={3}
+					value={name}
+					onChange={setName}
+					onOpenItem={onOpenAttributeTemplate}
+				/>
 			</label>
 			<label data-selectable="true">
 				<span>description</span>
@@ -899,6 +943,10 @@ interface EntityTemplateEditFormProps {
 	onCreateAttributeTemplate: (
 		input: CreateAttributeTemplateInput,
 	) => Promise<AttributeTemplate>
+	onOpenEntityTemplate: (
+		entityTemplate: EntityTemplate,
+		point: { clientX: number; clientY: number },
+	) => void
 	onSave: (input: CreateEntityTemplateInput) => Promise<void>
 	onActiveTabChange?: (key: string, tab: 'attributes' | 'links') => void
 	onValidityChange: (key: string, isValid: boolean) => void
@@ -933,6 +981,7 @@ function EntityTemplateEditForm({
 	modalKey,
 	onCreateAttributeTemplate,
 	onActiveTabChange,
+	onOpenEntityTemplate,
 	onSave,
 	onValidityChange,
 }: EntityTemplateEditFormProps) {
@@ -1822,11 +1871,15 @@ function EntityTemplateEditForm({
 			<div className="entity-template-fields">
 				<label data-selectable="true">
 					<span>name</span>
-					<input
-						ref={nameInputRef}
-						type="text"
+					<TemplateNameLookupInput
+						closeAriaLabel="Close entity template matches"
+						currentItemId={entityTemplate?.id}
+						inputRef={nameInputRef}
+						items={entityTemplates}
+						minimumQueryLength={2}
 						value={name}
-						onChange={(event) => setName(event.target.value)}
+						onChange={setName}
+						onOpenItem={onOpenEntityTemplate}
 					/>
 				</label>
 				<label data-selectable="true">
@@ -4012,6 +4065,7 @@ export function TemplatesView() {
 									onActiveTabChange={
 										setEntityTemplateActiveTab
 									}
+									onOpenEntityTemplate={openEntityTemplate}
 									onSave={createEntityTemplate}
 									onValidityChange={setModalFormValidity}
 								/>
@@ -4038,6 +4092,7 @@ export function TemplatesView() {
 									onActiveTabChange={
 										setEntityTemplateActiveTab
 									}
+									onOpenEntityTemplate={openEntityTemplate}
 									onSave={(input) => {
 										const entityTemplate =
 											modal.entityTemplate

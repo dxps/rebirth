@@ -2574,15 +2574,15 @@ button.security-user-permissions-trigger:focus-visible {
 	width: 100%;
 }
 
-.attribute-template-name-lookup {
+.template-name-lookup {
 	position: relative;
 }
 
-.attribute-template-name-lookup input {
+.template-name-lookup input {
 	width: 100%;
 }
 
-.attribute-template-name-lookup-popover {
+.template-name-lookup-popover {
 	background: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
 	border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
 	border-radius: 8px;
@@ -2598,7 +2598,7 @@ button.security-user-permissions-trigger:focus-visible {
 	z-index: 20;
 }
 
-.attribute-template-name-lookup-header {
+.template-name-lookup-header {
 	align-items: center;
 	color: var(--muted);
 	display: flex;
@@ -2608,8 +2608,8 @@ button.security-user-permissions-trigger:focus-visible {
 	padding: 0 0.16rem 0 0.44rem;
 }
 
-.attribute-template-name-lookup-close,
-button.attribute-template-name-lookup-close {
+.template-name-lookup-close,
+button.template-name-lookup-close {
 	align-items: center;
 	appearance: none;
 	background: transparent;
@@ -2625,20 +2625,20 @@ button.attribute-template-name-lookup-close {
 	width: 1rem;
 }
 
-.attribute-template-name-lookup-close:hover,
-button.attribute-template-name-lookup-close:hover {
+.template-name-lookup-close:hover,
+button.template-name-lookup-close:hover {
 	background: color-mix(in srgb, var(--fg) 9%, transparent);
 	background-color: color-mix(in srgb, var(--fg) 9%, transparent);
 	color: var(--fg);
 }
 
-.attribute-template-name-lookup-close svg {
+.template-name-lookup-close svg {
 	height: 0.78rem;
 	width: 0.78rem;
 }
 
-.attribute-template-name-lookup-option,
-button.attribute-template-name-lookup-option {
+.template-name-lookup-option,
+button.template-name-lookup-option {
 	align-items: center;
 	appearance: none;
 	background: transparent;
@@ -2656,53 +2656,53 @@ button.attribute-template-name-lookup-option {
 	text-align: left;
 }
 
-.attribute-template-name-lookup-option:hover,
-button.attribute-template-name-lookup-option:hover {
+.template-name-lookup-option:hover,
+button.template-name-lookup-option:hover {
 	background: color-mix(in srgb, var(--fg) 9%, transparent);
 	background-color: color-mix(in srgb, var(--fg) 9%, transparent);
 	color: var(--fg);
 }
 
-.attribute-template-name-lookup-option:focus-visible,
-button.attribute-template-name-lookup-option:focus-visible {
+.template-name-lookup-option:focus-visible,
+button.template-name-lookup-option:focus-visible {
 	background: transparent;
 	background-color: transparent;
 	color: var(--fg);
 	outline: none;
 }
 
-.attribute-template-name-lookup-copy {
+.template-name-lookup-copy {
 	display: grid;
 	gap: 0.12rem;
 	min-width: 0;
 }
 
-.attribute-template-name-lookup-copy strong,
-.attribute-template-name-lookup-copy span {
+.template-name-lookup-copy strong,
+.template-name-lookup-copy span {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.attribute-template-name-lookup-copy strong {
+.template-name-lookup-copy strong {
 	color: var(--fg);
 	font-size: 0.86rem;
 	font-weight: 400;
 }
 
-.attribute-template-name-lookup-copy strong mark {
+.template-name-lookup-copy strong mark {
 	background: color-mix(in srgb, var(--button-hover-bg) 92%, transparent);
 	border-radius: 4px;
 	color: color-mix(in srgb, var(--accent-strong) 82%, var(--button-hover-bg));
 	padding: 0 0.15rem;
 }
 
-.attribute-template-name-lookup-copy span {
+.template-name-lookup-copy span {
 	color: var(--muted);
 	font-size: 0.76rem;
 }
 
-.attribute-template-name-lookup-option svg {
+.template-name-lookup-option svg {
 	color: var(--muted);
 	height: 0.9rem;
 	opacity: 0;
@@ -2710,8 +2710,8 @@ button.attribute-template-name-lookup-option:focus-visible {
 	width: 0.9rem;
 }
 
-.attribute-template-name-lookup-option:hover svg,
-.attribute-template-name-lookup-option:focus-visible svg {
+.template-name-lookup-option:hover svg,
+.template-name-lookup-option:focus-visible svg {
 	opacity: 1;
 }
 
