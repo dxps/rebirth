@@ -60,6 +60,31 @@ const draggableModalDefaultWidth = 360
 const entityTemplateModalHeight = 440
 const entityTemplateModalWidth = 520
 const entityTemplateAttributeReorderThreshold = 0.5
+const auditAccessLevelName = 'Audit'
+
+function getSelectableAttributeAccessLevels(accessLevels: AccessLevel[]) {
+	return accessLevels.filter(
+		(accessLevel) => accessLevel.name !== auditAccessLevelName,
+	)
+}
+
+function getSelectableAttributeAccessLevelId(
+	accessLevels: AccessLevel[],
+	accessLevelId?: number,
+): number {
+	const selectableAccessLevels = getSelectableAttributeAccessLevels(accessLevels)
+
+	if (
+		accessLevelId !== undefined &&
+		selectableAccessLevels.some(
+			(accessLevel) => accessLevel.id === accessLevelId,
+		)
+	) {
+		return accessLevelId
+	}
+
+	return selectableAccessLevels[0]?.id ?? accessLevels[0]?.id ?? 1
+}
 
 function getAuthHeaders(): Record<string, string> {
 	const storedAuth = getStoredAuth()
@@ -774,8 +799,13 @@ function AttributeTemplateEditForm({
 	)
 	const [isSaving, setIsSaving] = useState(false)
 	const [name, setName] = useState(attributeTemplate?.name ?? '')
+	const selectableAccessLevels =
+		getSelectableAttributeAccessLevels(accessLevels)
 	const [accessLevelId, setAccessLevelId] = useState(
-		attributeTemplate?.accessLevelId ?? accessLevels[0]?.id ?? 1,
+		getSelectableAttributeAccessLevelId(
+			accessLevels,
+			attributeTemplate?.accessLevelId,
+		),
 	)
 	const [valueType, setValueType] = useState<ValueType>(
 		attributeTemplate?.valueType ?? ValueType.Text,
@@ -884,12 +914,12 @@ function AttributeTemplateEditForm({
 								setAccessLevelId(Number(event.target.value))
 							}
 						>
-							{accessLevels.length === 0 ? (
+							{selectableAccessLevels.length === 0 ? (
 								<option value={accessLevelId}>
 									{accessLevelId}
 								</option>
 							) : (
-								accessLevels.map((accessLevel) => (
+								selectableAccessLevels.map((accessLevel) => (
 									<option
 										key={accessLevel.id}
 										value={accessLevel.id}
@@ -988,7 +1018,10 @@ function EntityTemplateEditForm({
 	const [activeTab, setActiveTab] = useState<'attributes' | 'links'>(
 		initialActiveTab,
 	)
-	const defaultAccessLevelId = accessLevels[0]?.id ?? 1
+	const selectableAccessLevels =
+		getSelectableAttributeAccessLevels(accessLevels)
+	const defaultAccessLevelId =
+		getSelectableAttributeAccessLevelId(accessLevels)
 	const [description, setDescription] = useState(
 		entityTemplate?.description ?? '',
 	)
@@ -1010,7 +1043,10 @@ function EntityTemplateEditForm({
 					)
 					.map((attribute, index) => ({
 						id: attribute.id,
-						accessLevelId: attribute.accessLevelId,
+						accessLevelId: getSelectableAttributeAccessLevelId(
+							accessLevels,
+							attribute.accessLevelId,
+						),
 						attributeTemplateId: attribute.attributeTemplateId,
 						description: attribute.description,
 						listingIndex: index,
@@ -1362,10 +1398,13 @@ function EntityTemplateEditForm({
 
 		setIncludedAttributes((current) => [
 			...current,
-			{
-				id: crypto.randomUUID(),
-				accessLevelId: attributeTemplate.accessLevelId,
-				attributeTemplateId: attributeTemplate.id,
+				{
+					id: crypto.randomUUID(),
+					accessLevelId: getSelectableAttributeAccessLevelId(
+						accessLevels,
+						attributeTemplate.accessLevelId,
+					),
+					attributeTemplateId: attributeTemplate.id,
 				description: attributeTemplate.description,
 				listingIndex: current.length,
 				name: attributeTemplate.name,
@@ -2337,7 +2376,7 @@ function EntityTemplateEditForm({
 																)
 															}
 														>
-															{accessLevels.length ===
+															{selectableAccessLevels.length ===
 															0 ? (
 																<option
 																	value={
@@ -2349,7 +2388,7 @@ function EntityTemplateEditForm({
 																	}
 																</option>
 															) : (
-																accessLevels.map(
+																selectableAccessLevels.map(
 																	(
 																		accessLevel,
 																	) => (

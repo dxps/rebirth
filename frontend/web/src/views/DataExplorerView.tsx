@@ -59,6 +59,7 @@ const entityModalMinWidth = 400
 const entityModalWidth = 520
 const entityAttributeReorderThreshold = 0.5
 const entitiesPageSize = 10
+const auditAccessLevelName = 'Audit'
 
 interface ModalPosition {
 	x: number
@@ -85,6 +86,30 @@ function getDefaultEntityModalSize(): ModalSize {
 			window.innerWidth - entityModalMargin * 2,
 		),
 	}
+}
+
+function getSelectableAttributeAccessLevels(accessLevels: AccessLevel[]) {
+	return accessLevels.filter(
+		(accessLevel) => accessLevel.name !== auditAccessLevelName,
+	)
+}
+
+function getSelectableAttributeAccessLevelId(
+	accessLevels: AccessLevel[],
+	accessLevelId?: number,
+): number {
+	const selectableAccessLevels = getSelectableAttributeAccessLevels(accessLevels)
+
+	if (
+		accessLevelId !== undefined &&
+		selectableAccessLevels.some(
+			(accessLevel) => accessLevel.id === accessLevelId,
+		)
+	) {
+		return accessLevelId
+	}
+
+	return selectableAccessLevels[0]?.id ?? accessLevels[0]?.id ?? 1
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -324,6 +349,10 @@ function CreateEntityModal({
 	onUpdate,
 }: CreateEntityModalProps) {
 	const formId = mode === 'edit' ? 'entity-edit-form' : 'entity-create-form'
+	const selectableAccessLevels =
+		getSelectableAttributeAccessLevels(accessLevels)
+	const defaultAttributeAccessLevelId =
+		getSelectableAttributeAccessLevelId(accessLevels)
 	const [selectedEntityTemplateId, setSelectedEntityTemplateId] = useState(
 		initialEntityTemplateId,
 	)
@@ -449,7 +478,10 @@ function CreateEntityModal({
 		setSelectedEntityTemplateId(entity.entityTemplateId ?? '')
 		setIncludedAttributes(
 			orderedAttributes.map((attribute, index) => ({
-				accessLevelId: attribute.accessLevelId,
+				accessLevelId: getSelectableAttributeAccessLevelId(
+					accessLevels,
+					attribute.accessLevelId,
+				),
 				attributeTemplateId: attribute.attributeTemplateId,
 				description: attribute.description,
 				entityTemplateAttributeId: attribute.entityTemplateAttributeId,
@@ -476,7 +508,7 @@ function CreateEntityModal({
 		setIsIncludeAttributeOpen(false)
 		setSelectedAttributeTemplateId('')
 		setIsIdPopoverOpen(false)
-	}, [entity, mode])
+	}, [accessLevels, entity, mode])
 
 	useEffect(() => {
 		setActiveTab(
@@ -558,7 +590,10 @@ function CreateEntityModal({
 					)
 
 					return {
-						accessLevelId: attribute.accessLevelId,
+						accessLevelId: getSelectableAttributeAccessLevelId(
+							accessLevels,
+							attribute.accessLevelId,
+						),
 						attributeTemplateId: attribute.attributeTemplateId,
 						description: attribute.description,
 						entityTemplateAttributeId: attribute.id,
@@ -887,7 +922,7 @@ function CreateEntityModal({
 		setIncludedAttributes((current) => [
 			...current,
 			{
-				accessLevelId: accessLevels[0]?.id ?? 1,
+				accessLevelId: defaultAttributeAccessLevelId,
 				attributeTemplateId: null,
 				description: '',
 				entityTemplateAttributeId: null,
@@ -918,7 +953,10 @@ function CreateEntityModal({
 		setIncludedAttributes((current) => [
 			...current,
 			{
-				accessLevelId: attributeTemplate.accessLevelId,
+				accessLevelId: getSelectableAttributeAccessLevelId(
+					accessLevels,
+					attributeTemplate.accessLevelId,
+				),
 				attributeTemplateId: attributeTemplate.id,
 				description: attributeTemplate.description,
 				entityTemplateAttributeId: null,
@@ -1926,7 +1964,7 @@ function CreateEntityModal({
 																			)
 																		}
 																	>
-																		{accessLevels.length ===
+																		{selectableAccessLevels.length ===
 																		0 ? (
 																			<option
 																				value={
@@ -1938,7 +1976,7 @@ function CreateEntityModal({
 																				}
 																			</option>
 																		) : (
-																			accessLevels.map(
+																			selectableAccessLevels.map(
 																				(
 																					accessLevel,
 																				) => (
