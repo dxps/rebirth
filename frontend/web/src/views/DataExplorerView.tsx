@@ -136,6 +136,7 @@ function getLinkCountTooltip(count: number, direction: 'incoming' | 'outgoing') 
 function normalizeEntityAttributeValue(
 	value: string,
 	valueType: ValueType,
+	previousValueType: ValueType = valueType,
 ): string {
 	if (valueType === ValueType.Number) {
 		return normalizeNumberAttributeValue(value)
@@ -143,6 +144,22 @@ function normalizeEntityAttributeValue(
 
 	if (valueType === ValueType.Boolean) {
 		return value === 'true' || value === 'false' ? value : 'false'
+	}
+
+	if (
+		previousValueType === ValueType.Date &&
+		valueType === ValueType.DateTime &&
+		/^\d{4}-\d{2}-\d{2}$/.test(value)
+	) {
+		return `${value} 00:00:00`
+	}
+
+	if (
+		previousValueType === ValueType.DateTime &&
+		valueType === ValueType.Date &&
+		/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?$/.test(value)
+	) {
+		return value.slice(0, 10)
 	}
 
 	return value
@@ -1829,6 +1846,7 @@ function CreateEntityModal({
 																					value: normalizeEntityAttributeValue(
 																						attribute.value,
 																						valueType,
+																						attribute.valueType,
 																					),
 																				},
 																			)

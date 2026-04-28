@@ -2107,7 +2107,8 @@ button.delete-confirm-danger:hover {
 }
 
 .draggable-modal:has(.include-attribute-popover) .draggable-modal-content,
-.draggable-modal:has(.security-user-permissions-menu) .draggable-modal-content {
+.draggable-modal:has(.security-user-permissions-menu) .draggable-modal-content,
+.draggable-modal:has(.date-time-calendar-popover) .draggable-modal-content {
 	overflow: visible;
 }
 
@@ -3787,15 +3788,174 @@ button.date-time-input-picker-button:focus-visible {
 	width: 0.95rem;
 }
 
-.date-time-input-native-picker,
-.entity-template-edit-form .date-time-input-native-picker {
-	block-size: 1px;
-	inline-size: 1px;
-	inset: auto 0 0 auto;
-	opacity: 0;
-	padding: 0;
-	pointer-events: none;
+.date-time-calendar-popover {
+	background: var(--popover);
+	border: 1px solid color-mix(in srgb, var(--fg) 13%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 16px 34px rgb(0 0 0 / 18%);
+	color: var(--popover-foreground);
+	display: grid;
+	gap: 0.42rem;
+	bottom: calc(100% + 0.35rem);
+	left: 0;
+	padding: 0.55rem;
 	position: absolute;
+	top: auto;
+	width: 15.5rem;
+	z-index: 1000;
+}
+
+.entity-form
+	.entity-attributes-tabpanel
+	.entity-attributes-table
+	tbody:has(.date-time-calendar-popover) {
+	overflow-y: visible;
+}
+
+.date-time-calendar-header {
+	align-items: center;
+	display: grid;
+	font-size: 0.78rem;
+	font-weight: 600;
+	grid-template-columns: 1.65rem 1fr 1.65rem;
+	line-height: 1;
+	text-align: center;
+}
+
+.date-time-calendar-nav,
+button.date-time-calendar-nav {
+	align-items: center;
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--muted);
+	display: inline-flex;
+	height: 1.65rem;
+	justify-content: center;
+	padding: 0;
+	width: 1.65rem;
+}
+
+.date-time-calendar-nav:hover,
+button.date-time-calendar-nav:hover,
+.date-time-calendar-nav:focus-visible,
+button.date-time-calendar-nav:focus-visible {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+	color: var(--fg);
+}
+
+.date-time-calendar-nav svg {
+	height: 0.9rem;
+	width: 0.9rem;
+}
+
+.date-time-calendar-weekdays,
+.date-time-calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.date-time-calendar-weekdays span {
+	color: var(--muted);
+	font-size: 0.62rem;
+	line-height: 1;
+	padding: 0.28rem 0;
+	text-align: center;
+}
+
+.date-time-calendar-grid {
+	gap: 0.12rem;
+}
+
+.date-time-calendar-day,
+button.date-time-calendar-day {
+	align-items: center;
+	aspect-ratio: 1;
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	display: inline-flex;
+	font-size: 0.72rem;
+	justify-content: center;
+	line-height: 1;
+	padding: 0;
+}
+
+.date-time-calendar-day[data-outside-month='true'],
+button.date-time-calendar-day[data-outside-month='true'] {
+	color: color-mix(in srgb, var(--muted) 58%, transparent);
+}
+
+.date-time-calendar-day:hover,
+button.date-time-calendar-day:hover,
+.date-time-calendar-day:focus-visible,
+button.date-time-calendar-day:focus-visible {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+	color: var(--fg);
+}
+
+.date-time-calendar-day[data-selected='true'],
+button.date-time-calendar-day[data-selected='true'] {
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
+}
+
+.date-time-calendar-time {
+	align-items: end;
+	border-top: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+	display: grid;
+	gap: 0.32rem;
+	grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+	padding-top: 0.45rem;
+}
+
+.date-time-calendar-time label {
+	display: grid;
+	gap: 0.18rem;
+}
+
+.date-time-calendar-time label > span:first-child {
+	color: var(--muted);
+	font-size: 0.58rem;
+	line-height: 1;
+	padding-left: 0;
+	text-align: center;
+}
+
+.entity-template-edit-form .date-time-calendar-time input {
+	font-size: 0.72rem;
+	font-weight: 500;
+	height: 1.55rem;
+	min-height: 1.55rem;
+	padding: 0.12rem 0.18rem;
+	text-align: center;
+}
+
+.date-time-calendar-done,
+button.date-time-calendar-done {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font-size: 0.7rem;
+	height: 1.55rem;
+	padding: 0 0.5rem;
+}
+
+.date-time-calendar-done:hover,
+button.date-time-calendar-done:hover,
+.date-time-calendar-done:focus-visible,
+button.date-time-calendar-done:focus-visible {
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .entity-template-value-type-wrap {
