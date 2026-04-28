@@ -1349,6 +1349,24 @@ button.access-level-refresh-button:hover {
 	outline: 0;
 }
 
+.entity-search-field input::-webkit-search-cancel-button {
+	appearance: none;
+	background: var(--muted);
+	border-radius: 999px;
+	cursor: pointer;
+	height: 0.72rem;
+	mask:
+		linear-gradient(45deg, transparent 44%, #000 44% 56%, transparent 56%),
+		linear-gradient(-45deg, transparent 44%, #000 44% 56%, transparent 56%);
+	opacity: 0.4;
+	width: 0.72rem;
+}
+
+.entity-search-field input::-webkit-search-cancel-button:hover {
+	opacity: 1;
+	background: var(--fg);
+}
+
 .entity-search-field[data-tooltip]::after {
 	background: var(--tooltip-bg);
 	border-radius: 6px;
