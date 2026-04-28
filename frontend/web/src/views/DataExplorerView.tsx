@@ -43,6 +43,7 @@ import {
 	type PointerEvent as ReactPointerEvent,
 	type SyntheticEvent,
 } from 'react'
+import { DateTimeInput } from '../components/ui/date-time-input'
 import {
 	authChangedEventName,
 	getStoredAuth,
@@ -145,6 +146,10 @@ function normalizeEntityAttributeValue(
 	}
 
 	return value
+}
+
+function isDateValueType(valueType: ValueType): boolean {
+	return valueType === ValueType.Date || valueType === ValueType.DateTime
 }
 
 function normalizeNumberAttributeValue(value: string): string {
@@ -1750,6 +1755,33 @@ function CreateEntityModal({
 																			</option>
 																		</select>
 																	</span>
+																) : isDateValueType(
+																		attribute.valueType,
+																	) ? (
+																	<DateTimeInput
+																		aria-label={`${attribute.name || 'Attribute'} value`}
+																		className="entity-template-attribute-name-input"
+																		data-no-drag="true"
+																		mode={
+																			attribute.valueType ===
+																			ValueType.DateTime
+																				? 'datetime'
+																				: 'date'
+																		}
+																		value={
+																			attribute.value
+																		}
+																		onChange={(
+																			value,
+																		) =>
+																			updateAttribute(
+																				attribute.id,
+																				{
+																					value,
+																				},
+																			)
+																		}
+																	/>
 																) : (
 																	<input
 																		aria-label={`${attribute.name || 'Attribute'} value`}
