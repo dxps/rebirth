@@ -1404,6 +1404,55 @@ button.access-level-refresh-button:hover {
 	width: 50%;
 }
 
+.entities-skeleton-row {
+	pointer-events: none;
+}
+
+.skeleton {
+	animation: skeleton-pulse 1.25s ease-in-out infinite;
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--fg) 7%, transparent),
+		color-mix(in srgb, var(--fg) 13%, transparent),
+		color-mix(in srgb, var(--fg) 7%, transparent)
+	);
+	background-size: 220% 100%;
+	display: inline-block;
+}
+
+.entities-skeleton-line {
+	border-radius: 999px;
+	height: 0.72rem;
+}
+
+.entities-skeleton-name {
+	width: min(68%, 13rem);
+}
+
+.entities-skeleton-value {
+	width: min(58%, 12rem);
+}
+
+.entities-skeleton-icon {
+	border-radius: 999px;
+	height: 1rem;
+	width: 2.1rem;
+}
+
+.entities-skeleton-links {
+	gap: 0.28rem;
+}
+
+@keyframes skeleton-pulse {
+	0% {
+		background-position: 220% 0;
+	}
+
+	100% {
+		background-position: -220% 0;
+	}
+}
+
 .entity-listing-name-cell {
 	text-align: left;
 }

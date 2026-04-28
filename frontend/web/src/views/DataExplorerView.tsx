@@ -18,14 +18,14 @@ import {
 	type UpdateEntityInput,
 } from '@rebirth/shared'
 import {
-	ArrowLeft,
 	ArrowDownLeft,
+	ArrowLeft,
 	ArrowUpRight,
 	Clipboard,
 	ExternalLink,
-	GripVertical,
 	Eye,
 	EyeOff,
+	GripVertical,
 	Info,
 	Pencil,
 	Plus,
@@ -43,12 +43,13 @@ import {
 	type PointerEvent as ReactPointerEvent,
 	type SyntheticEvent,
 } from 'react'
-import { DateTimeInput } from '../components/ui/date-time-input'
 import {
 	authChangedEventName,
 	getStoredAuth,
 	hasStoredPermission,
 } from '../auth'
+import { DateTimeInput } from '../components/ui/date-time-input'
+import { Skeleton } from '../components/ui/skeleton'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const entityModalHeight = 330
@@ -129,7 +130,10 @@ function getEntityListingLabel(entity: Entity): string {
 		: entity.id
 }
 
-function getLinkCountTooltip(count: number, direction: 'incoming' | 'outgoing') {
+function getLinkCountTooltip(
+	count: number,
+	direction: 'incoming' | 'outgoing',
+) {
 	return `${count} ${direction} ${count === 1 ? 'link' : 'links'}`
 }
 
@@ -198,6 +202,29 @@ function isMissingRequiredEntityAttributeValue(
 	}
 
 	return value.trim().length === 0
+}
+
+function EntitiesTableSkeleton() {
+	return Array.from({ length: entitiesPageSize }, (_, index) => (
+		<tr
+			key={index}
+			aria-hidden="true"
+			className="entities-skeleton-row"
+		>
+			<td className="entity-listing-name-cell">
+				<Skeleton className="entities-skeleton-line entities-skeleton-name" />
+			</td>
+			<td className="entity-listing-value-cell">
+				<div className="entity-listing-value-content">
+					<Skeleton className="entities-skeleton-line entities-skeleton-value" />
+					<span className="entity-link-summary entities-skeleton-links">
+						<Skeleton className="entities-skeleton-icon" />
+						<Skeleton className="entities-skeleton-icon" />
+					</span>
+				</div>
+			</td>
+		</tr>
+	))
 }
 
 interface EntityDetailsWindowState {
@@ -1338,7 +1365,9 @@ function CreateEntityModal({
 								onPointerDown={(event) =>
 									event.stopPropagation()
 								}
-								onClick={() => onBack?.(position, size, activeTab)}
+								onClick={() =>
+									onBack?.(position, size, activeTab)
+								}
 							>
 								<ArrowLeft aria-hidden="true" />
 							</button>
@@ -1774,7 +1803,7 @@ function CreateEntityModal({
 																	</span>
 																) : isDateValueType(
 																		attribute.valueType,
-																	) ? (
+																  ) ? (
 																	<DateTimeInput
 																		aria-label={`${attribute.name || 'Attribute'} value`}
 																		className="entity-template-attribute-name-input"
@@ -3278,8 +3307,10 @@ export function DataExplorerView() {
 	const entityDetailsLoadRequestIds = useRef(new Map<string, number>())
 	const modalZIndexRef = useRef(1)
 	const isAuthenticated = storedAuth !== null
-	const canManageOwnData =
-		hasStoredPermission(storedAuth, PermissionName.ManageOwnData)
+	const canManageOwnData = hasStoredPermission(
+		storedAuth,
+		PermissionName.ManageOwnData,
+	)
 	const canManageData =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor)
@@ -3430,9 +3461,12 @@ export function DataExplorerView() {
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
 		try {
-			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`, {
-				headers: getAuthHeaders(),
-			})
+			const response = await fetch(
+				`${apiBaseUrl}${apiRoutes.accessLevels}`,
+				{
+					headers: getAuthHeaders(),
+				},
+			)
 
 			if (!response.ok) {
 				throw new Error('Unable to load access levels')
@@ -3585,66 +3619,73 @@ export function DataExplorerView() {
 		],
 	)
 
-	const deleteEntity = useCallback(async (entity: Entity): Promise<void> => {
-		if (!canCreateManagedData) {
-			return
-		}
+	const deleteEntity = useCallback(
+		async (entity: Entity): Promise<void> => {
+			if (!canCreateManagedData) {
+				return
+			}
 
-		setEntityDetailsWindows((current) =>
-			current.map((window) =>
-				window.entityId === entity.id
-					? {
-							...window,
-							error: null,
-						}
-					: window,
-			),
-		)
-
-		try {
-			const response = await fetch(
-				`${apiBaseUrl}${apiRoutes.entity(entity.id)}`,
-				{
-					headers: getAuthHeaders(),
-					method: 'DELETE',
-				},
+			setEntityDetailsWindows((current) =>
+				current.map((window) =>
+					window.entityId === entity.id
+						? {
+								...window,
+								error: null,
+							}
+						: window,
+				),
 			)
 
-			if (!response.ok) {
-				throw new Error(
-					await getErrorMessageFromResponse(
-						response,
-						'Unable to delete entity',
-					),
+			try {
+				const response = await fetch(
+					`${apiBaseUrl}${apiRoutes.entity(entity.id)}`,
+					{
+						headers: getAuthHeaders(),
+						method: 'DELETE',
+					},
 				)
-			}
 
-			if (isMountedRef.current) {
-				setEntities((current) =>
-					current.filter((candidate) => candidate.id !== entity.id),
-				)
-				setEntityDetailsWindows((current) =>
-					current.filter((window) => window.entityId !== entity.id),
-				)
+				if (!response.ok) {
+					throw new Error(
+						await getErrorMessageFromResponse(
+							response,
+							'Unable to delete entity',
+						),
+					)
+				}
+
+				if (isMountedRef.current) {
+					setEntities((current) =>
+						current.filter(
+							(candidate) => candidate.id !== entity.id,
+						),
+					)
+					setEntityDetailsWindows((current) =>
+						current.filter(
+							(window) => window.entityId !== entity.id,
+						),
+					)
+				}
+			} catch (error) {
+				if (isMountedRef.current) {
+					setEntityDetailsWindows((current) =>
+						current.map((window) =>
+							window.entityId === entity.id
+								? {
+										...window,
+										error:
+											error instanceof Error
+												? error.message
+												: 'Unable to delete entity',
+									}
+								: window,
+						),
+					)
+				}
 			}
-		} catch (error) {
-			if (isMountedRef.current) {
-				setEntityDetailsWindows((current) =>
-					current.map((window) =>
-						window.entityId === entity.id
-							? {
-									...window,
-									error:
-										error instanceof Error
-											? error.message
-											: 'Unable to delete entity',
-								}
-							: window,
-					),
-				)
-			}
-		}
-	}, [canCreateManagedData])
+		},
+		[canCreateManagedData],
+	)
 
 	const loadEntityDetails = useCallback(
 		async (windowId: string, entityId: string) => {
@@ -3996,7 +4037,8 @@ export function DataExplorerView() {
 									),
 								},
 								initialSize:
-									editWindowSize ?? getDefaultEntityModalSize(),
+									editWindowSize ??
+									getDefaultEntityModalSize(),
 								zIndex: getNextModalZIndex(),
 								isLoading: false,
 							},
@@ -4064,7 +4106,7 @@ export function DataExplorerView() {
 					<p>Entities</p>
 					<label
 						className="entity-search-field"
-						data-tooltip="Search by attributes names and values"
+						data-tooltip="Search through entities' attributes names and values"
 					>
 						<input
 							aria-label="Search entities"
@@ -4088,7 +4130,10 @@ export function DataExplorerView() {
 							data-tooltip="Try again"
 							type="button"
 							onClick={() =>
-								void loadEntities(entitySearchTerm, entitiesPage)
+								void loadEntities(
+									entitySearchTerm,
+									entitiesPage,
+								)
 							}
 						>
 							<RefreshCw aria-hidden="true" />
@@ -4130,9 +4175,7 @@ export function DataExplorerView() {
 							</thead>
 							<tbody>
 								{isLoadingEntities ? (
-									<tr>
-										<td>Loading entities</td>
-									</tr>
+									<EntitiesTableSkeleton />
 								) : entities.length === 0 ? (
 									<tr>
 										<td
@@ -4140,7 +4183,9 @@ export function DataExplorerView() {
 											colSpan={2}
 										>
 											<div className="entities-empty-state">
-												<span>There are no entries</span>
+												<span>
+													There are no entries
+												</span>
 												<button
 													aria-label="Refresh entities"
 													className="access-level-refresh-button"
@@ -4224,28 +4269,32 @@ export function DataExplorerView() {
 															className="entity-link-summary"
 															aria-label={`${outgoingLinksCount} outgoing links, ${incomingLinksCount} incoming links`}
 														>
-														<span
-															className="entity-link-summary-item"
-															data-tooltip={getLinkCountTooltip(
-																outgoingLinksCount,
-																'outgoing',
-															)}
-														>
-															<ArrowUpRight aria-hidden="true" />
-															<span>
-																{outgoingLinksCount}
+															<span
+																className="entity-link-summary-item"
+																data-tooltip={getLinkCountTooltip(
+																	outgoingLinksCount,
+																	'outgoing',
+																)}
+															>
+																<ArrowUpRight aria-hidden="true" />
+																<span>
+																	{
+																		outgoingLinksCount
+																	}
+																</span>
 															</span>
-														</span>
-														<span
-															className="entity-link-summary-item"
-															data-tooltip={getLinkCountTooltip(
-																incomingLinksCount,
-																'incoming',
-															)}
-														>
-															<ArrowDownLeft aria-hidden="true" />
-															<span>
-																{incomingLinksCount}
+															<span
+																className="entity-link-summary-item"
+																data-tooltip={getLinkCountTooltip(
+																	incomingLinksCount,
+																	'incoming',
+																)}
+															>
+																<ArrowDownLeft aria-hidden="true" />
+																<span>
+																	{
+																		incomingLinksCount
+																	}
 																</span>
 															</span>
 														</span>
@@ -4262,8 +4311,7 @@ export function DataExplorerView() {
 								<button
 									type="button"
 									disabled={
-										entitiesPage <= 1 ||
-										isLoadingEntities
+										entitiesPage <= 1 || isLoadingEntities
 									}
 									onClick={() =>
 										setEntitiesPage((current) =>
@@ -4421,67 +4469,71 @@ export function DataExplorerView() {
 					zIndex={createEntityModalZIndex}
 				/>
 			) : null}
-			{canCreateManagedData && entityEditWindows.map((window) => (
-				<CreateEntityModal
-					key={window.id}
-					accessLevels={accessLevels}
-					creationMode={
-						window.entity.entityTemplateId ? 'template' : 'scratch'
-					}
-					entity={window.entity}
-					entities={entities}
-					entityTemplates={entityTemplates}
-					error={createEntityError}
-					initialEntityTemplateId={
-						window.entity.entityTemplateId ?? ''
-					}
-					initialActiveTab={window.activeTab}
-					initialPosition={window.initialPosition}
-					initialSize={window.initialSize}
-					isLoadingOptions={isLoadingCreateOptions}
-					isSaving={isSavingEntity}
-					onActivate={() => activateEntityEditWindow(window.id)}
-					mode="edit"
-					onClose={() =>
-						setEntityEditWindows((current) =>
-							current.filter((item) => item.id !== window.id),
-						)
-					}
-					onBack={(position, size, activeTab) => {
-						setEntityEditWindows((current) =>
-							current.filter((item) => item.id !== window.id),
-						)
-						setEntityDetailsWindows((current) => [
-							...current.filter(
-								(item) => item.entityId !== window.entity.id,
-							),
-							{
-								entity: window.entity,
-								entityId: window.entity.id,
-								activeTab,
-								error: null,
-								id: crypto.randomUUID(),
-								initialPosition: position,
-								initialSize: size,
-								zIndex: getNextModalZIndex(),
-								isLoading: false,
-							},
-						])
-					}}
-					onCreate={createEntity}
-					onUpdate={(id, input, position, size, activeTab) =>
-						updateEntityRecord(
-							id,
-							input,
-							position ?? window.initialPosition,
-							size ?? window.initialSize,
-							activeTab ?? window.activeTab,
-							window.id,
-						)
-					}
-					zIndex={window.zIndex}
-				/>
-			))}
+			{canCreateManagedData &&
+				entityEditWindows.map((window) => (
+					<CreateEntityModal
+						key={window.id}
+						accessLevels={accessLevels}
+						creationMode={
+							window.entity.entityTemplateId
+								? 'template'
+								: 'scratch'
+						}
+						entity={window.entity}
+						entities={entities}
+						entityTemplates={entityTemplates}
+						error={createEntityError}
+						initialEntityTemplateId={
+							window.entity.entityTemplateId ?? ''
+						}
+						initialActiveTab={window.activeTab}
+						initialPosition={window.initialPosition}
+						initialSize={window.initialSize}
+						isLoadingOptions={isLoadingCreateOptions}
+						isSaving={isSavingEntity}
+						onActivate={() => activateEntityEditWindow(window.id)}
+						mode="edit"
+						onClose={() =>
+							setEntityEditWindows((current) =>
+								current.filter((item) => item.id !== window.id),
+							)
+						}
+						onBack={(position, size, activeTab) => {
+							setEntityEditWindows((current) =>
+								current.filter((item) => item.id !== window.id),
+							)
+							setEntityDetailsWindows((current) => [
+								...current.filter(
+									(item) =>
+										item.entityId !== window.entity.id,
+								),
+								{
+									entity: window.entity,
+									entityId: window.entity.id,
+									activeTab,
+									error: null,
+									id: crypto.randomUUID(),
+									initialPosition: position,
+									initialSize: size,
+									zIndex: getNextModalZIndex(),
+									isLoading: false,
+								},
+							])
+						}}
+						onCreate={createEntity}
+						onUpdate={(id, input, position, size, activeTab) =>
+							updateEntityRecord(
+								id,
+								input,
+								position ?? window.initialPosition,
+								size ?? window.initialSize,
+								activeTab ?? window.activeTab,
+								window.id,
+							)
+						}
+						zIndex={window.zIndex}
+					/>
+				))}
 			{entityDetailsWindows.map((window) => (
 				<EntityDetailsModal
 					key={window.id}
