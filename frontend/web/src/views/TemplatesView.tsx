@@ -567,21 +567,64 @@ function DraggableModal({
 interface AttributeTemplateEditFormProps {
 	accessLevels: AccessLevel[]
 	attributeTemplate?: AttributeTemplate
+	attributeTemplates: AttributeTemplate[]
 	autoFocusName?: boolean
 	formId: string
 	modalKey: string
+	onOpenAttributeTemplate: (
+		attributeTemplate: AttributeTemplate,
+		point: { clientX: number; clientY: number },
+	) => void
 	onSave: (
 		input: CreateAttributeTemplateInput | UpdateAttributeTemplateInput,
 	) => Promise<void | AttributeTemplate>
 	onValidityChange: (key: string, isValid: boolean) => void
 }
 
+function highlightAttributeTemplateNameMatch(
+	value: string,
+	query: string,
+): ReactNode {
+	if (query.length === 0) {
+		return value
+	}
+
+	const valueLower = value.toLocaleLowerCase()
+	const queryLower = query.toLocaleLowerCase()
+	const chunks: ReactNode[] = []
+	let cursor = 0
+	let matchIndex = valueLower.indexOf(queryLower)
+
+	while (matchIndex >= 0) {
+		if (matchIndex > cursor) {
+			chunks.push(value.slice(cursor, matchIndex))
+		}
+
+		const matchEnd = matchIndex + query.length
+		chunks.push(
+			<mark key={`${matchIndex}-${matchEnd}`}>
+				{value.slice(matchIndex, matchEnd)}
+			</mark>,
+		)
+		cursor = matchEnd
+		matchIndex = valueLower.indexOf(queryLower, cursor)
+	}
+
+	if (cursor < value.length) {
+		chunks.push(value.slice(cursor))
+	}
+
+	return chunks
+}
+
 function AttributeTemplateEditForm({
 	accessLevels,
 	attributeTemplate,
+	attributeTemplates,
 	autoFocusName = false,
 	formId,
 	modalKey,
+	onOpenAttributeTemplate,
 	onSave,
 	onValidityChange,
 }: AttributeTemplateEditFormProps) {
@@ -597,6 +640,7 @@ function AttributeTemplateEditForm({
 	)
 	const [isSaving, setIsSaving] = useState(false)
 	const [name, setName] = useState(attributeTemplate?.name ?? '')
+	const [isNameLookupOpen, setIsNameLookupOpen] = useState(false)
 	const [accessLevelId, setAccessLevelId] = useState(
 		attributeTemplate?.accessLevelId ?? accessLevels[0]?.id ?? 1,
 	)
@@ -604,6 +648,19 @@ function AttributeTemplateEditForm({
 		attributeTemplate?.valueType ?? ValueType.Text,
 	)
 	const nameInputRef = useRef<HTMLInputElement>(null)
+	const normalizedNameQuery = name.trim().toLocaleLowerCase()
+	const matchingAttributeTemplates =
+		normalizedNameQuery.length >= 2
+			? attributeTemplates.filter(
+					(candidate) =>
+						candidate.id !== attributeTemplate?.id &&
+						candidate.name
+							.toLocaleLowerCase()
+							.includes(normalizedNameQuery),
+				)
+			: []
+	const shouldShowNameLookup =
+		isNameLookupOpen && matchingAttributeTemplates.length > 0
 
 	useEffect(() => {
 		onValidityChange(modalKey, name.trim().length > 0)
@@ -660,12 +717,80 @@ function AttributeTemplateEditForm({
 		>
 			<label data-selectable="true">
 				<span>name</span>
-				<input
-					ref={nameInputRef}
-					type="text"
-					value={name}
-					onChange={(event) => setName(event.target.value)}
-				/>
+				<span className="attribute-template-name-lookup">
+					<input
+						ref={nameInputRef}
+						type="text"
+						value={name}
+						aria-autocomplete="list"
+						aria-expanded={shouldShowNameLookup}
+						onBlur={() => setIsNameLookupOpen(false)}
+						onChange={(event) => {
+							setName(event.target.value)
+							setIsNameLookupOpen(true)
+						}}
+						onFocus={() => setIsNameLookupOpen(true)}
+						onKeyDown={(event) => {
+							if (event.key === 'Escape') {
+								setIsNameLookupOpen(false)
+							}
+						}}
+					/>
+					{shouldShowNameLookup ? (
+						<span
+							className="attribute-template-name-lookup-popover"
+							role="listbox"
+						>
+							<span className="attribute-template-name-lookup-header">
+								<span>Existing entries</span>
+								<button
+									type="button"
+									className="attribute-template-name-lookup-close"
+									aria-label="Close attribute template matches"
+									onMouseDown={(event) => {
+										event.preventDefault()
+									}}
+									onClick={() => setIsNameLookupOpen(false)}
+								>
+									<X aria-hidden="true" />
+								</button>
+							</span>
+							{matchingAttributeTemplates.map((candidate) => (
+								<button
+									key={candidate.id}
+									type="button"
+									className="attribute-template-name-lookup-option"
+									onMouseDown={(event) => {
+										event.preventDefault()
+									}}
+									onClick={(event) => {
+										setIsNameLookupOpen(false)
+										onOpenAttributeTemplate(candidate, {
+											clientX: event.clientX,
+											clientY: event.clientY,
+										})
+									}}
+								>
+									<span className="attribute-template-name-lookup-copy">
+										<strong>
+											{highlightAttributeTemplateNameMatch(
+												candidate.name,
+												normalizedNameQuery,
+											)}
+										</strong>
+										<span>
+											{candidate.description.trim()
+												.length > 0
+												? candidate.description
+												: '-'}
+										</span>
+									</span>
+									<ExternalLink aria-hidden="true" />
+								</button>
+							))}
+						</span>
+					) : null}
+				</span>
 			</label>
 			<label data-selectable="true">
 				<span>description</span>
@@ -2759,7 +2884,9 @@ function EntityTemplateDetailsView({
 											<tr key={link.id}>
 												<td>{link.name}</td>
 												<LinkDescriptionValue
-													description={link.description}
+													description={
+														link.description
+													}
 												/>
 												<td>
 													{targetEntityTemplate ? (
@@ -2775,7 +2902,9 @@ function EntityTemplateDetailsView({
 															}
 														>
 															<span>
-																{targetEntityTemplate.name}
+																{
+																	targetEntityTemplate.name
+																}
 															</span>
 															<ExternalLink aria-hidden="true" />
 														</button>
@@ -2806,30 +2935,36 @@ function EntityTemplateDetailsView({
 								</tr>
 							</thead>
 							<tbody>
-								{incomingLinks.map(({ link, sourceTemplate }) => (
-									<tr key={`${sourceTemplate.id}:${link.id}`}>
-										<td>
-											<button
-												aria-label={`Open entity template ${sourceTemplate.name}`}
-												className="entity-reference-button"
-												type="button"
-												onClick={(event) =>
-													openReferencedEntityTemplate(
-														sourceTemplate,
-														event,
-													)
-												}
-											>
-												<span>{sourceTemplate.name}</span>
-												<ExternalLink aria-hidden="true" />
-											</button>
-										</td>
-										<td>{link.name}</td>
-										<LinkDescriptionValue
-											description={link.description}
-										/>
-									</tr>
-								))}
+								{incomingLinks.map(
+									({ link, sourceTemplate }) => (
+										<tr
+											key={`${sourceTemplate.id}:${link.id}`}
+										>
+											<td>
+												<button
+													aria-label={`Open entity template ${sourceTemplate.name}`}
+													className="entity-reference-button"
+													type="button"
+													onClick={(event) =>
+														openReferencedEntityTemplate(
+															sourceTemplate,
+															event,
+														)
+													}
+												>
+													<span>
+														{sourceTemplate.name}
+													</span>
+													<ExternalLink aria-hidden="true" />
+												</button>
+											</td>
+											<td>{link.name}</td>
+											<LinkDescriptionValue
+												description={link.description}
+											/>
+										</tr>
+									),
+								)}
 							</tbody>
 						</table>
 					</div>
@@ -2863,8 +2998,10 @@ export function TemplatesView() {
 	const loadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
 	const isAuthenticated = storedAuth !== null
-	const canManageOwnData =
-		hasStoredPermission(storedAuth, PermissionName.ManageOwnData)
+	const canManageOwnData = hasStoredPermission(
+		storedAuth,
+		PermissionName.ManageOwnData,
+	)
 	const canManageTemplates =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor)
@@ -2878,9 +3015,12 @@ export function TemplatesView() {
 		accessLevelsLoadRequestId.current = requestId
 
 		try {
-			const response = await fetch(`${apiBaseUrl}${apiRoutes.accessLevels}`, {
-				headers: getAuthHeaders(),
-			})
+			const response = await fetch(
+				`${apiBaseUrl}${apiRoutes.accessLevels}`,
+				{
+					headers: getAuthHeaders(),
+				},
+			)
 
 			if (!response.ok) {
 				throw new Error('Unable to load access levels')
@@ -3765,273 +3905,302 @@ export function TemplatesView() {
 								storedAuth?.user.id)
 
 					return (
-					<DraggableModal
-						key={modal.key}
-						id={modal.key}
-						initialHeight={
-							modal.templateType === 'entity'
-								? entityTemplateModalHeight
-								: undefined
-						}
-						initialPosition={modal.initialPosition}
-						isSaveDisabled={
-							(modal.mode === 'create' ||
-								modal.mode === 'edit') &&
-							!validFormModalIds.has(modal.key)
-						}
-						minHeight={
-							modal.templateType === 'entity'
-								? entityTemplateModalHeight
-								: undefined
-						}
-						mode={modal.mode}
-						onActivate={bringToFront}
-						onBack={(key) => {
-							const modal = openModals.find(
-								(item) => item.key === key,
-							)
-
-							if (modal?.mode === 'create') {
-								closeModal(key)
-								return
+						<DraggableModal
+							key={modal.key}
+							id={modal.key}
+							initialHeight={
+								modal.templateType === 'entity'
+									? entityTemplateModalHeight
+									: undefined
 							}
-
-							setModalMode(key, 'details')
-						}}
-						onClose={closeModal}
-						onDelete={() => {
-							if (!canManageModal) {
-								return
+							initialPosition={modal.initialPosition}
+							isSaveDisabled={
+								(modal.mode === 'create' ||
+									modal.mode === 'edit') &&
+								!validFormModalIds.has(modal.key)
 							}
-
-							if (modal.entityTemplate) {
-								void deleteEntityTemplate(modal.entityTemplate)
-							} else if (modal.attributeTemplate) {
-								void deleteAttributeTemplate(
-									modal.attributeTemplate,
+							minHeight={
+								modal.templateType === 'entity'
+									? entityTemplateModalHeight
+									: undefined
+							}
+							mode={modal.mode}
+							onActivate={bringToFront}
+							onBack={(key) => {
+								const modal = openModals.find(
+									(item) => item.key === key,
 								)
+
+								if (modal?.mode === 'create') {
+									closeModal(key)
+									return
+								}
+
+								setModalMode(key, 'details')
+							}}
+							onClose={closeModal}
+							onDelete={() => {
+								if (!canManageModal) {
+									return
+								}
+
+								if (modal.entityTemplate) {
+									void deleteEntityTemplate(
+										modal.entityTemplate,
+									)
+								} else if (modal.attributeTemplate) {
+									void deleteAttributeTemplate(
+										modal.attributeTemplate,
+									)
+								}
+							}}
+							onEdit={(key) => setModalMode(key, 'edit')}
+							canEdit={canManageModal}
+							saveDisabledTooltip={
+								modal.templateType === 'entity'
+									? 'An entity template must have a name\nand include at least one attribute'
+									: 'An attribute template must have a name'
 							}
-						}}
-						onEdit={(key) => setModalMode(key, 'edit')}
-						canEdit={canManageModal}
-						saveDisabledTooltip={
-							modal.templateType === 'entity'
-								? 'An entity template must have a name\nand include at least one attribute'
-								: 'An attribute template must have a name'
-						}
-						title={
-							modal.templateType === 'entity'
-								? getEntityTemplateModalTitle(modal.mode)
-								: getAttributeTemplateModalTitle(modal.mode)
-						}
-						infoText={
-							modal.entityTemplate?.id ??
-							modal.attributeTemplate?.id ??
-							undefined
-						}
-						zIndex={modal.zIndex}
-					>
-						{modal.templateType === 'entity' &&
-						modal.mode === 'create' ? (
-							<EntityTemplateEditForm
-								accessLevels={accessLevels}
-								attributeTemplates={attributeTemplates}
-								autoFocusName
-								entityTemplates={entityTemplates}
-								initialActiveTab={
-									modal.entityTemplateActiveTab === 'links'
-										? 'links'
-										: 'attributes'
-								}
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onCreateAttributeTemplate={
-									createAttributeTemplate
-								}
-								onActiveTabChange={setEntityTemplateActiveTab}
-								onSave={createEntityTemplate}
-								onValidityChange={setModalFormValidity}
-							/>
-						) : modal.templateType === 'entity' &&
-						  modal.mode === 'edit' &&
-						  modal.entityTemplate ? (
-							<EntityTemplateEditForm
-								accessLevels={accessLevels}
-								attributeTemplates={attributeTemplates}
-								autoFocusName
-								entityTemplate={modal.entityTemplate}
-								entityTemplates={entityTemplates}
-								initialActiveTab={
-									modal.entityTemplateActiveTab === 'links'
-										? 'links'
-										: 'attributes'
-								}
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onCreateAttributeTemplate={
-									createAttributeTemplate
-								}
-								onActiveTabChange={setEntityTemplateActiveTab}
-								onSave={(input) => {
-									const entityTemplate = modal.entityTemplate
-
-									if (!entityTemplate) {
-										return Promise.resolve()
+							title={
+								modal.templateType === 'entity'
+									? getEntityTemplateModalTitle(modal.mode)
+									: getAttributeTemplateModalTitle(modal.mode)
+							}
+							infoText={
+								modal.entityTemplate?.id ??
+								modal.attributeTemplate?.id ??
+								undefined
+							}
+							zIndex={modal.zIndex}
+						>
+							{modal.templateType === 'entity' &&
+							modal.mode === 'create' ? (
+								<EntityTemplateEditForm
+									accessLevels={accessLevels}
+									attributeTemplates={attributeTemplates}
+									autoFocusName
+									entityTemplates={entityTemplates}
+									initialActiveTab={
+										modal.entityTemplateActiveTab ===
+										'links'
+											? 'links'
+											: 'attributes'
 									}
-
-									return saveEntityTemplate(
-										entityTemplate.id,
-										input,
-									)
-								}}
-								onValidityChange={setModalFormValidity}
-							/>
-						) : modal.mode === 'create' ? (
-							<AttributeTemplateEditForm
-								accessLevels={accessLevels}
-								autoFocusName
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onSave={createAttributeTemplate}
-								onValidityChange={setModalFormValidity}
-							/>
-						) : modal.mode === 'edit' && modal.attributeTemplate ? (
-							<AttributeTemplateEditForm
-								accessLevels={accessLevels}
-								attributeTemplate={modal.attributeTemplate}
-								autoFocusName
-								formId={`${modal.key}-edit-form`}
-								modalKey={modal.key}
-								onSave={(input) => {
-									const attributeTemplate =
-										modal.attributeTemplate
-
-									if (!attributeTemplate) {
-										return Promise.resolve()
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onCreateAttributeTemplate={
+										createAttributeTemplate
 									}
+									onActiveTabChange={
+										setEntityTemplateActiveTab
+									}
+									onSave={createEntityTemplate}
+									onValidityChange={setModalFormValidity}
+								/>
+							) : modal.templateType === 'entity' &&
+							  modal.mode === 'edit' &&
+							  modal.entityTemplate ? (
+								<EntityTemplateEditForm
+									accessLevels={accessLevels}
+									attributeTemplates={attributeTemplates}
+									autoFocusName
+									entityTemplate={modal.entityTemplate}
+									entityTemplates={entityTemplates}
+									initialActiveTab={
+										modal.entityTemplateActiveTab ===
+										'links'
+											? 'links'
+											: 'attributes'
+									}
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onCreateAttributeTemplate={
+										createAttributeTemplate
+									}
+									onActiveTabChange={
+										setEntityTemplateActiveTab
+									}
+									onSave={(input) => {
+										const entityTemplate =
+											modal.entityTemplate
 
-									return saveAttributeTemplate(
-										attributeTemplate.id,
-										input,
-									)
-								}}
-								onValidityChange={setModalFormValidity}
-							/>
-						) : modal.entityTemplate ? (
-							<EntityTemplateDetailsView
-								accessLevels={accessLevels}
-								entityTemplate={modal.entityTemplate}
-								entityTemplates={entityTemplates}
-								initialActiveTab={modal.entityTemplateActiveTab}
-								onActiveTabChange={(tab) =>
-									setEntityTemplateActiveTab(modal.key, tab)
-								}
-								onOpenEntityTemplate={openEntityTemplate}
-							/>
-						) : modal.attributeTemplate ? (
-							<div className="access-level-details access-level-edit-form attribute-template-view-form">
-								<label data-selectable="true">
-									<span>name</span>
-									<input
-										readOnly
-										type="text"
-										value={modal.attributeTemplate.name}
-									/>
-								</label>
-								<label data-selectable="true">
-									<span>description</span>
-									<textarea
-										className="attribute-template-description-input"
-										readOnly
-										rows={1}
-										value={
-											modal.attributeTemplate.description
+										if (!entityTemplate) {
+											return Promise.resolve()
 										}
-									/>
-								</label>
-								<div className="attribute-template-detail-pair-row">
+
+										return saveEntityTemplate(
+											entityTemplate.id,
+											input,
+										)
+									}}
+									onValidityChange={setModalFormValidity}
+								/>
+							) : modal.mode === 'create' ? (
+								<AttributeTemplateEditForm
+									accessLevels={accessLevels}
+									attributeTemplates={attributeTemplates}
+									autoFocusName
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onOpenAttributeTemplate={
+										openAttributeTemplate
+									}
+									onSave={createAttributeTemplate}
+									onValidityChange={setModalFormValidity}
+								/>
+							) : modal.mode === 'edit' &&
+							  modal.attributeTemplate ? (
+								<AttributeTemplateEditForm
+									accessLevels={accessLevels}
+									attributeTemplate={modal.attributeTemplate}
+									attributeTemplates={attributeTemplates}
+									autoFocusName
+									formId={`${modal.key}-edit-form`}
+									modalKey={modal.key}
+									onOpenAttributeTemplate={
+										openAttributeTemplate
+									}
+									onSave={(input) => {
+										const attributeTemplate =
+											modal.attributeTemplate
+
+										if (!attributeTemplate) {
+											return Promise.resolve()
+										}
+
+										return saveAttributeTemplate(
+											attributeTemplate.id,
+											input,
+										)
+									}}
+									onValidityChange={setModalFormValidity}
+								/>
+							) : modal.entityTemplate ? (
+								<EntityTemplateDetailsView
+									accessLevels={accessLevels}
+									entityTemplate={modal.entityTemplate}
+									entityTemplates={entityTemplates}
+									initialActiveTab={
+										modal.entityTemplateActiveTab
+									}
+									onActiveTabChange={(tab) =>
+										setEntityTemplateActiveTab(
+											modal.key,
+											tab,
+										)
+									}
+									onOpenEntityTemplate={openEntityTemplate}
+								/>
+							) : modal.attributeTemplate ? (
+								<div className="access-level-details access-level-edit-form attribute-template-view-form">
 									<label data-selectable="true">
-										<span>value type</span>
-										<span className="attribute-template-select-wrap">
-											<select
-												disabled
-												value={
-													modal.attributeTemplate
-														.valueType
-												}
-											>
-												<option
+										<span>name</span>
+										<input
+											readOnly
+											type="text"
+											value={modal.attributeTemplate.name}
+										/>
+									</label>
+									<label data-selectable="true">
+										<span>description</span>
+										<textarea
+											className="attribute-template-description-input"
+											readOnly
+											rows={1}
+											value={
+												modal.attributeTemplate
+													.description
+											}
+										/>
+									</label>
+									<div className="attribute-template-detail-pair-row">
+										<label data-selectable="true">
+											<span>value type</span>
+											<span className="attribute-template-select-wrap">
+												<select
+													disabled
 													value={
 														modal.attributeTemplate
 															.valueType
 													}
 												>
-													{
-														modal.attributeTemplate
-															.valueType
-													}
-												</option>
-											</select>
-										</span>
-									</label>
-									<label data-selectable="true">
-										<span>access level</span>
-										<span className="attribute-template-select-wrap">
-											<select
-												disabled
-												value={
-													modal.attributeTemplate
-														.accessLevelId
-												}
-											>
-												<option
+													<option
+														value={
+															modal
+																.attributeTemplate
+																.valueType
+														}
+													>
+														{
+															modal
+																.attributeTemplate
+																.valueType
+														}
+													</option>
+												</select>
+											</span>
+										</label>
+										<label data-selectable="true">
+											<span>access level</span>
+											<span className="attribute-template-select-wrap">
+												<select
+													disabled
 													value={
 														modal.attributeTemplate
 															.accessLevelId
 													}
 												>
-													{accessLevels.find(
-														(accessLevel) =>
-															accessLevel.id ===
+													<option
+														value={
 															modal
 																.attributeTemplate
-																?.accessLevelId,
-													)?.name ??
-														modal.attributeTemplate
-															.accessLevelId}
-												</option>
-											</select>
-										</span>
+																.accessLevelId
+														}
+													>
+														{accessLevels.find(
+															(accessLevel) =>
+																accessLevel.id ===
+																modal
+																	.attributeTemplate
+																	?.accessLevelId,
+														)?.name ??
+															modal
+																.attributeTemplate
+																.accessLevelId}
+													</option>
+												</select>
+											</span>
+										</label>
+									</div>
+									<label data-selectable="true">
+										<span>default value</span>
+										<input
+											readOnly
+											type="text"
+											value={
+												modal.attributeTemplate
+													.defaultValue ?? ''
+											}
+										/>
+									</label>
+									<label
+										className="attribute-template-checkbox-label attribute-template-readonly-checkbox"
+										data-selectable="true"
+									>
+										<input
+											checked={
+												modal.attributeTemplate
+													.isRequired
+											}
+											disabled
+											readOnly
+											type="checkbox"
+										/>
+										<span>required</span>
 									</label>
 								</div>
-								<label data-selectable="true">
-									<span>default value</span>
-									<input
-										readOnly
-										type="text"
-										value={
-											modal.attributeTemplate
-												.defaultValue ?? ''
-										}
-									/>
-								</label>
-								<label
-									className="attribute-template-checkbox-label attribute-template-readonly-checkbox"
-									data-selectable="true"
-								>
-									<input
-										checked={
-											modal.attributeTemplate.isRequired
-										}
-										disabled
-										readOnly
-										type="checkbox"
-									/>
-									<span>required</span>
-								</label>
-							</div>
-						) : null}
-					</DraggableModal>
+							) : null}
+						</DraggableModal>
 					)
 				})}
 			</div>
