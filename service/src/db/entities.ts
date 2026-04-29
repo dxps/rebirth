@@ -645,6 +645,22 @@ export async function listEntities(
 	}
 }
 
+export async function listAllEntities(): Promise<Entity[]> {
+	const databaseUrl = getDatabaseUrl()
+
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL is not set.')
+	}
+
+	const { client } = createDatabase(databaseUrl)
+
+	try {
+		return await readEntityRows(client)
+	} finally {
+		await client.end()
+	}
+}
+
 export async function getEntity(id: string) {
 	const databaseUrl = getDatabaseUrl()
 

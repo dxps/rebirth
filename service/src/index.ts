@@ -31,6 +31,8 @@ import {
 	type EntitiesResponse,
 	type Entity,
 	type EntityResponse,
+	type SpringConfigEnvironment,
+	type SpringConfigPropertySource,
 	type EntityTemplateResponse,
 	type EntityTemplatesResponse,
 	type LoginResponse,
@@ -57,6 +59,7 @@ import {
 	deleteEntity,
 	EntityValidationError,
 	getEntity,
+	listAllEntities,
 	listEntities,
 	updateEntity,
 } from './db/entities'
@@ -115,6 +118,9 @@ const attributeTemplateUniqueConflictResponse: ApiErrorResponse = {
 }
 const publicAccessLevelId = 1
 const maskedAttributeValue = '******'
+const springConfigDefaultLabel = 'main'
+const springConfigDefaultProfile = 'default'
+const springConfigSharedApplication = 'application'
 
 function getErrorProperty(error: unknown, property: string): unknown {
 	if (typeof error !== 'object' || error === null) {
@@ -296,6 +302,149 @@ function getVisibleEntity(user: User, entity: Entity): Entity {
 	}
 }
 
+function normalizeConfigMetadataName(name: string): string | null {
+	const trimmedName = name.trim()
+
+	if (!/^\[[^\]]+\]$/.test(trimmedName)) {
+		return null
+	}
+
+	return trimmedName.slice(1, -1).trim().toLowerCase()
+}
+
+function isConfigMetadataAttributeName(name: string): boolean {
+	return normalizeConfigMetadataName(name) !== null
+}
+
+function getConfigMetadataValue(
+	entity: Entity,
+	name: string,
+): string | undefined {
+	const normalizedName = name.toLowerCase()
+
+	return entity.attributes.find(
+		(attribute) =>
+			normalizeConfigMetadataName(attribute.name) === normalizedName,
+	)?.value
+}
+
+function getConfigMetadataValues(entity: Entity, name: string): string[] {
+	return (
+		getConfigMetadataValue(entity, name)
+			?.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean) ?? []
+	)
+}
+
+function isSpringConfigEntityEnabled(entity: Entity): boolean {
+	const enabledValue = getConfigMetadataValue(entity, 'config.enabled')
+
+	if (enabledValue === undefined) {
+		return true
+	}
+
+	return !['0', 'false', 'no', 'off'].includes(
+		enabledValue.trim().toLowerCase(),
+	)
+}
+
+function canReadSpringConfigEntity(user: User, entity: Entity): boolean {
+	return (
+		canManageData(user) ||
+		(canManageOwnData(user) && entity.ownerUserId === user.id)
+	)
+}
+
+function getSpringConfigSource(entity: Entity): Record<string, string> {
+	return entity.attributes
+		.filter(
+			(attribute) =>
+				!isConfigMetadataAttributeName(attribute.name) &&
+				attribute.name.trim().length > 0,
+		)
+		.reduce<Record<string, string>>((source, attribute) => {
+			source[attribute.name.trim()] = attribute.value
+			return source
+		}, {})
+}
+
+function getSpringConfigEntityRank(input: {
+	application: string
+	entity: Entity
+	label: string
+	profiles: string[]
+}): number | null {
+	if (!isSpringConfigEntityEnabled(input.entity)) {
+		return null
+	}
+
+	const applications = getConfigMetadataValues(
+		input.entity,
+		'config.application',
+	)
+	const profiles = getConfigMetadataValues(input.entity, 'config.profile')
+	const labels = getConfigMetadataValues(input.entity, 'config.label')
+
+	if (applications.length === 0 || profiles.length === 0) {
+		return null
+	}
+
+	const applicationRank = applications.includes(input.application)
+		? 0
+		: applications.includes(springConfigSharedApplication)
+			? 200
+			: null
+
+	if (applicationRank === null) {
+		return null
+	}
+
+	const profileIndexes = profiles
+		.map((profile) =>
+			profile === springConfigDefaultProfile
+				? 100
+				: input.profiles.indexOf(profile),
+		)
+		.filter((index) => index >= 0)
+	const profileRank = Math.min(...profileIndexes)
+
+	if (!Number.isFinite(profileRank)) {
+		return null
+	}
+
+	const labelRank =
+		labels.length === 0
+			? 1
+			: labels.includes(input.label)
+				? 0
+				: null
+
+	if (labelRank === null) {
+		return null
+	}
+
+	return applicationRank + profileRank + labelRank / 10
+}
+
+function toSpringConfigPropertySource(
+	entity: Entity,
+	rank: number,
+): SpringConfigPropertySource & { rank: number } {
+	const application =
+		getConfigMetadataValue(entity, 'config.application') ?? 'unknown'
+	const profile = getConfigMetadataValue(entity, 'config.profile') ?? 'unknown'
+	const label =
+		getConfigMetadataValue(entity, 'config.label') ??
+		springConfigDefaultLabel
+
+	return {
+		name: `rebirth:${application}:${profile}:${label}:${entity.id}`,
+		rank,
+		source: getSpringConfigSource(entity),
+	}
+}
+
 async function getAuthenticatedUser(
 	request: Request,
 ): Promise<User | undefined> {
@@ -457,6 +606,122 @@ const server = Bun.serve({
 			return Response.json(createHealthResponse('ok'), {
 				headers: jsonHeaders,
 			})
+		}
+
+		const springConfigMatch =
+			/^\/config\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/i.exec(
+				url.pathname,
+			)
+
+		if (request.method === 'GET' && springConfigMatch) {
+			const authenticatedUser = await requireAuthenticatedUser(request)
+
+			if (authenticatedUser instanceof Response) {
+				return authenticatedUser
+			}
+
+			try {
+				const application = decodeURIComponent(
+					springConfigMatch[1] ?? '',
+				).trim()
+				const profileSegment = decodeURIComponent(
+					springConfigMatch[2] ?? '',
+				).trim()
+				const label =
+					decodeURIComponent(
+						springConfigMatch[3] ?? springConfigDefaultLabel,
+					).trim() || springConfigDefaultLabel
+				const profiles = profileSegment
+					.split(',')
+					.map((profile) => profile.trim())
+					.filter(Boolean)
+
+				if (application.length === 0 || profiles.length === 0) {
+					return Response.json(
+						{
+							error: 'Invalid config request',
+						},
+						{
+							headers: jsonHeaders,
+							status: 400,
+						},
+					)
+				}
+
+				const propertySources = (await listAllEntities())
+					.filter((entity) =>
+						canReadSpringConfigEntity(authenticatedUser, entity),
+					)
+					.map((entity) => ({
+						entity,
+						rank: getSpringConfigEntityRank({
+							application,
+							entity,
+							label,
+							profiles,
+						}),
+					}))
+					.filter(
+						(
+							item,
+						): item is {
+							entity: Entity
+							rank: number
+						} => item.rank !== null,
+					)
+					.map((item) =>
+						toSpringConfigPropertySource(item.entity, item.rank),
+					)
+					.filter(
+						(propertySource) =>
+							Object.keys(propertySource.source).length > 0,
+					)
+					.sort((left, right) =>
+						left.rank === right.rank
+							? left.name.localeCompare(right.name)
+							: left.rank - right.rank,
+					)
+					.map(({ rank: _rank, ...propertySource }) => propertySource)
+
+				if (propertySources.length === 0) {
+					return Response.json(
+						{
+							error: 'Configuration not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
+				const response: SpringConfigEnvironment = {
+					label,
+					name: application,
+					profiles,
+					propertySources,
+					state: null,
+					version: propertySources
+						.map((propertySource) => propertySource.name)
+						.join('|'),
+				}
+
+				return Response.json(response, {
+					headers: jsonHeaders,
+				})
+			} catch (error) {
+				console.error(error)
+
+				return Response.json(
+					{
+						error: 'Unable to load configuration',
+					},
+					{
+						headers: jsonHeaders,
+						status: 500,
+					},
+				)
+			}
 		}
 
 		if (request.method === 'GET' && url.pathname === apiRoutes.authMe) {

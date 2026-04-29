@@ -80,6 +80,20 @@ export interface EntityResponse {
 	data: Entity
 }
 
+export interface SpringConfigPropertySource {
+	name: string
+	source: Record<string, string>
+}
+
+export interface SpringConfigEnvironment {
+	label: string | null
+	name: string
+	profiles: string[]
+	propertySources: SpringConfigPropertySource[]
+	state: string | null
+	version: string | null
+}
+
 export interface PermissionsResponse {
 	data: Permission[]
 }
@@ -138,6 +152,14 @@ export const apiRoutes = {
 	authLogin: '/auth/login',
 	authLogout: '/auth/logout',
 	authMe: '/auth/me',
+	config: (application: string, profile: string, label?: string) =>
+		label
+			? `/config/${encodeURIComponent(application)}/${encodeURIComponent(
+					profile,
+				)}/${encodeURIComponent(label)}`
+			: `/config/${encodeURIComponent(application)}/${encodeURIComponent(
+					profile,
+				)}`,
 	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
 	attributeTemplates: '/attribute-templates',
 	entity: (id: string) => `/entities/${id}`,
