@@ -8,6 +8,7 @@ import { type Permission } from './security/permission'
 import {
 	hasValidAccessLevelIds,
 	hasValidPermissionIds,
+	isUserId,
 	type CreateUserInput,
 	type UpdateUserInput,
 	type User,
@@ -315,7 +316,10 @@ export function isUpdateAttributeTemplateInput(
 			typeof input.isRequired === 'boolean') &&
 		(input.accessLevelId === undefined ||
 			(typeof input.accessLevelId === 'number' &&
-				isAccessLevelId(input.accessLevelId)))
+				isAccessLevelId(input.accessLevelId))) &&
+		(input.ownerUserId === undefined ||
+			(typeof input.ownerUserId === 'string' &&
+				isUserId(input.ownerUserId)))
 	)
 }
 
@@ -337,7 +341,10 @@ export function isCreateAttributeTemplateInput(
 			typeof input.defaultValue === 'string') &&
 		typeof input.isRequired === 'boolean' &&
 		typeof input.accessLevelId === 'number' &&
-		isAccessLevelId(input.accessLevelId)
+		isAccessLevelId(input.accessLevelId) &&
+		(input.ownerUserId === undefined ||
+			(typeof input.ownerUserId === 'string' &&
+				isUserId(input.ownerUserId)))
 	)
 }
 
@@ -377,6 +384,9 @@ export function isCreateEntityTemplateInput(
 
 	return (
 		typeof input.name === 'string' &&
+		(input.ownerUserId === undefined ||
+			(typeof input.ownerUserId === 'string' &&
+				isUserId(input.ownerUserId))) &&
 		typeof input.description === 'string' &&
 		hasValidEntityTemplateAttributes(
 			input.attributes,
@@ -401,6 +411,9 @@ export function isUpdateEntityTemplateInput(
 
 	return (
 		(input.name === undefined || typeof input.name === 'string') &&
+		(input.ownerUserId === undefined ||
+			(typeof input.ownerUserId === 'string' &&
+				isUserId(input.ownerUserId))) &&
 		(input.description === undefined ||
 			typeof input.description === 'string') &&
 		(!hasAttributeUpdate ||

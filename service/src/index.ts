@@ -1125,8 +1125,26 @@ const server = Bun.serve({
 					)
 				}
 
+				if (input.ownerUserId && !canManageData(authenticatedUser)) {
+					return authorizationRequiredResponse()
+				}
+
+				if (input.ownerUserId && !(await getUser(input.ownerUserId))) {
+					return Response.json(
+						{
+							error: 'Owner user not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
 				const createdAttributeTemplate = await createAttributeTemplate(
-					authenticatedUser.id,
+					canManageData(authenticatedUser) && input.ownerUserId
+						? input.ownerUserId
+						: authenticatedUser.id,
 					{
 						accessLevelId: input.accessLevelId,
 						defaultValue:
@@ -1245,8 +1263,26 @@ const server = Bun.serve({
 					)
 				}
 
+				if (input.ownerUserId && !canManageData(authenticatedUser)) {
+					return authorizationRequiredResponse()
+				}
+
+				if (input.ownerUserId && !(await getUser(input.ownerUserId))) {
+					return Response.json(
+						{
+							error: 'Owner user not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
 				const createdEntityTemplate = await createEntityTemplate(
-					authenticatedUser.id,
+					canManageData(authenticatedUser) && input.ownerUserId
+						? input.ownerUserId
+						: authenticatedUser.id,
 					{
 						attributes: input.attributes,
 						description: input.description.trim(),
@@ -1316,15 +1352,53 @@ const server = Bun.serve({
 					requestedPageSize,
 					maxEntitiesPageSize,
 				)
-				const entities = await listEntities(searchTerm, page, pageSize)
+				const listSearchTerm = canManageData(authenticatedUser)
+					? searchTerm
+					: undefined
+				const allMatchingEntities = await listEntities(
+					listSearchTerm,
+					1,
+					Number.MAX_SAFE_INTEGER,
+				)
+				const visibleEntities = canManageData(authenticatedUser)
+					? allMatchingEntities.data
+					: allMatchingEntities.data.filter(
+							(entity) =>
+								entity.ownerUserId === authenticatedUser.id,
+						)
+				const normalizedSearchTerm = searchTerm?.trim().toLowerCase()
+				const filteredEntities =
+					!canManageData(authenticatedUser) &&
+					normalizedSearchTerm &&
+					normalizedSearchTerm.length >= 3
+						? visibleEntities.filter((entity) =>
+								entity.attributes.some(
+									(attribute) =>
+										attribute.name
+											.toLowerCase()
+											.includes(
+												normalizedSearchTerm,
+											) ||
+										attribute.value
+											.toLowerCase()
+											.includes(
+												normalizedSearchTerm,
+											),
+								),
+							)
+						: visibleEntities
+				const pagedEntities = filteredEntities.slice(
+					(page - 1) * pageSize,
+					(page - 1) * pageSize + pageSize,
+				)
 				const response: EntitiesResponse = {
-					data: entities.data.map((entity) =>
+					data: pagedEntities.map((entity) =>
 						getVisibleEntity(authenticatedUser, entity),
 					),
 					pagination: {
 						page,
 						pageSize,
-						total: entities.total,
+						total: filteredEntities.length,
 					},
 				}
 
@@ -1466,7 +1540,11 @@ const server = Bun.serve({
 
 				const entity = await getEntity(id)
 
-				if (!entity) {
+				if (
+					!entity ||
+					(!canManageData(authenticatedUser) &&
+						entity.ownerUserId !== authenticatedUser.id)
+				) {
 					return Response.json(
 						{
 							error: 'Entity not found',
@@ -1911,6 +1989,22 @@ const server = Bun.serve({
 					return authorizationRequiredResponse()
 				}
 
+				if (input.ownerUserId && !canManageData(authenticatedUser)) {
+					return authorizationRequiredResponse()
+				}
+
+				if (input.ownerUserId && !(await getUser(input.ownerUserId))) {
+					return Response.json(
+						{
+							error: 'Owner user not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
 				const updatedAttributeTemplate = await updateAttributeTemplate(
 					id,
 					{
@@ -1919,6 +2013,9 @@ const server = Bun.serve({
 						description: input.description?.trim(),
 						isRequired: input.isRequired,
 						name: input.name?.trim(),
+						ownerUserId: canManageData(authenticatedUser)
+							? input.ownerUserId
+							: undefined,
 						valueType: input.valueType,
 					},
 				)
@@ -2114,12 +2211,31 @@ const server = Bun.serve({
 					return authorizationRequiredResponse()
 				}
 
+				if (input.ownerUserId && !canManageData(authenticatedUser)) {
+					return authorizationRequiredResponse()
+				}
+
+				if (input.ownerUserId && !(await getUser(input.ownerUserId))) {
+					return Response.json(
+						{
+							error: 'Owner user not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
 				const updatedEntityTemplate = await updateEntityTemplate(id, {
 					attributes: input.attributes,
 					description: input.description?.trim(),
 					links: input.links,
 					listingAttributeId: input.listingAttributeId,
 					name: input.name?.trim(),
+					ownerUserId: canManageData(authenticatedUser)
+						? input.ownerUserId
+						: undefined,
 				})
 
 				if (!updatedEntityTemplate) {

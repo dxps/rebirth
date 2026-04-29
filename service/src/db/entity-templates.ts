@@ -29,6 +29,7 @@ interface NormalizedEntityTemplateLinkInput
 interface EntityTemplateRow {
 	id: string
 	owner_user_id: string
+	owner_username: string
 	name: string
 	description: string
 	listing_attribute_id: string
@@ -147,6 +148,7 @@ function toEntityTemplate(
 		description: row.description,
 		id: row.id,
 		ownerUserId: row.owner_user_id,
+		ownerUsername: row.owner_username,
 		links: linkRows
 			.filter((linkRow) => linkRow.entity_template_id === row.id)
 			.map(toEntityTemplateLink),
@@ -170,14 +172,17 @@ export async function readEntityTemplateRows(
 	const rows = id
 		? await client<EntityTemplateRow[]>`
 			SELECT id, name, description, listing_attribute_id
-			, owner_user_id
+				, owner_user_id
+				, users.username AS owner_username
 			FROM entity_templates
-			WHERE id = ${id}
-			ORDER BY name
+			INNER JOIN users ON users.id = entity_templates.owner_user_id
+			WHERE entity_templates.id = ${id}
+			ORDER BY entity_templates.name
 		`
 		: await client<EntityTemplateRow[]>`
-			SELECT id, name, description, listing_attribute_id, owner_user_id
+			SELECT entity_templates.id, name, description, listing_attribute_id, owner_user_id, users.username AS owner_username
 			FROM entity_templates
+			INNER JOIN users ON users.id = entity_templates.owner_user_id
 			ORDER BY name
 		`
 
@@ -444,6 +449,7 @@ export async function updateEntityTemplate(
 			await sql`
 				UPDATE entity_templates
 				SET
+					owner_user_id = ${input.ownerUserId ?? existingEntityTemplate.ownerUserId},
 					name = ${input.name?.trim() ?? existingEntityTemplate.name},
 					description = ${input.description?.trim() ?? existingEntityTemplate.description},
 					listing_attribute_id = ${nextListingAttributeTemplateId}

@@ -43,6 +43,7 @@ export function Header({ onToggleTheme, theme }: HeaderProps) {
 	const canAccessData =
 		hasStoredPermission(storedAuth, PermissionName.Admin) ||
 		hasStoredPermission(storedAuth, PermissionName.Editor) ||
+		hasStoredPermission(storedAuth, PermissionName.ManageOwnData) ||
 		hasStoredPermission(storedAuth, PermissionName.Viewer)
 	const canAccessSecurity = hasStoredPermission(
 		storedAuth,

@@ -6,6 +6,7 @@ import {
 
 import { createDatabase, getDatabaseUrl } from './client'
 import { attributeTemplates } from './schema'
+import { users } from './schema'
 import { createUuidV7 } from './uuid'
 
 function normalizeCreateInput(
@@ -49,8 +50,19 @@ export async function listAttributeTemplates() {
 
 	try {
 		return await db
-			.select()
+			.select({
+				accessLevelId: attributeTemplates.accessLevelId,
+				defaultValue: attributeTemplates.defaultValue,
+				description: attributeTemplates.description,
+				id: attributeTemplates.id,
+				isRequired: attributeTemplates.isRequired,
+				name: attributeTemplates.name,
+				ownerUserId: attributeTemplates.ownerUserId,
+				ownerUsername: users.username,
+				valueType: attributeTemplates.valueType,
+			})
 			.from(attributeTemplates)
+			.innerJoin(users, eq(attributeTemplates.ownerUserId, users.id))
 			.orderBy(asc(attributeTemplates.name))
 	} finally {
 		await client.end()
@@ -79,7 +91,10 @@ export async function createAttributeTemplate(
 			})
 			.returning()
 
-		return createdAttributeTemplate
+		return (await listAttributeTemplates()).find(
+			(attributeTemplate) =>
+				attributeTemplate.id === createdAttributeTemplate?.id,
+		)
 	} finally {
 		await client.end()
 	}
@@ -104,7 +119,10 @@ export async function updateAttributeTemplate(
 			.where(eq(attributeTemplates.id, id))
 			.returning()
 
-		return updatedAttributeTemplate
+		return (await listAttributeTemplates()).find(
+			(attributeTemplate) =>
+				attributeTemplate.id === updatedAttributeTemplate?.id,
+		)
 	} finally {
 		await client.end()
 	}

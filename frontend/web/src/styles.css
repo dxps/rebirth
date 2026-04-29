@@ -1967,7 +1967,7 @@ button.entity-attribute-value-action {
 .draggable-modal-header h2 {
 	color: color-mix(in srgb, var(--fg) 78%, transparent);
 	flex: 1;
-	font-size: 0.88rem;
+	font-size: 0.86rem;
 	font-weight: 500;
 	line-height: 1.2;
 	margin: 0;

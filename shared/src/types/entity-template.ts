@@ -43,6 +43,7 @@ export interface EntityTemplateLink {
 export interface EntityTemplate {
 	id: EntityTemplateId
 	ownerUserId: UserId
+	ownerUsername?: string
 	name: string
 	description: string
 	attributes: EntityTemplateAttribute[]
@@ -59,6 +60,7 @@ export interface CreateEntityTemplateLinkInput {
 }
 
 export interface CreateEntityTemplateInput {
+	ownerUserId?: UserId
 	name: string
 	description: string
 	attributes: CreateEntityTemplateAttributeInput[]

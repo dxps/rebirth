@@ -16,6 +16,8 @@ import {
 	type EntityTemplatesResponse,
 	type UpdateAttributeTemplateInput,
 	type UpdateEntityTemplateInput,
+	type User as RebirthUser,
+	type UsersResponse,
 } from '@rebirth/shared'
 import {
 	ArrowLeft,
@@ -27,6 +29,7 @@ import {
 	RefreshCw,
 	Save,
 	Trash2,
+	User as UserIcon,
 	X,
 } from 'lucide-react'
 import {
@@ -46,6 +49,7 @@ import {
 	getStoredAuth,
 	hasStoredPermission,
 } from '../auth'
+import { CustomDropdown } from '../components/ui/custom-dropdown'
 import { DraggableModal as BaseDraggableModal } from '../components/ui/draggable-modal'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
@@ -153,6 +157,7 @@ interface OpenTemplateModal {
 	}
 	key: string
 	mode: 'create' | 'details' | 'edit'
+	ownerUserId?: string
 	templateType: 'attribute' | 'entity'
 	zIndex: number
 }
@@ -173,8 +178,13 @@ interface DraggableModalProps {
 	onClose: (id: string) => void
 	onDelete: (id: string) => void
 	onEdit: (id: string) => void
+	onOwnerChange: (id: string, ownerUserId: string) => void
+	canAssignOwner?: boolean
 	canEdit?: boolean
 	infoText?: string
+	ownerLabel?: string
+	ownerOptions?: Array<{ label: string; searchText: string; value: string }>
+	ownerUserId?: string
 	saveDisabledTooltip?: string
 	title: string
 	zIndex: number
@@ -233,17 +243,24 @@ function DraggableModal({
 	onClose,
 	onDelete,
 	onEdit,
+	onOwnerChange,
+	canAssignOwner = false,
 	canEdit = true,
 	infoText,
+	ownerLabel,
+	ownerOptions = [],
+	ownerUserId = '',
 	saveDisabledTooltip = 'A template must have a name',
 	title,
 	zIndex,
 }: DraggableModalProps) {
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false)
+	const [isOwnershipPopoverOpen, setIsOwnershipPopoverOpen] = useState(false)
 	const minHeight = minHeightOverride ?? draggableModalMinHeights[mode]
 	const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null)
 	const infoPopoverRef = useRef<HTMLDivElement>(null)
+	const ownershipPopoverRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		if (isDeleteConfirmOpen) {
@@ -252,7 +269,7 @@ function DraggableModal({
 	}, [isDeleteConfirmOpen])
 
 	useEffect(() => {
-		if (!isInfoPopoverOpen) {
+		if (!isInfoPopoverOpen && !isOwnershipPopoverOpen) {
 			return
 		}
 
@@ -260,14 +277,17 @@ function DraggableModal({
 			const target = event.target
 
 			if (
-				infoPopoverRef.current &&
 				target instanceof Node &&
-				infoPopoverRef.current.contains(target)
+				((infoPopoverRef.current &&
+					infoPopoverRef.current.contains(target)) ||
+					(ownershipPopoverRef.current &&
+						ownershipPopoverRef.current.contains(target)))
 			) {
 				return
 			}
 
 			setIsInfoPopoverOpen(false)
+			setIsOwnershipPopoverOpen(false)
 		}
 
 		window.addEventListener('pointerdown', handlePointerDown)
@@ -275,13 +295,63 @@ function DraggableModal({
 		return () => {
 			window.removeEventListener('pointerdown', handlePointerDown)
 		}
-	}, [isInfoPopoverOpen])
+	}, [isInfoPopoverOpen, isOwnershipPopoverOpen])
 
 	useEffect(() => {
 		setIsDeleteConfirmOpen(false)
 	}, [mode])
 
 	const saveTooltip = isSaveDisabled ? saveDisabledTooltip : 'Save'
+	const ownershipButton = ownerLabel ? (
+		<div
+			className="draggable-modal-info-action"
+			data-no-drag="true"
+			ref={ownershipPopoverRef}
+		>
+			<button
+				aria-expanded={isOwnershipPopoverOpen}
+				aria-label="Ownership"
+				className="draggable-modal-titlebar-button draggable-modal-info-button"
+				data-no-drag="true"
+				data-tooltip="Ownership"
+				type="button"
+				onPointerDown={(event) => event.stopPropagation()}
+				onClick={() => {
+					setIsInfoPopoverOpen(false)
+					setIsOwnershipPopoverOpen((current) => !current)
+				}}
+			>
+				<UserIcon aria-hidden="true" />
+			</button>
+			{isOwnershipPopoverOpen ? (
+				<div
+					className="include-attribute-popover entity-ownership-popover entity-ownership-read-popover"
+					data-no-drag="true"
+					onPointerDown={(event) => event.stopPropagation()}
+				>
+					{canAssignOwner && mode !== 'details' ? (
+						<label>
+							<span>Owner:</span>
+							<CustomDropdown
+								ariaLabel="Filter owners"
+								emptyText="No owners found"
+								options={ownerOptions}
+								placeholder="Select owner"
+								value={ownerUserId}
+								onChange={(nextOwnerUserId) =>
+									onOwnerChange(id, nextOwnerUserId)
+								}
+							/>
+						</label>
+					) : (
+						<p className="entity-ownership-read-title">
+							Owner: {ownerLabel}
+						</p>
+					)}
+				</div>
+			) : null}
+		</div>
+	) : null
 	const deleteButton = (
 		<div className="draggable-modal-delete-action" data-no-drag="true">
 			<button
@@ -413,6 +483,7 @@ function DraggableModal({
 									</button>
 								</>
 							) : null}
+							{ownershipButton}
 						</>
 					) : (
 						<>
@@ -430,6 +501,7 @@ function DraggableModal({
 							>
 								<ArrowLeft aria-hidden="true" />
 							</button>
+							{ownershipButton}
 							<button
 								aria-label={`Save ${title}`}
 								className="draggable-modal-titlebar-button"
@@ -477,6 +549,7 @@ interface AttributeTemplateEditFormProps {
 	autoFocusName?: boolean
 	formId: string
 	modalKey: string
+	ownerUserId?: string
 	onOpenAttributeTemplate: (
 		attributeTemplate: AttributeTemplate,
 		point: { clientX: number; clientY: number },
@@ -651,6 +724,7 @@ function AttributeTemplateEditForm({
 	autoFocusName = false,
 	formId,
 	modalKey,
+	ownerUserId,
 	onOpenAttributeTemplate,
 	onSave,
 	onValidityChange,
@@ -709,6 +783,7 @@ function AttributeTemplateEditForm({
 				description,
 				isRequired,
 				name,
+				ownerUserId,
 				valueType,
 			})
 		} catch (error) {
@@ -838,6 +913,7 @@ interface EntityTemplateEditFormProps {
 	initialActiveTab?: 'attributes' | 'links'
 	formId: string
 	modalKey: string
+	ownerUserId?: string
 	onCreateAttributeTemplate: (
 		input: CreateAttributeTemplateInput,
 	) => Promise<AttributeTemplate>
@@ -877,6 +953,7 @@ function EntityTemplateEditForm({
 	initialActiveTab = 'attributes',
 	formId,
 	modalKey,
+	ownerUserId,
 	onCreateAttributeTemplate,
 	onActiveTabChange,
 	onOpenEntityTemplate,
@@ -1751,6 +1828,7 @@ function EntityTemplateEditForm({
 				})),
 				listingAttributeId,
 				name,
+				ownerUserId,
 			})
 		} catch (error) {
 			setError({
@@ -2949,6 +3027,9 @@ function EntityTemplateDetailsView({
 export function TemplatesView() {
 	const [storedAuth, setStoredAuth] = useState(getStoredAuth)
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
+	const [templateOwnerUsers, setTemplateOwnerUsers] = useState<RebirthUser[]>(
+		[],
+	)
 	const [attributeTemplates, setAttributeTemplates] = useState<
 		AttributeTemplate[]
 	>([])
@@ -2968,6 +3049,7 @@ export function TemplatesView() {
 	const entityTemplatesLoadRequestId = useRef(0)
 	const accessLevelsLoadRequestId = useRef(0)
 	const loadRequestId = useRef(0)
+	const ownerUsersLoadRequestId = useRef(0)
 	const nextZIndex = useRef(1)
 	const isAuthenticated = storedAuth !== null
 	const canManageOwnData = hasStoredPermission(
@@ -2981,6 +3063,37 @@ export function TemplatesView() {
 	const isAuthorized =
 		canCreateManagedData ||
 		hasStoredPermission(storedAuth, PermissionName.Viewer)
+	const ownerOptions = templateOwnerUsers.map((user) => ({
+		label: user.username,
+		searchText: [
+			user.username,
+			user.email,
+			user.firstName,
+			user.lastName,
+		].join(' '),
+		value: user.id,
+	}))
+	const getOwnerLabel = useCallback(
+		(ownerUserId?: string): string =>
+			attributeTemplates.find(
+				(attributeTemplate) =>
+					attributeTemplate.ownerUserId === ownerUserId &&
+					attributeTemplate.ownerUsername,
+			)?.ownerUsername ??
+			entityTemplates.find(
+				(entityTemplate) =>
+					entityTemplate.ownerUserId === ownerUserId &&
+					entityTemplate.ownerUsername,
+			)?.ownerUsername ??
+			templateOwnerUsers.find((user) => user.id === ownerUserId)
+				?.username ??
+			(storedAuth && storedAuth.user.id === ownerUserId
+				? storedAuth.user.username
+				: undefined) ??
+			ownerUserId ??
+			'',
+		[attributeTemplates, entityTemplates, storedAuth, templateOwnerUsers],
+	)
 
 	const loadAccessLevels = useCallback(async (): Promise<void> => {
 		const requestId = accessLevelsLoadRequestId.current + 1
@@ -3095,6 +3208,42 @@ export function TemplatesView() {
 		}
 	}, [])
 
+	const loadTemplateOwnerUsers = useCallback(async (): Promise<void> => {
+		if (!canManageTemplates) {
+			setTemplateOwnerUsers([])
+			return
+		}
+
+		const requestId = ownerUsersLoadRequestId.current + 1
+		ownerUsersLoadRequestId.current = requestId
+
+		try {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.entityOwners}`, {
+				headers: getAuthHeaders(),
+			})
+
+			if (!response.ok) {
+				throw new Error('Unable to load template owners')
+			}
+
+			const data = (await response.json()) as UsersResponse
+
+			if (
+				isMountedRef.current &&
+				requestId === ownerUsersLoadRequestId.current
+			) {
+				setTemplateOwnerUsers(data.data)
+			}
+		} catch {
+			if (
+				isMountedRef.current &&
+				requestId === ownerUsersLoadRequestId.current
+			) {
+				setTemplateOwnerUsers([])
+			}
+		}
+	}, [canManageTemplates])
+
 	useEffect(() => {
 		function syncAuthState(): void {
 			setStoredAuth(getStoredAuth())
@@ -3121,6 +3270,7 @@ export function TemplatesView() {
 		void loadAccessLevels()
 		void loadAttributeTemplates()
 		void loadEntityTemplates()
+		void loadTemplateOwnerUsers()
 
 		return () => {
 			isMountedRef.current = false
@@ -3130,6 +3280,7 @@ export function TemplatesView() {
 		loadAccessLevels,
 		loadAttributeTemplates,
 		loadEntityTemplates,
+		loadTemplateOwnerUsers,
 	])
 
 	const bringToFront = useCallback((key: string) => {
@@ -3179,6 +3330,17 @@ export function TemplatesView() {
 		[],
 	)
 
+	const setModalOwnerUserId = useCallback(
+		(key: string, ownerUserId: string) => {
+			setOpenModals((current) =>
+				current.map((modal) =>
+					modal.key === key ? { ...modal, ownerUserId } : modal,
+				),
+			)
+		},
+		[],
+	)
+
 	const updateAttributeTemplateInState = useCallback(
 		(attributeTemplate: AttributeTemplate) => {
 			setAttributeTemplates((current) =>
@@ -3193,7 +3355,12 @@ export function TemplatesView() {
 			setOpenModals((current) =>
 				current.map((modal) =>
 					modal.attributeTemplate?.id === attributeTemplate.id
-						? { ...modal, attributeTemplate, mode: 'details' }
+						? {
+								...modal,
+								attributeTemplate,
+								mode: 'details',
+								ownerUserId: attributeTemplate.ownerUserId,
+							}
 						: modal,
 				),
 			)
@@ -3313,7 +3480,12 @@ export function TemplatesView() {
 			setOpenModals((current) =>
 				current.map((modal) =>
 					modal.entityTemplate?.id === entityTemplate.id
-						? { ...modal, entityTemplate, mode: 'details' }
+						? {
+								...modal,
+								entityTemplate,
+								mode: 'details',
+								ownerUserId: entityTemplate.ownerUserId,
+							}
 						: modal,
 				),
 			)
@@ -3449,6 +3621,7 @@ export function TemplatesView() {
 						initialPosition: { x, y },
 						key: `entity-template-${entityTemplate.id}`,
 						mode: 'details',
+						ownerUserId: entityTemplate.ownerUserId,
 						templateType: 'entity',
 						zIndex: nextZIndex.current,
 					},
@@ -3517,6 +3690,7 @@ export function TemplatesView() {
 						initialPosition: { x, y },
 						key: `attribute-template-${attributeTemplate.id}`,
 						mode: 'details',
+						ownerUserId: attributeTemplate.ownerUserId,
 						templateType: 'attribute',
 						zIndex: nextZIndex.current,
 					},
@@ -3569,13 +3743,14 @@ export function TemplatesView() {
 						},
 						key: 'attribute-template-create',
 						mode: 'create',
+						ownerUserId: storedAuth?.user.id,
 						templateType: 'attribute',
 						zIndex: nextZIndex.current,
 					},
 				]
 			})
 		},
-		[canCreateManagedData],
+		[canCreateManagedData, storedAuth],
 	)
 
 	const openCreateEntityTemplate = useCallback(
@@ -3621,13 +3796,14 @@ export function TemplatesView() {
 						},
 						key: 'entity-template-create',
 						mode: 'create',
+						ownerUserId: storedAuth?.user.id,
 						templateType: 'entity',
 						zIndex: nextZIndex.current,
 					},
 				]
 			})
 		},
-		[canCreateManagedData],
+		[canCreateManagedData, storedAuth],
 	)
 
 	if (!isAuthorized) {
@@ -3914,7 +4090,21 @@ export function TemplatesView() {
 									return
 								}
 
-								setModalMode(key, 'details')
+								setOpenModals((current) =>
+									current.map((item) =>
+										item.key === key
+											? {
+													...item,
+													mode: 'details',
+													ownerUserId:
+														item.entityTemplate
+															?.ownerUserId ??
+														item.attributeTemplate
+															?.ownerUserId,
+												}
+											: item,
+									),
+								)
 							}}
 							onClose={closeModal}
 							onDelete={() => {
@@ -3933,6 +4123,8 @@ export function TemplatesView() {
 								}
 							}}
 							onEdit={(key) => setModalMode(key, 'edit')}
+							onOwnerChange={setModalOwnerUserId}
+							canAssignOwner={canManageTemplates}
 							canEdit={canManageModal}
 							saveDisabledTooltip={
 								modal.templateType === 'entity'
@@ -3949,6 +4141,9 @@ export function TemplatesView() {
 								modal.attributeTemplate?.id ??
 								undefined
 							}
+							ownerLabel={getOwnerLabel(modal.ownerUserId)}
+							ownerOptions={ownerOptions}
+							ownerUserId={modal.ownerUserId}
 							zIndex={modal.zIndex}
 						>
 							{modal.templateType === 'entity' &&
@@ -3966,6 +4161,11 @@ export function TemplatesView() {
 									}
 									formId={`${modal.key}-edit-form`}
 									modalKey={modal.key}
+									ownerUserId={
+										canManageTemplates
+											? modal.ownerUserId
+											: undefined
+									}
 									onCreateAttributeTemplate={
 										createAttributeTemplate
 									}
@@ -3993,6 +4193,11 @@ export function TemplatesView() {
 									}
 									formId={`${modal.key}-edit-form`}
 									modalKey={modal.key}
+									ownerUserId={
+										canManageTemplates
+											? modal.ownerUserId
+											: undefined
+									}
 									onCreateAttributeTemplate={
 										createAttributeTemplate
 									}
@@ -4022,6 +4227,11 @@ export function TemplatesView() {
 									autoFocusName
 									formId={`${modal.key}-edit-form`}
 									modalKey={modal.key}
+									ownerUserId={
+										canManageTemplates
+											? modal.ownerUserId
+											: undefined
+									}
 									onOpenAttributeTemplate={
 										openAttributeTemplate
 									}
@@ -4037,6 +4247,11 @@ export function TemplatesView() {
 									autoFocusName
 									formId={`${modal.key}-edit-form`}
 									modalKey={modal.key}
+									ownerUserId={
+										canManageTemplates
+											? modal.ownerUserId
+											: undefined
+									}
 									onOpenAttributeTemplate={
 										openAttributeTemplate
 									}

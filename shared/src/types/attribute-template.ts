@@ -22,6 +22,7 @@ export const valueTypes = [
 export interface AttributeTemplate {
 	id: AttributeTemplateId
 	ownerUserId: UserId
+	ownerUsername?: string
 	name: string
 	description: string
 	valueType: ValueType
@@ -35,6 +36,7 @@ export type CreateAttributeTemplateInput = Omit<
 	'defaultValue' | 'id' | 'ownerUserId'
 > & {
 	defaultValue?: string | null
+	ownerUserId?: UserId
 }
 
 export type UpdateAttributeTemplateInput =
