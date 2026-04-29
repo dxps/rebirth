@@ -49,9 +49,19 @@ export interface EntityLink {
 	entityTemplateLinkId: EntityTemplateLinkId | null
 	targetEntityTemplateId: EntityTemplateId | null
 	targetEntityId: EntityId | null
+	targetEntityLabel?: string | null
 	name: string
 	description: string | null
 	listingIndex: number
+}
+
+export interface EntityIncomingLink {
+	id: EntityLinkId
+	description: string | null
+	listingIndex: number
+	name: string
+	sourceEntityId: EntityId
+	sourceEntityLabel: string
 }
 
 export interface CreateEntityLinkInput {
@@ -110,6 +120,7 @@ export interface Entity {
 	attributes: EntityAttribute[]
 	listingAttributeId: EntityAttributeId
 	links: EntityLink[]
+	incomingLinks?: EntityIncomingLink[]
 	incomingLinksCount?: number
 	outgoingLinksCount?: number
 }

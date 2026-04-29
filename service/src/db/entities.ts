@@ -5,6 +5,7 @@ import type {
 	CreateEntityLinkInput,
 	Entity,
 	EntityAttribute,
+	EntityIncomingLink,
 	EntityLink,
 	UpdateEntityInput,
 	ValueType,
@@ -41,6 +42,20 @@ interface EntityLinkRow {
 	entity_template_link_id: string | null
 	target_entity_template_id: string | null
 	target_entity_id: string | null
+	name: string
+	description: string | null
+	listing_index: number
+}
+
+interface EntityLabelRow {
+	id: string
+	label: string | null
+}
+
+interface EntityIncomingLinkRow {
+	id: string
+	source_entity_id: string
+	source_entity_label: string | null
 	name: string
 	description: string | null
 	listing_index: number
@@ -138,6 +153,8 @@ function toEntity(
 	row: EntityRow,
 	attributeRows: EntityAttributeRow[],
 	linkRows: EntityLinkRow[],
+	targetEntityLabels = new Map<string, string>(),
+	incomingLinksByEntityId = new Map<string, EntityIncomingLink[]>(),
 ): Entity {
 	return {
 		attributes: attributeRows
@@ -161,7 +178,13 @@ function toEntity(
 		links: linkRows
 			.filter((linkRow) => linkRow.entity_id === row.id)
 			.sort((left, right) => left.listing_index - right.listing_index)
-			.map(toEntityLink),
+			.map((linkRow) => ({
+				...toEntityLink(linkRow),
+				targetEntityLabel: linkRow.target_entity_id
+					? targetEntityLabels.get(linkRow.target_entity_id) ?? null
+					: null,
+			})),
+		incomingLinks: incomingLinksByEntityId.get(row.id) ?? [],
 		listingAttributeId: row.listing_attribute_id,
 	}
 }
@@ -283,9 +306,75 @@ async function readEntityRows(
 		WHERE entity_id = ANY(${ids})
 		ORDER BY entity_id, listing_index
 	`
+	const outgoingTargetEntityIds = [
+		...new Set(
+			linkRows
+				.map((linkRow) => linkRow.target_entity_id)
+				.filter((targetEntityId): targetEntityId is string =>
+					Boolean(targetEntityId),
+				),
+		),
+	]
+	const targetEntityLabelRows =
+		outgoingTargetEntityIds.length > 0
+			? await client<EntityLabelRow[]>`
+				SELECT entities.id, entity_attributes.value AS label
+				FROM entities
+				LEFT JOIN entity_attributes
+					ON entity_attributes.id = entities.listing_attribute_id
+				WHERE entities.id = ANY(${outgoingTargetEntityIds})
+			`
+			: []
+	const targetEntityLabels = new Map(
+		targetEntityLabelRows.map((row) => [row.id, row.label ?? '']),
+	)
+	const incomingLinkRows = await client<
+		(EntityIncomingLinkRow & { target_entity_id: string })[]
+	>`
+		SELECT
+			entity_links.id,
+			entity_links.target_entity_id,
+			entity_links.entity_id AS source_entity_id,
+			source_listing_attribute.value AS source_entity_label,
+			entity_links.name,
+			entity_links.description,
+			entity_links.listing_index
+		FROM entity_links
+		INNER JOIN entities AS source_entities
+			ON source_entities.id = entity_links.entity_id
+		LEFT JOIN entity_attributes AS source_listing_attribute
+			ON source_listing_attribute.id = source_entities.listing_attribute_id
+		WHERE entity_links.target_entity_id = ANY(${ids})
+		ORDER BY source_entity_label, entity_links.listing_index
+	`
+	const incomingLinksByEntityId = new Map<string, EntityIncomingLink[]>()
+
+	for (const row of incomingLinkRows) {
+		const incomingLink: EntityIncomingLink = {
+			description: row.description,
+			id: row.id,
+			listingIndex: row.listing_index,
+			name: row.name,
+			sourceEntityId: row.source_entity_id,
+			sourceEntityLabel: row.source_entity_label ?? row.source_entity_id,
+		}
+		const incomingLinks =
+			incomingLinksByEntityId.get(row.target_entity_id) ?? []
+
+		incomingLinks.push(incomingLink)
+		incomingLinksByEntityId.set(row.target_entity_id, incomingLinks)
+	}
 
 	const entities = rows
-		.map((row) => toEntity(row, attributeRows, linkRows))
+		.map((row) =>
+			toEntity(
+				row,
+				attributeRows,
+				linkRows,
+				targetEntityLabels,
+				incomingLinksByEntityId,
+			),
+		)
 		.sort((left, right) =>
 			getListingAttributeValue(left).localeCompare(
 				getListingAttributeValue(right),

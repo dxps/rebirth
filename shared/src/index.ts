@@ -496,6 +496,7 @@ export type {
 	EntityAttribute,
 	EntityAttributeId,
 	EntityId,
+	EntityIncomingLink,
 	EntityLink,
 	EntityLinkId,
 	EntityTemplateAttributeValueInput,

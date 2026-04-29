@@ -2489,16 +2489,9 @@ function EntityDetailsModal({
 	const orderedLinks = (entity?.links ?? [])
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
-	const orderedInlinks = entities.flatMap((sourceEntity) =>
-		sourceEntity.links
-			.slice()
-			.sort((left, right) => left.listingIndex - right.listingIndex)
-			.filter((link) => link.targetEntityId === entity?.id)
-			.map((link) => ({
-				link,
-				sourceEntity,
-			})),
-	)
+	const orderedInlinks = (entity?.incomingLinks ?? [])
+		.slice()
+		.sort((left, right) => left.listingIndex - right.listingIndex)
 	const listingAttribute = entity ? getEntityListingAttribute(entity) : null
 	const ownerLabel =
 		ownerUsers.find((user) => user.id === entity?.ownerUserId)?.username ??
@@ -2530,6 +2523,10 @@ function EntityDetailsModal({
 			return getEntityListingLabel(targetEntity)
 		}
 
+		if (link.targetEntityLabel) {
+			return link.targetEntityLabel
+		}
+
 		if (link.targetEntityTemplateId) {
 			return (
 				entityTemplates.find(
@@ -2543,8 +2540,8 @@ function EntityDetailsModal({
 	const getLinkTargetEntity = (link: EntityLink): Entity | null =>
 		entities.find((candidate) => candidate.id === link.targetEntityId) ??
 		null
-	const getInlinkSourceLabel = (sourceEntity: Entity): string =>
-		getEntityListingLabel(sourceEntity)
+	const getInlinkSourceEntity = (sourceEntityId: string): Entity | null =>
+		entities.find((candidate) => candidate.id === sourceEntityId) ?? null
 	const isDeleteBlocked = orderedInlinks.length > 0
 
 	function openReferencedEntity(
@@ -3174,53 +3171,67 @@ function EntityDetailsModal({
 													</tr>
 												) : (
 													orderedInlinks.map(
-														({
-															link,
-															sourceEntity,
-														}) => (
-															<tr key={link.id}>
-																<td>
-																	<button
-																		aria-label={`Open entity ${getInlinkSourceLabel(sourceEntity)}`}
-																		className="entity-reference-button"
-																		data-no-drag="true"
-																		type="button"
-																		onClick={(
-																			event,
-																		) =>
-																			openReferencedEntity(
-																				sourceEntity.id,
-																				event,
-																			)
+														(link) => {
+															const sourceEntity =
+																getInlinkSourceEntity(
+																	link.sourceEntityId,
+																)
+
+															return (
+																<tr
+																	key={
+																		link.id
+																	}
+																>
+																	<td>
+																		{sourceEntity ? (
+																			<button
+																				aria-label={`Open entity ${getEntityListingLabel(sourceEntity)}`}
+																				className="entity-reference-button"
+																				data-no-drag="true"
+																				type="button"
+																				onClick={(
+																					event,
+																				) =>
+																					openReferencedEntity(
+																						sourceEntity.id,
+																						event,
+																					)
+																				}
+																			>
+																				<span>
+																					{getEntityListingLabel(
+																						sourceEntity,
+																					)}
+																				</span>
+																				<ExternalLink aria-hidden="true" />
+																			</button>
+																		) : (
+																			link.sourceEntityLabel
+																		)}
+																	</td>
+																	<td>
+																		{
+																			link.name
 																		}
-																	>
-																		<span>
-																			{getInlinkSourceLabel(
-																				sourceEntity,
-																			)}
+																	</td>
+																	<td>
+																		<span
+																			className="entity-template-link-description-value entity-template-link-description-view-value"
+																			data-tooltip={
+																				link.description ||
+																				undefined
+																			}
+																		>
+																			<span>
+																				{link.description ??
+																					''}
+																			</span>
 																		</span>
-																		<ExternalLink aria-hidden="true" />
-																	</button>
-																</td>
-																<td>
-																	{link.name}
-																</td>
-																<td>
-																	<span
-																		className="entity-template-link-description-value entity-template-link-description-view-value"
-																		data-tooltip={
-																			link.description ||
-																			undefined
-																		}
-																	>
-																		<span>
-																			{link.description ??
-																				''}
-																		</span>
-																	</span>
-																</td>
-															</tr>
-														),
+																	</td>
+																</tr>
+															)
+														},
 													)
 												)}
 											</tbody>
