@@ -854,6 +854,39 @@ const server = Bun.serve({
 			}
 		}
 
+		if (
+			request.method === 'GET' &&
+			url.pathname === apiRoutes.entityOwners
+		) {
+			const authenticatedUser = await requireDataManager(request)
+
+			if (authenticatedUser instanceof Response) {
+				return authenticatedUser
+			}
+
+			try {
+				const response: UsersResponse = {
+					data: await listUsers(),
+				}
+
+				return Response.json(response, {
+					headers: jsonHeaders,
+				})
+			} catch (error) {
+				console.error(error)
+
+				return Response.json(
+					{
+						error: 'Unable to load entity owners',
+					},
+					{
+						headers: jsonHeaders,
+						status: 500,
+					},
+				)
+			}
+		}
+
 		if (request.method === 'POST' && url.pathname === apiRoutes.users) {
 			try {
 				const existingUserCount = await countUsers()
@@ -1335,8 +1368,26 @@ const server = Bun.serve({
 					)
 				}
 
+				if (input.ownerUserId && !canManageData(authenticatedUser)) {
+					return authorizationRequiredResponse()
+				}
+
+				if (input.ownerUserId && !(await getUser(input.ownerUserId))) {
+					return Response.json(
+						{
+							error: 'Owner user not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
 				const createdEntity = await createEntity(
-					authenticatedUser.id,
+					canManageData(authenticatedUser) && input.ownerUserId
+						? input.ownerUserId
+						: authenticatedUser.id,
 					input,
 				)
 
@@ -1490,11 +1541,30 @@ const server = Bun.serve({
 					return authorizationRequiredResponse()
 				}
 
+				if (input.ownerUserId && !canManageData(authenticatedUser)) {
+					return authorizationRequiredResponse()
+				}
+
+				if (input.ownerUserId && !(await getUser(input.ownerUserId))) {
+					return Response.json(
+						{
+							error: 'Owner user not found',
+						},
+						{
+							headers: jsonHeaders,
+							status: 404,
+						},
+					)
+				}
+
 				const updatedEntity = await updateEntity(id, {
 					attributes: input.attributes,
 					entityTemplateId: input.entityTemplateId,
 					links: input.links,
 					listingAttributeId: input.listingAttributeId,
+					ownerUserId: canManageData(authenticatedUser)
+						? input.ownerUserId
+						: undefined,
 				})
 
 				if (!updatedEntity) {

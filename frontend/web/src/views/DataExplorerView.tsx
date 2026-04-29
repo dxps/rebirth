@@ -16,6 +16,8 @@ import {
 	type EntityTemplate,
 	type EntityTemplatesResponse,
 	type UpdateEntityInput,
+	type User as RebirthUser,
+	type UsersResponse,
 } from '@rebirth/shared'
 import {
 	ArrowDownLeft,
@@ -32,6 +34,7 @@ import {
 	RefreshCw,
 	Save,
 	Trash2,
+	User as UserIcon,
 	X,
 } from 'lucide-react'
 import {
@@ -49,6 +52,7 @@ import {
 	hasStoredPermission,
 } from '../auth'
 import { DateTimeInput } from '../components/ui/date-time-input'
+import { CustomDropdown } from '../components/ui/custom-dropdown'
 import { DraggableModal as BaseDraggableModal } from '../components/ui/draggable-modal'
 import { Skeleton } from '../components/ui/skeleton'
 
@@ -285,6 +289,9 @@ interface CreateEntityModalProps {
 	initialSize?: ModalSize
 	isLoadingOptions: boolean
 	isSaving: boolean
+	canAssignOwner: boolean
+	currentUserId?: string
+	ownerUsers: RebirthUser[]
 	zIndex?: number
 	onClose: () => void
 	onActivate?: () => void
@@ -339,6 +346,9 @@ function CreateEntityModal({
 	initialSize,
 	isLoadingOptions,
 	isSaving,
+	canAssignOwner,
+	currentUserId,
+	ownerUsers,
 	zIndex = 1,
 	onClose,
 	onActivate,
@@ -374,7 +384,12 @@ function CreateEntityModal({
 	const [selectedAttributeTemplateId, setSelectedAttributeTemplateId] =
 		useState('')
 	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
+	const [isOwnershipPopoverOpen, setIsOwnershipPopoverOpen] = useState(false)
+	const [selectedOwnerUserId, setSelectedOwnerUserId] = useState(
+		entity?.ownerUserId ?? currentUserId ?? '',
+	)
 	const idPopoverRef = useRef<HTMLDivElement | null>(null)
+	const ownershipPopoverRef = useRef<HTMLDivElement | null>(null)
 	const defaultPosition = {
 		x:
 			initialPosition?.x ??
@@ -405,6 +420,16 @@ function CreateEntityModal({
 		includedAttributes.find(
 			(attribute) => attribute.id === listingAttributeId,
 		) ?? null
+	const ownerOptions = ownerUsers.map((user) => ({
+		label: user.username,
+		searchText: [
+			user.username,
+			user.email,
+			user.firstName,
+			user.lastName,
+		].join(' '),
+		value: user.id,
+	}))
 	const attributeTemplateById = new Map(
 		attributeTemplates.map((attributeTemplate) => [
 			attributeTemplate.id,
@@ -508,7 +533,17 @@ function CreateEntityModal({
 		setIsIncludeAttributeOpen(false)
 		setSelectedAttributeTemplateId('')
 		setIsIdPopoverOpen(false)
+		setIsOwnershipPopoverOpen(false)
+		setSelectedOwnerUserId(entity.ownerUserId)
 	}, [accessLevels, entity, mode])
+
+	useEffect(() => {
+		if (mode === 'edit') {
+			return
+		}
+
+		setSelectedOwnerUserId(currentUserId ?? ownerUsers[0]?.id ?? '')
+	}, [currentUserId, mode, ownerUsers])
 
 	useEffect(() => {
 		setActiveTab(
@@ -517,7 +552,7 @@ function CreateEntityModal({
 	}, [initialActiveTab])
 
 	useEffect(() => {
-		if (!isIdPopoverOpen) {
+		if (!isIdPopoverOpen && !isOwnershipPopoverOpen) {
 			return
 		}
 
@@ -525,14 +560,17 @@ function CreateEntityModal({
 			const target = event.target
 
 			if (
-				idPopoverRef.current &&
 				target instanceof Node &&
-				idPopoverRef.current.contains(target)
+				((idPopoverRef.current &&
+					idPopoverRef.current.contains(target)) ||
+					(ownershipPopoverRef.current &&
+						ownershipPopoverRef.current.contains(target)))
 			) {
 				return
 			}
 
 			setIsIdPopoverOpen(false)
+			setIsOwnershipPopoverOpen(false)
 		}
 
 		window.addEventListener('pointerdown', handlePointerDown)
@@ -540,7 +578,7 @@ function CreateEntityModal({
 		return () => {
 			window.removeEventListener('pointerdown', handlePointerDown)
 		}
-	}, [isIdPopoverOpen])
+	}, [isIdPopoverOpen, isOwnershipPopoverOpen])
 
 	useEffect(() => {
 		if (mode === 'edit') {
@@ -715,6 +753,11 @@ function CreateEntityModal({
 				return
 			}
 
+			const ownerUserId =
+				canAssignOwner && selectedOwnerUserId.length > 0
+					? selectedOwnerUserId
+					: undefined
+
 			await onUpdate(
 				entity.id,
 				{
@@ -743,11 +786,12 @@ function CreateEntityModal({
 						targetEntityId: link.targetEntityId,
 						targetEntityTemplateId: link.targetEntityTemplateId,
 					})),
-					},
-					modalStateRef.current.position,
-					modalStateRef.current.size,
-					activeTab,
-				)
+					ownerUserId,
+				},
+				modalStateRef.current.position,
+				modalStateRef.current.size,
+				activeTab,
+			)
 			return
 		}
 
@@ -755,6 +799,11 @@ function CreateEntityModal({
 			if (!selectedEntityTemplate) {
 				return
 			}
+
+			const ownerUserId =
+				canAssignOwner && selectedOwnerUserId.length > 0
+					? selectedOwnerUserId
+					: undefined
 
 			await onCreate({
 				attributes: includedAttributes.map((attribute, index) => ({
@@ -783,9 +832,15 @@ function CreateEntityModal({
 				})),
 				entityTemplateId: selectedEntityTemplate.id,
 				listingAttributeId,
+				ownerUserId,
 			})
 			return
 		}
+
+		const ownerUserId =
+			canAssignOwner && selectedOwnerUserId.length > 0
+				? selectedOwnerUserId
+				: undefined
 
 		await onCreate({
 			attributes: includedAttributes.map((attribute, index) => ({
@@ -804,6 +859,7 @@ function CreateEntityModal({
 			})),
 			entityTemplateId: null,
 			listingAttributeId,
+			ownerUserId,
 			links: includedLinks.map((link, index) => ({
 				description: link.description.trim(),
 				entityTemplateLinkId: link.entityTemplateLinkId,
@@ -1268,11 +1324,12 @@ function CreateEntityModal({
 									onPointerDown={(event) =>
 										event.stopPropagation()
 									}
-									onClick={() =>
-										setIsIdPopoverOpen(
-											(current) => !current,
-										)
-									}
+										onClick={() =>
+											setIsIdPopoverOpen((current) => {
+												setIsOwnershipPopoverOpen(false)
+												return !current
+											})
+										}
 								>
 									<Info aria-hidden="true" />
 								</button>
@@ -1310,6 +1367,53 @@ function CreateEntityModal({
 							>
 								<ArrowLeft aria-hidden="true" />
 							</button>
+						) : null}
+						{canAssignOwner ? (
+							<div
+								className="draggable-modal-info-action"
+								ref={ownershipPopoverRef}
+							>
+								<button
+									aria-expanded={isOwnershipPopoverOpen}
+									aria-label="Ownership"
+									className="draggable-modal-titlebar-button draggable-modal-info-button"
+									data-no-drag="true"
+									data-tooltip="Ownership"
+									type="button"
+									onPointerDown={(event) =>
+										event.stopPropagation()
+									}
+									onClick={() => {
+										setIsIdPopoverOpen(false)
+										setIsOwnershipPopoverOpen(
+											(current) => !current,
+										)
+									}}
+								>
+									<UserIcon aria-hidden="true" />
+								</button>
+								{isOwnershipPopoverOpen ? (
+									<div
+										className="include-attribute-popover entity-ownership-popover"
+										data-no-drag="true"
+										onPointerDown={(event) =>
+											event.stopPropagation()
+										}
+									>
+										<label>
+											<span>Owner:</span>
+											<CustomDropdown
+												ariaLabel="Filter owners"
+												emptyText="No owners found"
+												options={ownerOptions}
+												placeholder="Select owner"
+												value={selectedOwnerUserId}
+												onChange={setSelectedOwnerUserId}
+											/>
+										</label>
+									</div>
+								) : null}
+							</div>
 						) : null}
 						<button
 							aria-label={`Save ${modalTitle}`}
@@ -2305,6 +2409,8 @@ interface EntityDetailsModalProps {
 	entityTemplates: EntityTemplate[]
 	error: string | null
 	isLoading: boolean
+	currentUser?: RebirthUser
+	ownerUsers: RebirthUser[]
 	initialPosition?: ModalPosition
 	initialSize?: ModalSize
 	initialActiveTab?: 'attributes' | 'links' | 'inlinks'
@@ -2335,6 +2441,8 @@ function EntityDetailsModal({
 	entityTemplates,
 	error,
 	isLoading,
+	currentUser,
+	ownerUsers,
 	initialActiveTab = 'attributes',
 	initialPosition,
 	initialSize,
@@ -2372,7 +2480,9 @@ function EntityDetailsModal({
 			Math.max(entityModalMargin, window.innerHeight * 0.18),
 	}
 	const [isIdPopoverOpen, setIsIdPopoverOpen] = useState(false)
+	const [isOwnershipPopoverOpen, setIsOwnershipPopoverOpen] = useState(false)
 	const idPopoverRef = useRef<HTMLDivElement | null>(null)
+	const ownershipPopoverRef = useRef<HTMLDivElement | null>(null)
 	const orderedAttributes = (entity?.attributes ?? [])
 		.slice()
 		.sort((left, right) => left.listingIndex - right.listingIndex)
@@ -2390,6 +2500,13 @@ function EntityDetailsModal({
 			})),
 	)
 	const listingAttribute = entity ? getEntityListingAttribute(entity) : null
+	const ownerLabel =
+		ownerUsers.find((user) => user.id === entity?.ownerUserId)?.username ??
+		(currentUser && currentUser.id === entity?.ownerUserId
+			? currentUser.username
+			: undefined) ??
+		entity?.ownerUserId ??
+		''
 	const getAccessLevelName = (accessLevelId: number): string =>
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
 			?.name ?? String(accessLevelId)
@@ -2448,6 +2565,35 @@ function EntityDetailsModal({
 	useEffect(() => {
 		setRevealedAttributeIds(new Set())
 	}, [entity?.id])
+
+	useEffect(() => {
+		if (!isIdPopoverOpen && !isOwnershipPopoverOpen) {
+			return
+		}
+
+		function handlePointerDown(event: PointerEvent): void {
+			const target = event.target
+
+			if (
+				target instanceof Node &&
+				((idPopoverRef.current &&
+					idPopoverRef.current.contains(target)) ||
+					(ownershipPopoverRef.current &&
+						ownershipPopoverRef.current.contains(target)))
+			) {
+				return
+			}
+
+			setIsIdPopoverOpen(false)
+			setIsOwnershipPopoverOpen(false)
+		}
+
+		window.addEventListener('pointerdown', handlePointerDown)
+
+		return () => {
+			window.removeEventListener('pointerdown', handlePointerDown)
+		}
+	}, [isIdPopoverOpen, isOwnershipPopoverOpen])
 
 	function toggleAttributeValueVisibility(attributeId: string): void {
 		setRevealedAttributeIds((current) => {
@@ -2573,11 +2719,12 @@ function EntityDetailsModal({
 									onPointerDown={(event) =>
 										event.stopPropagation()
 									}
-									onClick={() =>
+									onClick={() => {
+										setIsOwnershipPopoverOpen(false)
 										setIsIdPopoverOpen(
 											(current) => !current,
 										)
-									}
+									}}
 								>
 									<Info aria-hidden="true" />
 								</button>
@@ -2666,6 +2813,43 @@ function EntityDetailsModal({
 													Delete
 												</button>
 											</div>
+										</div>
+									) : null}
+								</div>
+								<div
+									className="draggable-modal-info-action"
+									ref={ownershipPopoverRef}
+								>
+									<button
+										aria-expanded={isOwnershipPopoverOpen}
+										aria-label="Ownership"
+										className="draggable-modal-titlebar-button draggable-modal-info-button"
+										data-no-drag="true"
+										data-tooltip="Ownership"
+										type="button"
+										onPointerDown={(event) =>
+											event.stopPropagation()
+										}
+										onClick={() => {
+											setIsIdPopoverOpen(false)
+											setIsOwnershipPopoverOpen(
+												(current) => !current,
+											)
+										}}
+									>
+										<UserIcon aria-hidden="true" />
+									</button>
+									{isOwnershipPopoverOpen ? (
+										<div
+											className="include-attribute-popover entity-ownership-popover entity-ownership-read-popover"
+											data-no-drag="true"
+											onPointerDown={(event) =>
+												event.stopPropagation()
+											}
+										>
+											<p className="entity-ownership-read-title">
+												Owner: {ownerLabel}
+											</p>
 										</div>
 									) : null}
 								</div>
@@ -3062,6 +3246,7 @@ export function DataExplorerView() {
 	const [entities, setEntities] = useState<Entity[]>([])
 	const [entityTemplates, setEntityTemplates] = useState<EntityTemplate[]>([])
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
+	const [entityOwnerUsers, setEntityOwnerUsers] = useState<RebirthUser[]>([])
 	const [entitySearchTerm, setEntitySearchTerm] = useState('')
 	const [entitiesPage, setEntitiesPage] = useState(1)
 	const [entitiesTotal, setEntitiesTotal] = useState(0)
@@ -3280,6 +3465,33 @@ export function DataExplorerView() {
 		}
 	}, [])
 
+	const loadEntityOwnerUsers = useCallback(async (): Promise<void> => {
+		if (!canManageData) {
+			setEntityOwnerUsers([])
+			return
+		}
+
+		try {
+			const response = await fetch(`${apiBaseUrl}${apiRoutes.entityOwners}`, {
+				headers: getAuthHeaders(),
+			})
+
+			if (!response.ok) {
+				throw new Error('Unable to load entity owners')
+			}
+
+			const data = (await response.json()) as UsersResponse
+
+			if (isMountedRef.current) {
+				setEntityOwnerUsers(data.data)
+			}
+		} catch {
+			if (isMountedRef.current) {
+				setEntityOwnerUsers([])
+			}
+		}
+	}, [canManageData])
+
 	const openCreateEntityChoice = useCallback(
 		(event: ReactMouseEvent<HTMLButtonElement>) => {
 			if (!canCreateManagedData) {
@@ -3331,6 +3543,7 @@ export function DataExplorerView() {
 			setCreateEntityModalPosition(undefined)
 			setCreateEntityModalZIndex(getNextModalZIndex())
 			void loadAccessLevels()
+			void loadEntityOwnerUsers()
 
 			if (mode === 'template' && entityTemplates.length === 0) {
 				void loadEntityTemplates()
@@ -3340,6 +3553,7 @@ export function DataExplorerView() {
 			getNextModalZIndex,
 			entityTemplates.length,
 			loadAccessLevels,
+			loadEntityOwnerUsers,
 			loadEntityTemplates,
 			canCreateManagedData,
 		],
@@ -3368,6 +3582,7 @@ export function DataExplorerView() {
 				current.filter((window) => window.id !== windowId),
 			)
 			void loadAccessLevels()
+			void loadEntityOwnerUsers()
 
 			if (entityTemplates.length === 0) {
 				void loadEntityTemplates()
@@ -3410,6 +3625,7 @@ export function DataExplorerView() {
 			getNextModalZIndex,
 			entityTemplates.length,
 			loadAccessLevels,
+			loadEntityOwnerUsers,
 			loadEntityTemplates,
 			canCreateManagedData,
 		],
@@ -3611,6 +3827,7 @@ export function DataExplorerView() {
 					),
 				)
 				void loadAccessLevels()
+				void loadEntityOwnerUsers()
 
 				if (entityTemplates.length === 0) {
 					void loadEntityTemplates()
@@ -3642,6 +3859,7 @@ export function DataExplorerView() {
 				},
 			])
 			void loadAccessLevels()
+			void loadEntityOwnerUsers()
 
 			if (entityTemplates.length === 0) {
 				void loadEntityTemplates()
@@ -3657,6 +3875,7 @@ export function DataExplorerView() {
 			entityTemplates.length,
 			loadAccessLevels,
 			loadEntityDetails,
+			loadEntityOwnerUsers,
 			loadEntityTemplates,
 		],
 	)
@@ -4246,7 +4465,9 @@ export function DataExplorerView() {
 			{canCreateManagedData && isCreateEntityModalOpen ? (
 				<CreateEntityModal
 					accessLevels={accessLevels}
+					canAssignOwner={canManageData}
 					creationMode={createEntityMode}
+					currentUserId={storedAuth?.user.id}
 					entities={entities}
 					entityTemplates={entityTemplates}
 					error={createEntityError}
@@ -4262,6 +4483,7 @@ export function DataExplorerView() {
 					}}
 					onCreate={createEntity}
 					onUpdate={updateEntityRecord}
+					ownerUsers={entityOwnerUsers}
 					zIndex={createEntityModalZIndex}
 				/>
 			) : null}
@@ -4270,11 +4492,13 @@ export function DataExplorerView() {
 					<CreateEntityModal
 						key={window.id}
 						accessLevels={accessLevels}
+						canAssignOwner={canManageData}
 						creationMode={
 							window.entity.entityTemplateId
 								? 'template'
 								: 'scratch'
 						}
+						currentUserId={storedAuth?.user.id}
 						entity={window.entity}
 						entities={entities}
 						entityTemplates={entityTemplates}
@@ -4327,6 +4551,7 @@ export function DataExplorerView() {
 								window.id,
 							)
 						}
+						ownerUsers={entityOwnerUsers}
 						zIndex={window.zIndex}
 					/>
 				))}
@@ -4339,6 +4564,7 @@ export function DataExplorerView() {
 					entities={entities}
 					entityTemplates={entityTemplates}
 					error={window.error}
+					currentUser={storedAuth?.user}
 					initialActiveTab={window.activeTab}
 					initialPosition={window.initialPosition}
 					initialSize={window.initialSize}
@@ -4346,6 +4572,7 @@ export function DataExplorerView() {
 					onActivate={activateEntityDetailsWindow}
 					onDelete={deleteEntity}
 					onEdit={openEntityEditModal}
+					ownerUsers={entityOwnerUsers}
 					canEdit={
 						canManageData ||
 						(canManageOwnData &&

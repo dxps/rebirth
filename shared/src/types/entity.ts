@@ -5,7 +5,7 @@ import {
 	type ValueType,
 } from './attribute-template'
 import { isAccessLevelId, type AccessLevelId } from '../security/access-level'
-import { type UserId } from '../security/user'
+import { isUserId, type UserId } from '../security/user'
 import {
 	isEntityTemplateAttributeId,
 	isEntityTemplateId,
@@ -75,6 +75,7 @@ export interface EntityTemplateLinkTargetInput {
 
 export interface CreateEntityFromTemplateInput {
 	entityTemplateId: EntityTemplateId
+	ownerUserId?: UserId
 	attributes?: CreateEntityAttributeInput[]
 	attributeValues?: EntityTemplateAttributeValueInput[]
 	listingAttributeId?: EntityAttributeId
@@ -84,6 +85,7 @@ export interface CreateEntityFromTemplateInput {
 
 export interface CreateEntityFromScratchInput {
 	entityTemplateId?: null
+	ownerUserId?: UserId
 	attributes: CreateEntityAttributeInput[]
 	listingAttributeId: EntityAttributeId
 	links?: CreateEntityLinkInput[]
@@ -91,6 +93,7 @@ export interface CreateEntityFromScratchInput {
 
 export interface UpdateEntityInput {
 	entityTemplateId?: EntityTemplateId | null
+	ownerUserId?: UserId
 	attributes: CreateEntityAttributeInput[]
 	listingAttributeId: EntityAttributeId
 	links?: CreateEntityLinkInput[]
@@ -285,11 +288,15 @@ export function isCreateEntityInput(
 	}
 
 	const value = input as Record<string, unknown>
+	const hasValidOwnerUserId =
+		value.ownerUserId === undefined ||
+		(typeof value.ownerUserId === 'string' && isUserId(value.ownerUserId))
 
 	if (typeof value.entityTemplateId === 'string') {
 		const hasExplicitAttributes = value.attributes !== undefined
 
 		return (
+			hasValidOwnerUserId &&
 			isEntityTemplateId(value.entityTemplateId) &&
 			(hasExplicitAttributes
 				? Array.isArray(value.attributes) &&
@@ -312,6 +319,7 @@ export function isCreateEntityInput(
 	}
 
 	return (
+		hasValidOwnerUserId &&
 		(value.entityTemplateId === undefined || value.entityTemplateId === null) &&
 		hasValidEntityAttributes(value.attributes, value.listingAttributeId) &&
 		(value.links === undefined ||
@@ -330,6 +338,8 @@ export function isUpdateEntityInput(
 	const value = input as Record<string, unknown>
 
 	return (
+		(value.ownerUserId === undefined ||
+			(typeof value.ownerUserId === 'string' && isUserId(value.ownerUserId))) &&
 		(value.entityTemplateId === undefined ||
 			value.entityTemplateId === null ||
 			(typeof value.entityTemplateId === 'string' &&

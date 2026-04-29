@@ -140,6 +140,7 @@ export const apiRoutes = {
 	attributeTemplate: (id: string) => `/attribute-templates/${id}`,
 	attributeTemplates: '/attribute-templates',
 	entity: (id: string) => `/entities/${id}`,
+	entityOwners: '/entity-owners',
 	entities: '/entities',
 	entityTemplate: (id: string) => `/entity-templates/${id}`,
 	entityTemplates: '/entity-templates',

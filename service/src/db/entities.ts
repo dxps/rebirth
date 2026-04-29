@@ -673,6 +673,7 @@ export async function updateEntity(id: string, input: UpdateEntityInput) {
 			await sql`
 				UPDATE entities
 				SET
+					owner_user_id = ${input.ownerUserId ?? existingEntity.ownerUserId},
 					entity_template_id = ${input.entityTemplateId ?? existingEntity.entityTemplateId},
 					listing_attribute_id = ${nextListingAttributeId}
 				WHERE id = ${id}
