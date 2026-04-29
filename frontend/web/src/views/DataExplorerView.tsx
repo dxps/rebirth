@@ -157,6 +157,10 @@ function getEntityListingLabel(entity: Entity): string {
 		: entity.id
 }
 
+function getEntityListingValue(entity: Entity): string {
+	return getEntityListingAttribute(entity)?.value ?? entity.id
+}
+
 function getLinkCountTooltip(
 	count: number,
 	direction: 'incoming' | 'outgoing',
@@ -2520,7 +2524,7 @@ function EntityDetailsModal({
 		const targetEntity = getLinkTargetEntity(link)
 
 		if (targetEntity) {
-			return getEntityListingLabel(targetEntity)
+			return getEntityListingValue(targetEntity)
 		}
 
 		if (link.targetEntityLabel) {
@@ -3105,7 +3109,7 @@ function EntityDetailsModal({
 																<td>
 																	{targetEntity ? (
 																		<button
-																			aria-label={`Open entity ${getEntityListingLabel(targetEntity)}`}
+																			aria-label={`Open entity ${getEntityListingValue(targetEntity)}`}
 																			className="entity-reference-button"
 																			data-no-drag="true"
 																			type="button"
@@ -3119,7 +3123,7 @@ function EntityDetailsModal({
 																			}
 																		>
 																			<span>
-																				{getEntityListingLabel(
+																				{getEntityListingValue(
 																					targetEntity,
 																				)}
 																			</span>
@@ -3186,7 +3190,7 @@ function EntityDetailsModal({
 																	<td>
 																		{sourceEntity ? (
 																			<button
-																				aria-label={`Open entity ${getEntityListingLabel(sourceEntity)}`}
+																				aria-label={`Open entity ${getEntityListingValue(sourceEntity)}`}
 																				className="entity-reference-button"
 																				data-no-drag="true"
 																				type="button"
@@ -3200,7 +3204,7 @@ function EntityDetailsModal({
 																				}
 																			>
 																				<span>
-																					{getEntityListingLabel(
+																					{getEntityListingValue(
 																						sourceEntity,
 																					)}
 																				</span>

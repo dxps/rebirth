@@ -4497,6 +4497,12 @@ button.date-time-calendar-done:focus-visible {
 	overflow: visible;
 }
 
+.entity-template-view-links-table td,
+.entity-template-view-inlinks-table td {
+	line-height: 1.35;
+	vertical-align: top;
+}
+
 .entity-template-view-links-table td:last-child {
 	padding-left: 0.7rem;
 	padding-right: 0.7rem;
@@ -4528,7 +4534,7 @@ button.date-time-calendar-done:focus-visible {
 
 .entity-reference-button,
 button.entity-reference-button {
-	align-items: center;
+	align-items: flex-start;
 	background: transparent;
 	background-color: transparent;
 	border: 0;
@@ -4539,10 +4545,14 @@ button.entity-reference-button {
 	font-size: inherit;
 	font-weight: 500;
 	gap: 0.32rem;
+	height: auto;
+	line-height: 1.35;
 	max-width: 100%;
+	min-height: 0;
 	min-width: 0;
 	padding: 0;
 	text-align: left;
+	vertical-align: top;
 }
 
 .entity-reference-button:hover,
