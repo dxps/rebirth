@@ -5,6 +5,7 @@ import {
 } from '@rebirth/shared'
 import { sql } from 'drizzle-orm'
 import {
+	boolean,
 	check,
 	foreignKey,
 	integer,
@@ -15,10 +16,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import { accessLevels } from './access-levels'
-import {
-	attributeTemplateValueType,
-	attributeTemplates,
-} from './attribute-templates'
+import { attributeTemplateValueType } from './attribute-templates'
 import { users } from './users'
 
 export const entityTemplates = pgTable(
@@ -53,10 +51,10 @@ export const entityTemplateAttributes = pgTable(
 	{
 		id: uuid('id').primaryKey(),
 		entityTemplateId: uuid('entity_template_id').notNull(),
-		attributeTemplateId: uuid('attribute_template_id'),
 		name: text('name').notNull(),
 		description: text('description').notNull(),
 		valueType: attributeTemplateValueType('value_type').notNull(),
+		isRequired: boolean('is_required').notNull().default(false),
 		accessLevelId: integer('access_level_id').notNull(),
 		listingIndex: integer('listing_index').notNull(),
 	},
@@ -66,11 +64,6 @@ export const entityTemplateAttributes = pgTable(
 			foreignColumns: [entityTemplates.id],
 			name: 'entity_tmpl_attrs_entity_tmpl_id_entity_tmpls_id_fk',
 		}).onDelete('cascade'),
-		foreignKey({
-			columns: [table.attributeTemplateId],
-			foreignColumns: [attributeTemplates.id],
-			name: 'entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk',
-		}),
 		foreignKey({
 			columns: [table.accessLevelId],
 			foreignColumns: [accessLevels.id],
@@ -100,7 +93,7 @@ export const entityTemplateLinks = pgTable(
 	{
 		id: uuid('id').primaryKey(),
 		entityTemplateId: uuid('entity_template_id').notNull(),
-		targetEntityTemplateId: uuid('target_entity_template_id').notNull(),
+		targetEntityTemplateId: uuid('target_entity_template_id'),
 		name: text('name').notNull(),
 		description: text('description'),
 		listingIndex: integer('listing_index').notNull(),
@@ -132,10 +125,5 @@ export const entityTemplateLinks = pgTable(
 			foreignColumns: [entityTemplates.id],
 			name: 'entity_tmpl_links_entity_tmpl_id_entity_tmpls_id_fk',
 		}).onDelete('cascade'),
-		foreignKey({
-			columns: [table.targetEntityTemplateId],
-			foreignColumns: [entityTemplates.id],
-			name: 'entity_tmpl_links_target_entity_tmpl_id_entity_tmpls_id_fk',
-		}),
 	],
 )

@@ -1,7 +1,5 @@
 import {
-	isAttributeTemplateId,
 	isValueType,
-	type AttributeTemplateId,
 	type ValueType,
 } from './attribute-template'
 import { isAccessLevelId, type AccessLevelId } from '../security/access-level'
@@ -21,11 +19,10 @@ export type EntityLinkId = string
 
 export interface EntityAttribute {
 	id: EntityAttributeId
-	entityTemplateAttributeId: EntityTemplateAttributeId | null
-	attributeTemplateId: AttributeTemplateId | null
 	name: string
 	description: string
 	valueType: ValueType
+	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
 	value: string
@@ -33,11 +30,10 @@ export interface EntityAttribute {
 
 export interface CreateEntityAttributeInput {
 	id: EntityAttributeId
-	entityTemplateAttributeId?: EntityTemplateAttributeId | null
-	attributeTemplateId?: AttributeTemplateId | null
 	name: string
 	description: string
 	valueType: ValueType
+	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
 	value: string
@@ -46,8 +42,6 @@ export interface CreateEntityAttributeInput {
 export interface EntityLink {
 	id: EntityLinkId
 	entityId: EntityId
-	entityTemplateLinkId: EntityTemplateLinkId | null
-	targetEntityTemplateId: EntityTemplateId | null
 	targetEntityId: EntityId | null
 	targetEntityLabel?: string | null
 	name: string
@@ -65,8 +59,6 @@ export interface EntityIncomingLink {
 }
 
 export interface CreateEntityLinkInput {
-	entityTemplateLinkId?: EntityTemplateLinkId | null
-	targetEntityTemplateId?: EntityTemplateId | null
 	targetEntityId?: EntityId | null
 	name: string
 	description?: string | null
@@ -102,7 +94,6 @@ export interface CreateEntityFromScratchInput {
 }
 
 export interface UpdateEntityInput {
-	entityTemplateId?: EntityTemplateId | null
 	ownerUserId?: UserId
 	attributes: CreateEntityAttributeInput[]
 	listingAttributeId: EntityAttributeId
@@ -116,7 +107,6 @@ export type CreateEntityInput =
 export interface Entity {
 	id: EntityId
 	ownerUserId: UserId
-	entityTemplateId: EntityTemplateId | null
 	attributes: EntityAttribute[]
 	listingAttributeId: EntityAttributeId
 	links: EntityLink[]
@@ -203,17 +193,10 @@ function hasValidEntityAttributes(
 			return (
 				typeof input.id === 'string' &&
 				isEntityAttributeId(input.id) &&
-				(input.entityTemplateAttributeId === undefined ||
-					input.entityTemplateAttributeId === null ||
-					(typeof input.entityTemplateAttributeId === 'string' &&
-						isEntityTemplateAttributeId(input.entityTemplateAttributeId))) &&
-				(input.attributeTemplateId === undefined ||
-					input.attributeTemplateId === null ||
-					(typeof input.attributeTemplateId === 'string' &&
-						isAttributeTemplateId(input.attributeTemplateId))) &&
 				typeof input.name === 'string' &&
 				typeof input.description === 'string' &&
 				isValueType(input.valueType) &&
+				typeof input.isRequired === 'boolean' &&
 				typeof input.accessLevelId === 'number' &&
 				isAccessLevelId(input.accessLevelId) &&
 				typeof input.listingIndex === 'number' &&
@@ -234,14 +217,6 @@ function isCreateEntityLinkInput(value: unknown): value is CreateEntityLinkInput
 	const input = value as Record<string, unknown>
 
 	return (
-		(input.entityTemplateLinkId === undefined ||
-			input.entityTemplateLinkId === null ||
-			(typeof input.entityTemplateLinkId === 'string' &&
-				isEntityTemplateLinkId(input.entityTemplateLinkId))) &&
-		(input.targetEntityTemplateId === undefined ||
-			input.targetEntityTemplateId === null ||
-			(typeof input.targetEntityTemplateId === 'string' &&
-				isEntityTemplateId(input.targetEntityTemplateId))) &&
 		(input.targetEntityId === undefined ||
 			input.targetEntityId === null ||
 			(typeof input.targetEntityId === 'string' &&
@@ -351,10 +326,6 @@ export function isUpdateEntityInput(
 	return (
 		(value.ownerUserId === undefined ||
 			(typeof value.ownerUserId === 'string' && isUserId(value.ownerUserId))) &&
-		(value.entityTemplateId === undefined ||
-			value.entityTemplateId === null ||
-			(typeof value.entityTemplateId === 'string' &&
-				isEntityTemplateId(value.entityTemplateId))) &&
 		hasValidEntityAttributes(value.attributes, value.listingAttributeId) &&
 		(value.links === undefined ||
 			(Array.isArray(value.links) &&

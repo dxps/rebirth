@@ -1,10 +1,10 @@
 CREATE TABLE "entity_template_attributes" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"entity_template_id" uuid NOT NULL,
-	"attribute_template_id" uuid,
 	"name" text NOT NULL,
 	"description" text NOT NULL,
 	"value_type" "attribute_template_value_type" NOT NULL,
+	"is_required" boolean DEFAULT false NOT NULL,
 	"access_level_id" integer NOT NULL,
 	"listing_index" integer NOT NULL,
 	CONSTRAINT "entity_tmpl_attrs_entity_tmpl_id_listing_idx_unique" UNIQUE("entity_template_id","listing_index"),
@@ -16,7 +16,7 @@ CREATE TABLE "entity_template_attributes" (
 CREATE TABLE "entity_template_links" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"entity_template_id" uuid NOT NULL,
-	"target_entity_template_id" uuid NOT NULL,
+	"target_entity_template_id" uuid,
 	"name" text NOT NULL,
 	"description" text,
 	"listing_index" integer NOT NULL,
@@ -40,7 +40,5 @@ CREATE TABLE "entity_templates" (
 --> statement-breakpoint
 ALTER TABLE "entity_templates" ADD CONSTRAINT "entity_templates_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entity_template_attributes" ADD CONSTRAINT "entity_tmpl_attrs_entity_tmpl_id_entity_tmpls_id_fk" FOREIGN KEY ("entity_template_id") REFERENCES "public"."entity_templates"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "entity_template_attributes" ADD CONSTRAINT "entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk" FOREIGN KEY ("attribute_template_id") REFERENCES "public"."attribute_templates"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entity_template_attributes" ADD CONSTRAINT "entity_tmpl_attrs_access_level_id_access_levels_id_fk" FOREIGN KEY ("access_level_id") REFERENCES "public"."access_levels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entity_template_links" ADD CONSTRAINT "entity_tmpl_links_entity_tmpl_id_entity_tmpls_id_fk" FOREIGN KEY ("entity_template_id") REFERENCES "public"."entity_templates"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "entity_template_links" ADD CONSTRAINT "entity_tmpl_links_target_entity_tmpl_id_entity_tmpls_id_fk" FOREIGN KEY ("target_entity_template_id") REFERENCES "public"."entity_templates"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

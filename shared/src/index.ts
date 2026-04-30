@@ -383,8 +383,10 @@ function isCreateEntityTemplateLinkInput(
 		(input.id === undefined ||
 			(typeof input.id === 'string' &&
 				isEntityTemplateLinkId(input.id))) &&
-		typeof input.targetEntityTemplateId === 'string' &&
-		isEntityTemplateId(input.targetEntityTemplateId) &&
+		(input.targetEntityTemplateId === undefined ||
+			input.targetEntityTemplateId === null ||
+			(typeof input.targetEntityTemplateId === 'string' &&
+				isEntityTemplateId(input.targetEntityTemplateId))) &&
 		typeof input.name === 'string' &&
 		(input.description === undefined ||
 			input.description === null ||

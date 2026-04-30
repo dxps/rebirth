@@ -1,9 +1,4 @@
-import {
-	isAttributeTemplateId,
-	isValueType,
-	type AttributeTemplateId,
-	type ValueType,
-} from './attribute-template'
+import { isValueType, type ValueType } from './attribute-template'
 import { isAccessLevelId, type AccessLevelId } from '../security/access-level'
 import { type UserId } from '../security/user'
 
@@ -13,20 +8,20 @@ export type EntityTemplateLinkId = string
 
 export interface EntityTemplateAttribute {
 	id: EntityTemplateAttributeId
-	attributeTemplateId: AttributeTemplateId | null
 	name: string
 	description: string
 	valueType: ValueType
+	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
 }
 
 export interface CreateEntityTemplateAttributeInput {
 	id: EntityTemplateAttributeId
-	attributeTemplateId?: AttributeTemplateId | null
 	name: string
 	description: string
 	valueType: ValueType
+	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
 }
@@ -34,7 +29,7 @@ export interface CreateEntityTemplateAttributeInput {
 export interface EntityTemplateLink {
 	id: EntityTemplateLinkId
 	entityTemplateId: EntityTemplateId
-	targetEntityTemplateId: EntityTemplateId
+	targetEntityTemplateId: EntityTemplateId | null
 	name: string
 	description: string | null
 	listingIndex: number
@@ -53,7 +48,7 @@ export interface EntityTemplate {
 
 export interface CreateEntityTemplateLinkInput {
 	id?: EntityTemplateLinkId
-	targetEntityTemplateId: EntityTemplateId
+	targetEntityTemplateId?: EntityTemplateId | null
 	name: string
 	description?: string | null
 	listingIndex: number
@@ -151,13 +146,10 @@ export function hasValidEntityTemplateAttributes(
 			return (
 				typeof input.id === 'string' &&
 				isEntityTemplateAttributeId(input.id) &&
-				(input.attributeTemplateId === undefined ||
-					input.attributeTemplateId === null ||
-					(typeof input.attributeTemplateId === 'string' &&
-						isAttributeTemplateId(input.attributeTemplateId))) &&
 				typeof input.name === 'string' &&
 				typeof input.description === 'string' &&
 				isValueType(input.valueType) &&
+				typeof input.isRequired === 'boolean' &&
 				typeof input.accessLevelId === 'number' &&
 				isAccessLevelId(input.accessLevelId) &&
 				typeof input.listingIndex === 'number' &&

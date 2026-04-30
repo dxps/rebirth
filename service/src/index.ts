@@ -1902,7 +1902,6 @@ const server = Bun.serve({
 
 				const updatedEntity = await updateEntity(id, {
 					attributes: input.attributes,
-					entityTemplateId: input.entityTemplateId,
 					links: input.links,
 					listingAttributeId: input.listingAttributeId,
 					ownerUserId: canManageData(authenticatedUser)

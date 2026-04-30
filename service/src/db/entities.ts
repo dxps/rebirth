@@ -19,18 +19,16 @@ import { createUuidV7 } from './uuid'
 interface EntityRow {
 	id: string
 	owner_user_id: string
-	entity_template_id: string | null
 	listing_attribute_id: string
 }
 
 interface EntityAttributeRow {
 	id: string
 	entity_id: string
-	entity_template_attribute_id: string | null
-	attribute_template_id: string | null
 	name: string
 	description: string
 	value_type: ValueType
+	is_required: boolean
 	access_level_id: number
 	listing_index: number
 	value: string
@@ -39,8 +37,6 @@ interface EntityAttributeRow {
 interface EntityLinkRow {
 	id: string
 	entity_id: string
-	entity_template_link_id: string | null
-	target_entity_template_id: string | null
 	target_entity_id: string | null
 	name: string
 	description: string | null
@@ -59,12 +55,6 @@ interface EntityIncomingLinkRow {
 	name: string
 	description: string | null
 	listing_index: number
-}
-
-interface AttributeTemplateRequirementRow {
-	id: string
-	is_required: boolean
-	name: string
 }
 
 interface EntityListResult {
@@ -101,9 +91,8 @@ function normalizeAttributes(
 		.map((attribute, index) => ({
 			id: attribute.id,
 			accessLevelId: attribute.accessLevelId,
-			attributeTemplateId: attribute.attributeTemplateId ?? null,
 			description: attribute.description.trim(),
-			entityTemplateAttributeId: attribute.entityTemplateAttributeId ?? null,
+			isRequired: attribute.isRequired,
 			listingIndex: attribute.listingIndex ?? index,
 			name: attribute.name.trim(),
 			value: attribute.value,
@@ -118,11 +107,9 @@ function normalizeLinks(
 	return (links ?? [])
 		.map((link, index) => ({
 			description: normalizeNullableText(link.description),
-			entityTemplateLinkId: link.entityTemplateLinkId ?? null,
 			listingIndex: link.listingIndex ?? index,
 			name: link.name.trim(),
 			targetEntityId: link.targetEntityId ?? null,
-			targetEntityTemplateId: link.targetEntityTemplateId ?? null,
 		}))
 		.sort((left, right) => left.listingIndex - right.listingIndex)
 }
@@ -140,12 +127,10 @@ function toEntityLink(row: EntityLinkRow): EntityLink {
 	return {
 		description: row.description,
 		entityId: row.entity_id,
-		entityTemplateLinkId: row.entity_template_link_id,
 		id: row.id,
 		listingIndex: row.listing_index,
 		name: row.name,
 		targetEntityId: row.target_entity_id,
-		targetEntityTemplateId: row.target_entity_template_id,
 	}
 }
 
@@ -163,16 +148,13 @@ function toEntity(
 			.map((attributeRow) => ({
 				id: attributeRow.id,
 				accessLevelId: attributeRow.access_level_id,
-				attributeTemplateId: attributeRow.attribute_template_id,
 				description: attributeRow.description,
-				entityTemplateAttributeId:
-					attributeRow.entity_template_attribute_id,
+				isRequired: attributeRow.is_required,
 				listingIndex: attributeRow.listing_index,
 				name: attributeRow.name,
 				value: attributeRow.value,
 				valueType: attributeRow.value_type,
 			})),
-		entityTemplateId: row.entity_template_id,
 		id: row.id,
 		ownerUserId: row.owner_user_id,
 		links: linkRows
@@ -206,40 +188,12 @@ function isMissingRequiredAttributeValue(attribute: EntityAttribute): boolean {
 }
 
 async function validateRequiredAttributes(
-	client: ReturnType<typeof createDatabase>['client'],
 	attributes: EntityAttribute[],
 ): Promise<void> {
-	const attributeTemplateIds = [
-		...new Set(
-			attributes
-				.map((attribute) => attribute.attributeTemplateId)
-				.filter((attributeTemplateId): attributeTemplateId is string =>
-					Boolean(attributeTemplateId),
-				),
-		),
-	]
-
-	if (attributeTemplateIds.length === 0) {
-		return
-	}
-
-	const templateRows = await client<AttributeTemplateRequirementRow[]>`
-		SELECT id, name, is_required
-		FROM attribute_templates
-		WHERE id = ANY(${attributeTemplateIds})
-	`
-	const templateById = new Map(
-		templateRows.map((row) => [row.id, row]),
+	const missingRequiredAttributes = attributes.filter(
+		(attribute) =>
+			attribute.isRequired && isMissingRequiredAttributeValue(attribute),
 	)
-	const missingRequiredAttributes = attributes.filter((attribute) => {
-		if (!attribute.attributeTemplateId) {
-			return false
-		}
-
-		const template = templateById.get(attribute.attributeTemplateId)
-
-		return Boolean(template?.is_required) && isMissingRequiredAttributeValue(attribute)
-	})
 
 	if (missingRequiredAttributes.length === 0) {
 		return
@@ -266,13 +220,13 @@ async function readEntityRows(
 			: null
 	const rows = id
 		? await client<EntityRow[]>`
-			SELECT id, owner_user_id, entity_template_id, listing_attribute_id
+			SELECT id, owner_user_id, listing_attribute_id
 			FROM entities
 			WHERE id = ${id}
 		`
 		: searchPattern
 			? await client<EntityRow[]>`
-			SELECT id, owner_user_id, entity_template_id, listing_attribute_id
+			SELECT id, owner_user_id, listing_attribute_id
 			FROM entities
 			WHERE EXISTS (
 				SELECT 1
@@ -285,7 +239,7 @@ async function readEntityRows(
 			)
 		`
 		: await client<EntityRow[]>`
-			SELECT id, owner_user_id, entity_template_id, listing_attribute_id
+			SELECT id, owner_user_id, listing_attribute_id
 			FROM entities
 		`
 
@@ -295,13 +249,13 @@ async function readEntityRows(
 
 	const ids = rows.map((row) => row.id)
 	const attributeRows = await client<EntityAttributeRow[]>`
-		SELECT id, entity_id, entity_template_attribute_id, attribute_template_id, name, description, value_type, access_level_id, listing_index, value
+		SELECT id, entity_id, name, description, value_type, is_required, access_level_id, listing_index, value
 		FROM entity_attributes
 		WHERE entity_id = ANY(${ids})
 		ORDER BY entity_id, listing_index
 	`
 	const linkRows = await client<EntityLinkRow[]>`
-		SELECT id, entity_id, entity_template_link_id, target_entity_template_id, target_entity_id, name, description, listing_index
+		SELECT id, entity_id, target_entity_id, name, description, listing_index
 		FROM entity_links
 		WHERE entity_id = ANY(${ids})
 		ORDER BY entity_id, listing_index
@@ -443,11 +397,10 @@ async function insertEntityAttributes(
 			INSERT INTO entity_attributes (
 				id,
 				entity_id,
-				entity_template_attribute_id,
-				attribute_template_id,
 				name,
 				description,
 				value_type,
+				is_required,
 				access_level_id,
 				listing_index,
 				value
@@ -455,11 +408,10 @@ async function insertEntityAttributes(
 			VALUES (
 				${attribute.id},
 				${entityId},
-				${attribute.entityTemplateAttributeId},
-				${attribute.attributeTemplateId},
 				${attribute.name},
 				${attribute.description},
 				${attribute.valueType},
+				${attribute.isRequired},
 				${attribute.accessLevelId},
 				${attribute.listingIndex},
 				${attribute.value}
@@ -478,8 +430,6 @@ async function insertEntityLinks(
 			INSERT INTO entity_links (
 				id,
 				entity_id,
-				entity_template_link_id,
-				target_entity_template_id,
 				target_entity_id,
 				name,
 				description,
@@ -488,8 +438,6 @@ async function insertEntityLinks(
 			VALUES (
 				${createUuidV7()},
 				${entityId},
-				${link.entityTemplateLinkId ?? null},
-				${link.targetEntityTemplateId ?? null},
 				${link.targetEntityId ?? null},
 				${link.name.trim()},
 				${normalizeNullableText(link.description)},
@@ -529,7 +477,6 @@ async function buildEntityFromTemplate(
 ): Promise<
 	| {
 			attributes: EntityAttribute[]
-			entityTemplateId: string
 			links: CreateEntityLinkInput[]
 			listingAttributeId: string
 	  }
@@ -550,20 +497,11 @@ async function buildEntityFromTemplate(
 				.map((attribute, index) => {
 					const id = attribute.id
 
-					if (attribute.entityTemplateAttributeId) {
-						entityTemplateAttributeIdToEntityAttributeId.set(
-							attribute.entityTemplateAttributeId,
-							id,
-						)
-					}
-
 					return {
 						id,
 						accessLevelId: attribute.accessLevelId,
-						attributeTemplateId: attribute.attributeTemplateId ?? null,
 						description: attribute.description,
-						entityTemplateAttributeId:
-							attribute.entityTemplateAttributeId ?? null,
+						isRequired: attribute.isRequired,
 						listingIndex: attribute.listingIndex ?? index,
 						name: attribute.name,
 						value: attribute.value,
@@ -578,9 +516,8 @@ async function buildEntityFromTemplate(
 				return {
 					id,
 					accessLevelId: attribute.accessLevelId,
-					attributeTemplateId: attribute.attributeTemplateId,
 					description: attribute.description,
-					entityTemplateAttributeId: attribute.id,
+					isRequired: attribute.isRequired,
 					listingIndex: attribute.listingIndex,
 					name: attribute.name,
 					value: '',
@@ -600,16 +537,13 @@ async function buildEntityFromTemplate(
 
 	return {
 		attributes,
-		entityTemplateId: entityTemplate.id,
 		links: input.links
 			? input.links
 			: entityTemplate.links.map((link) => ({
 					description: link.description,
-					entityTemplateLinkId: link.id,
 					listingIndex: link.listingIndex,
 					name: link.name,
 					targetEntityId: null,
-					targetEntityTemplateId: link.targetEntityTemplateId,
 				})),
 		listingAttributeId,
 	}
@@ -700,7 +634,6 @@ export async function createEntity(ownerUserId: string, input: CreateEntityInput
 							attributes: normalizeAttributes(
 								scratchInput.attributes,
 							),
-							entityTemplateId: null,
 							links: normalizeLinks(scratchInput.links),
 							listingAttributeId: scratchInput.listingAttributeId,
 						}
@@ -714,20 +647,18 @@ export async function createEntity(ownerUserId: string, input: CreateEntityInput
 			throw new Error('Listing attribute must be included in attributes.')
 		}
 
-		await validateRequiredAttributes(client, normalizedInput.attributes)
+		await validateRequiredAttributes(normalizedInput.attributes)
 
 		await client.begin(async (sql) => {
 			await sql`
 				INSERT INTO entities (
 					id,
 					owner_user_id,
-					entity_template_id,
 					listing_attribute_id
 				)
 				VALUES (
 					${id},
 					${ownerUserId},
-					${normalizedInput.entityTemplateId},
 					${normalizedInput.listingAttributeId}
 				)
 			`
@@ -772,14 +703,13 @@ export async function updateEntity(id: string, input: UpdateEntityInput) {
 			throw new Error('Listing attribute must be included in attributes.')
 		}
 
-		await validateRequiredAttributes(client, nextAttributes)
+		await validateRequiredAttributes(nextAttributes)
 
 		await client.begin(async (sql) => {
 			await sql`
 				UPDATE entities
 				SET
 					owner_user_id = ${input.ownerUserId ?? existingEntity.ownerUserId},
-					entity_template_id = ${input.entityTemplateId ?? existingEntity.entityTemplateId},
 					listing_attribute_id = ${nextListingAttributeId}
 				WHERE id = ${id}
 			`

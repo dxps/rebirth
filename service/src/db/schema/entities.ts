@@ -5,6 +5,7 @@ import {
 } from '@rebirth/shared'
 import { sql } from 'drizzle-orm'
 import {
+	boolean,
 	check,
 	foreignKey,
 	integer,
@@ -15,15 +16,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import { accessLevels } from './access-levels'
-import {
-	attributeTemplateValueType,
-	attributeTemplates,
-} from './attribute-templates'
-import {
-	entityTemplateAttributes,
-	entityTemplateLinks,
-	entityTemplates,
-} from './entity-templates'
+import { attributeTemplateValueType } from './attribute-templates'
 import { users } from './users'
 
 export const entities = pgTable(
@@ -31,15 +24,9 @@ export const entities = pgTable(
 	{
 		id: uuid('id').primaryKey(),
 		ownerUserId: uuid('owner_user_id').notNull(),
-		entityTemplateId: uuid('entity_template_id'),
 		listingAttributeId: uuid('listing_attribute_id').notNull(),
 	},
 	(table) => [
-		foreignKey({
-			columns: [table.entityTemplateId],
-			foreignColumns: [entityTemplates.id],
-			name: 'entities_entity_tmpl_id_entity_tmpls_id_fk',
-		}),
 		foreignKey({
 			columns: [table.ownerUserId],
 			foreignColumns: [users.id],
@@ -53,11 +40,10 @@ export const entityAttributes = pgTable(
 	{
 		id: uuid('id').primaryKey(),
 		entityId: uuid('entity_id').notNull(),
-		entityTemplateAttributeId: uuid('entity_template_attribute_id'),
-		attributeTemplateId: uuid('attribute_template_id'),
 		name: text('name').notNull(),
 		description: text('description').notNull(),
 		valueType: attributeTemplateValueType('value_type').notNull(),
+		isRequired: boolean('is_required').notNull().default(false),
 		accessLevelId: integer('access_level_id').notNull(),
 		listingIndex: integer('listing_index').notNull(),
 		value: text('value').notNull(),
@@ -68,16 +54,6 @@ export const entityAttributes = pgTable(
 			foreignColumns: [entities.id],
 			name: 'entity_attrs_entity_id_entities_id_fk',
 		}).onDelete('cascade'),
-		foreignKey({
-			columns: [table.entityTemplateAttributeId],
-			foreignColumns: [entityTemplateAttributes.id],
-			name: 'entity_attrs_entity_tmpl_attr_id_entity_tmpl_attrs_id_fk',
-		}),
-		foreignKey({
-			columns: [table.attributeTemplateId],
-			foreignColumns: [attributeTemplates.id],
-			name: 'entity_attrs_attr_tmpl_id_attribute_tmpls_id_fk',
-		}),
 		foreignKey({
 			columns: [table.accessLevelId],
 			foreignColumns: [accessLevels.id],
@@ -104,8 +80,6 @@ export const entityLinks = pgTable(
 	{
 		id: uuid('id').primaryKey(),
 		entityId: uuid('entity_id').notNull(),
-		entityTemplateLinkId: uuid('entity_template_link_id'),
-		targetEntityTemplateId: uuid('target_entity_template_id'),
 		targetEntityId: uuid('target_entity_id'),
 		name: text('name').notNull(),
 		description: text('description'),
@@ -117,16 +91,6 @@ export const entityLinks = pgTable(
 			foreignColumns: [entities.id],
 			name: 'entity_links_entity_id_entities_id_fk',
 		}).onDelete('cascade'),
-		foreignKey({
-			columns: [table.entityTemplateLinkId],
-			foreignColumns: [entityTemplateLinks.id],
-			name: 'entity_links_entity_tmpl_link_id_entity_tmpl_links_id_fk',
-		}),
-		foreignKey({
-			columns: [table.targetEntityTemplateId],
-			foreignColumns: [entityTemplates.id],
-			name: 'entity_links_target_entity_tmpl_id_entity_tmpls_id_fk',
-		}),
 		foreignKey({
 			columns: [table.targetEntityId],
 			foreignColumns: [entities.id],

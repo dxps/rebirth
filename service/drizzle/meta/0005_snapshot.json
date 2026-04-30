@@ -143,12 +143,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "entity_template_id": {
-          "name": "entity_template_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "listing_attribute_id": {
           "name": "listing_attribute_id",
           "type": "uuid",
@@ -157,21 +151,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "entities_entity_tmpl_id_entity_tmpls_id_fk": {
-          "name": "entities_entity_tmpl_id_entity_tmpls_id_fk",
-          "tableFrom": "entities",
-          "tableTo": "entity_templates",
-          "columnsFrom": [
-            "entity_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -193,18 +173,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
-        },
-        "entity_template_attribute_id": {
-          "name": "entity_template_attribute_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attribute_template_id": {
-          "name": "attribute_template_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         },
         "name": {
           "name": "name",
@@ -242,6 +210,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_required": {
+          "name": "is_required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "false"
         }
       },
       "indexes": {},
@@ -257,32 +232,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "entity_attrs_entity_tmpl_attr_id_entity_tmpl_attrs_id_fk": {
-          "name": "entity_attrs_entity_tmpl_attr_id_entity_tmpl_attrs_id_fk",
-          "tableFrom": "entity_attributes",
-          "tableTo": "entity_template_attributes",
-          "columnsFrom": [
-            "entity_template_attribute_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "entity_attrs_attr_tmpl_id_attribute_tmpls_id_fk": {
-          "name": "entity_attrs_attr_tmpl_id_attribute_tmpls_id_fk",
-          "tableFrom": "entity_attributes",
-          "tableTo": "attribute_templates",
-          "columnsFrom": [
-            "attribute_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "entity_attrs_access_level_id_access_levels_id_fk": {
@@ -343,18 +292,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "entity_template_link_id": {
-          "name": "entity_template_link_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "target_entity_template_id": {
-          "name": "target_entity_template_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "target_entity_id": {
           "name": "target_entity_id",
           "type": "uuid",
@@ -393,32 +330,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "entity_links_entity_tmpl_link_id_entity_tmpl_links_id_fk": {
-          "name": "entity_links_entity_tmpl_link_id_entity_tmpl_links_id_fk",
-          "tableFrom": "entity_links",
-          "tableTo": "entity_template_links",
-          "columnsFrom": [
-            "entity_template_link_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "entity_links_target_entity_tmpl_id_entity_tmpls_id_fk": {
-          "name": "entity_links_target_entity_tmpl_id_entity_tmpls_id_fk",
-          "tableFrom": "entity_links",
-          "tableTo": "entity_templates",
-          "columnsFrom": [
-            "target_entity_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "entity_links_target_entity_id_entities_id_fk": {
@@ -479,12 +390,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "attribute_template_id": {
-          "name": "attribute_template_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -515,6 +420,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_required": {
+          "name": "is_required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "false"
         }
       },
       "indexes": {},
@@ -530,19 +442,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk": {
-          "name": "entity_tmpl_attrs_attr_tmpl_id_attribute_tmpls_id_fk",
-          "tableFrom": "entity_template_attributes",
-          "tableTo": "attribute_templates",
-          "columnsFrom": [
-            "attribute_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "entity_tmpl_attrs_access_level_id_access_levels_id_fk": {
@@ -607,7 +506,7 @@
           "name": "target_entity_template_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -641,19 +540,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "entity_tmpl_links_target_entity_tmpl_id_entity_tmpls_id_fk": {
-          "name": "entity_tmpl_links_target_entity_tmpl_id_entity_tmpls_id_fk",
-          "tableFrom": "entity_template_links",
-          "tableTo": "entity_templates",
-          "columnsFrom": [
-            "target_entity_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

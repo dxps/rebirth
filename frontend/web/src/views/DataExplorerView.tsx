@@ -316,10 +316,9 @@ interface CreateEntityModalProps {
 
 interface EntityFormAttribute {
 	accessLevelId: number
-	attributeTemplateId: string | null
 	description: string
-	entityTemplateAttributeId: string | null
 	id: string
+	isRequired: boolean
 	listingIndex: number
 	name: string
 	value: string
@@ -328,12 +327,10 @@ interface EntityFormAttribute {
 
 interface EntityFormLink {
 	description: string
-	entityTemplateLinkId: string | null
 	id: string
 	listingIndex: number
 	name: string
 	targetEntityId: string | null
-	targetEntityTemplateId: string | null
 }
 
 function CreateEntityModal({
@@ -434,23 +431,9 @@ function CreateEntityModal({
 		].join(' '),
 		value: user.id,
 	}))
-	const attributeTemplateById = new Map(
-		attributeTemplates.map((attributeTemplate) => [
-			attributeTemplate.id,
-			attributeTemplate,
-		]),
-	)
 	const missingRequiredAttribute = includedAttributes.find((attribute) => {
-		if (!attribute.attributeTemplateId) {
-			return false
-		}
-
-		const attributeTemplate = attributeTemplateById.get(
-			attribute.attributeTemplateId,
-		)
-
 		return (
-			Boolean(attributeTemplate?.isRequired) &&
+			attribute.isRequired &&
 			isMissingRequiredEntityAttributeValue(
 				attribute.value,
 				attribute.valueType,
@@ -504,17 +487,15 @@ function CreateEntityModal({
 			.slice()
 			.sort((left, right) => left.listingIndex - right.listingIndex)
 
-		setSelectedEntityTemplateId(entity.entityTemplateId ?? '')
 		setIncludedAttributes(
 			orderedAttributes.map((attribute, index) => ({
 				accessLevelId: getSelectableAttributeAccessLevelId(
 					accessLevels,
 					attribute.accessLevelId,
 				),
-				attributeTemplateId: attribute.attributeTemplateId,
 				description: attribute.description,
-				entityTemplateAttributeId: attribute.entityTemplateAttributeId,
 				id: attribute.id,
+				isRequired: attribute.isRequired,
 				listingIndex: index,
 				name: attribute.name,
 				value: attribute.value,
@@ -524,12 +505,10 @@ function CreateEntityModal({
 		setIncludedLinks(
 			orderedLinks.map((link, index) => ({
 				description: link.description ?? '',
-				entityTemplateLinkId: link.entityTemplateLinkId,
 				id: link.id,
 				listingIndex: index,
 				name: link.name,
 				targetEntityId: link.targetEntityId,
-				targetEntityTemplateId: link.targetEntityTemplateId,
 			})),
 		)
 		setListingAttributeId(entity.listingAttributeId)
@@ -636,10 +615,9 @@ function CreateEntityModal({
 							accessLevels,
 							attribute.accessLevelId,
 						),
-						attributeTemplateId: attribute.attributeTemplateId,
 						description: attribute.description,
-						entityTemplateAttributeId: attribute.id,
 						id,
+						isRequired: attribute.isRequired,
 						listingIndex: index,
 						name: attribute.name,
 						value: '',
@@ -656,12 +634,10 @@ function CreateEntityModal({
 					)
 					.map((link, index) => ({
 						description: link.description ?? '',
-						entityTemplateLinkId: link.id,
 						id: crypto.randomUUID(),
 						listingIndex: index,
 						name: link.name,
 						targetEntityId: null,
-						targetEntityTemplateId: link.targetEntityTemplateId,
 					})),
 			)
 			setListingAttributeId(
@@ -767,11 +743,9 @@ function CreateEntityModal({
 				{
 					attributes: includedAttributes.map((attribute, index) => ({
 						accessLevelId: attribute.accessLevelId,
-						attributeTemplateId: attribute.attributeTemplateId,
 						description: attribute.description.trim(),
-						entityTemplateAttributeId:
-							attribute.entityTemplateAttributeId,
 						id: attribute.id,
+						isRequired: attribute.isRequired,
 						listingIndex: index,
 						name: attribute.name.trim(),
 						value: normalizeEntityAttributeValue(
@@ -780,15 +754,12 @@ function CreateEntityModal({
 						),
 						valueType: attribute.valueType,
 					})),
-					entityTemplateId: entity.entityTemplateId,
 					listingAttributeId,
 					links: includedLinks.map((link, index) => ({
 						description: link.description.trim(),
-						entityTemplateLinkId: link.entityTemplateLinkId,
 						listingIndex: index,
 						name: link.name.trim(),
 						targetEntityId: link.targetEntityId,
-						targetEntityTemplateId: link.targetEntityTemplateId,
 					})),
 					ownerUserId,
 				},
@@ -812,11 +783,9 @@ function CreateEntityModal({
 			await onCreate({
 				attributes: includedAttributes.map((attribute, index) => ({
 					accessLevelId: attribute.accessLevelId,
-					attributeTemplateId: attribute.attributeTemplateId,
 					description: attribute.description.trim(),
-					entityTemplateAttributeId:
-						attribute.entityTemplateAttributeId,
 					id: attribute.id,
+					isRequired: attribute.isRequired,
 					listingIndex: index,
 					name: attribute.name.trim(),
 					value: normalizeEntityAttributeValue(
@@ -827,12 +796,10 @@ function CreateEntityModal({
 				})),
 				links: includedLinks.map((link, index) => ({
 					description: link.description.trim(),
-					entityTemplateLinkId: link.entityTemplateLinkId,
 					id: link.id,
 					listingIndex: index,
 					name: link.name.trim(),
 					targetEntityId: link.targetEntityId,
-					targetEntityTemplateId: link.targetEntityTemplateId,
 				})),
 				entityTemplateId: selectedEntityTemplate.id,
 				listingAttributeId,
@@ -849,10 +816,9 @@ function CreateEntityModal({
 		await onCreate({
 			attributes: includedAttributes.map((attribute, index) => ({
 				accessLevelId: attribute.accessLevelId,
-				attributeTemplateId: attribute.attributeTemplateId,
 				description: attribute.description.trim(),
-				entityTemplateAttributeId: attribute.entityTemplateAttributeId,
 				id: attribute.id,
+				isRequired: attribute.isRequired,
 				listingIndex: index,
 				name: attribute.name.trim(),
 				value: normalizeEntityAttributeValue(
@@ -866,11 +832,9 @@ function CreateEntityModal({
 			ownerUserId,
 			links: includedLinks.map((link, index) => ({
 				description: link.description.trim(),
-				entityTemplateLinkId: link.entityTemplateLinkId,
 				listingIndex: index,
 				name: link.name.trim(),
 				targetEntityId: link.targetEntityId,
-				targetEntityTemplateId: link.targetEntityTemplateId,
 			})),
 		})
 	}
@@ -882,10 +846,9 @@ function CreateEntityModal({
 			...current,
 			{
 				accessLevelId: defaultAttributeAccessLevelId,
-				attributeTemplateId: null,
 				description: '',
-				entityTemplateAttributeId: null,
 				id,
+				isRequired: false,
 				listingIndex: current.length,
 				name: '',
 				value: '',
@@ -916,10 +879,9 @@ function CreateEntityModal({
 					accessLevels,
 					attributeTemplate.accessLevelId,
 				),
-				attributeTemplateId: attributeTemplate.id,
 				description: attributeTemplate.description,
-				entityTemplateAttributeId: null,
 				id,
+				isRequired: attributeTemplate.isRequired,
 				listingIndex: current.length,
 				name: attributeTemplate.name,
 				value: attributeTemplate.defaultValue ?? '',
@@ -960,12 +922,10 @@ function CreateEntityModal({
 			...current,
 			{
 				description: '',
-				entityTemplateLinkId: null,
 				id: crypto.randomUUID(),
 				listingIndex: current.length,
 				name: '',
 				targetEntityId: null,
-				targetEntityTemplateId: null,
 			},
 		])
 	}
@@ -979,18 +939,7 @@ function CreateEntityModal({
 	}
 
 	function getLinkTargetEntities(link: EntityFormLink): Entity[] {
-		if (creationMode !== 'template' || !link.entityTemplateLinkId) {
-			return entities
-		}
-
-		if (!link.targetEntityTemplateId) {
-			return entities
-		}
-
-		return entities.filter(
-			(candidate) =>
-				candidate.entityTemplateId === link.targetEntityTemplateId,
-		)
+		return entities
 	}
 
 	function removeLink(linkId: string): void {
@@ -2116,14 +2065,6 @@ function CreateEntityModal({
 																		aria-label="Link name"
 																		className="entity-template-link-input"
 																		data-no-drag="true"
-																		disabled={
-																			mode !==
-																				'edit' &&
-																			creationMode ===
-																				'template' &&
-																			link.entityTemplateLinkId !==
-																				null
-																		}
 																		type="text"
 																		value={
 																			link.name
@@ -2158,14 +2099,6 @@ function CreateEntityModal({
 																			aria-label="Link description"
 																			className="entity-template-link-input"
 																			data-no-drag="true"
-																			disabled={
-																				mode !==
-																					'edit' &&
-																				creationMode ===
-																					'template' &&
-																				link.entityTemplateLinkId !==
-																					null
-																			}
 																			type="text"
 																			value={
 																				link.description
@@ -2227,19 +2160,6 @@ function CreateEntityModal({
 																			onChange={(
 																				event,
 																			) => {
-																				const targetEntity =
-																					getLinkTargetEntities(
-																						link,
-																					).find(
-																						(
-																							target,
-																						) =>
-																							target.id ===
-																							event
-																								.target
-																								.value,
-																					)
-
 																				updateLink(
 																					link.id,
 																					{
@@ -2247,9 +2167,6 @@ function CreateEntityModal({
 																							event
 																								.target
 																								.value ||
-																							null,
-																						targetEntityTemplateId:
-																							targetEntity?.entityTemplateId ??
 																							null,
 																					},
 																				)
@@ -2529,14 +2446,6 @@ function EntityDetailsModal({
 
 		if (link.targetEntityLabel) {
 			return link.targetEntityLabel
-		}
-
-		if (link.targetEntityTemplateId) {
-			return (
-				entityTemplates.find(
-					(template) => template.id === link.targetEntityTemplateId,
-				)?.name ?? link.targetEntityTemplateId
-			)
 		}
 
 		return link.targetEntityId ?? ''
@@ -4508,19 +4417,13 @@ export function DataExplorerView() {
 						key={window.id}
 						accessLevels={accessLevels}
 						canAssignOwner={canManageData}
-						creationMode={
-							window.entity.entityTemplateId
-								? 'template'
-								: 'scratch'
-						}
+						creationMode="scratch"
 						currentUserId={storedAuth?.user.id}
 						entity={window.entity}
 						entities={entities}
 						entityTemplates={entityTemplates}
 						error={createEntityError}
-						initialEntityTemplateId={
-							window.entity.entityTemplateId ?? ''
-						}
+						initialEntityTemplateId=""
 						initialActiveTab={window.activeTab}
 						initialPosition={window.initialPosition}
 						initialSize={window.initialSize}

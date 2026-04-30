@@ -929,8 +929,8 @@ interface EntityTemplateEditFormProps {
 interface IncludedEntityAttribute {
 	id: string
 	accessLevelId: number
-	attributeTemplateId: string | null
 	description: string
+	isRequired: boolean
 	listingIndex: number
 	name: string
 	valueType: ValueType
@@ -941,7 +941,7 @@ interface IncludedEntityLink {
 	description: string
 	listingIndex: number
 	name: string
-	targetEntityTemplateId: string
+	targetEntityTemplateId: string | null
 }
 
 function EntityTemplateEditForm({
@@ -992,8 +992,8 @@ function EntityTemplateEditForm({
 							accessLevels,
 							attribute.accessLevelId,
 						),
-						attributeTemplateId: attribute.attributeTemplateId,
 						description: attribute.description,
+						isRequired: attribute.isRequired,
 						listingIndex: index,
 						name: attribute.name,
 						valueType: attribute.valueType,
@@ -1018,16 +1018,7 @@ function EntityTemplateEditForm({
 						}))
 				: [],
 	)
-	const availableAttributeTemplates = attributeTemplates.filter(
-		(attributeTemplate) =>
-			!includedAttributes.some(
-				(attribute) =>
-					attribute.attributeTemplateId === attributeTemplate.id &&
-					attribute.name === attributeTemplate.name &&
-					attribute.description === attributeTemplate.description &&
-					attribute.valueType === attributeTemplate.valueType,
-			),
-	)
+	const availableAttributeTemplates = attributeTemplates
 	const availableLinkTargets = entityTemplates
 	const [includeAttributeMode, setIncludeAttributeMode] = useState<
 		'existing' | 'new'
@@ -1074,10 +1065,10 @@ function EntityTemplateEditForm({
 	const getAccessLevelName = (accessLevelId: number): string =>
 		accessLevels.find((accessLevel) => accessLevel.id === accessLevelId)
 			?.name ?? String(accessLevelId)
-	const getLinkTargetName = (targetEntityTemplateId: string): string =>
+	const getLinkTargetName = (targetEntityTemplateId: string | null): string =>
 		availableLinkTargets.find(
 			(target) => target.id === targetEntityTemplateId,
-		)?.name ?? targetEntityTemplateId
+		)?.name ?? targetEntityTemplateId ?? ''
 
 	useEffect(() => {
 		onValidityChange(modalKey, isValid)
@@ -1343,14 +1334,14 @@ function EntityTemplateEditForm({
 
 		setIncludedAttributes((current) => [
 			...current,
-				{
-					id: crypto.randomUUID(),
-					accessLevelId: getSelectableAttributeAccessLevelId(
-						accessLevels,
-						attributeTemplate.accessLevelId,
-					),
-					attributeTemplateId: attributeTemplate.id,
+			{
+				id: crypto.randomUUID(),
+				accessLevelId: getSelectableAttributeAccessLevelId(
+					accessLevels,
+					attributeTemplate.accessLevelId,
+				),
 				description: attributeTemplate.description,
+				isRequired: attributeTemplate.isRequired,
 				listingIndex: current.length,
 				name: attributeTemplate.name,
 				valueType: attributeTemplate.valueType,
@@ -1384,10 +1375,10 @@ function EntityTemplateEditForm({
 				{
 					id: crypto.randomUUID(),
 					accessLevelId: defaultAccessLevelId,
-					attributeTemplateId: savedAttributeTemplate?.id ?? null,
 					description:
 						savedAttributeTemplate?.description ??
 						newAttributeDescription.trim(),
+					isRequired: savedAttributeTemplate?.isRequired ?? false,
 					listingIndex: current.length,
 					name:
 						savedAttributeTemplate?.name ?? newAttributeName.trim(),
@@ -1467,10 +1458,10 @@ function EntityTemplateEditForm({
 		)
 	}
 
-	function updateLinkTarget(
-		linkId: string,
-		targetEntityTemplateId: string,
-	): void {
+function updateLinkTarget(
+	linkId: string,
+	targetEntityTemplateId: string | null,
+): void {
 		setIncludedLinks((current) =>
 			current.map((link) =>
 				link.id === linkId ? { ...link, targetEntityTemplateId } : link,
@@ -1537,14 +1528,7 @@ function EntityTemplateEditForm({
 				attribute.id === attributeId
 					? {
 							...attribute,
-							description: attributeTemplates.some(
-								(attributeTemplate) =>
-									attributeTemplate.id ===
-										attribute.attributeTemplateId &&
-									attributeTemplate.name === name,
-							)
-								? attribute.description
-								: '',
+							description: '',
 							name,
 						}
 					: attribute,
@@ -1809,8 +1793,8 @@ function EntityTemplateEditForm({
 				attributes: includedAttributes.map((attribute, index) => ({
 					id: attribute.id,
 					accessLevelId: attribute.accessLevelId,
-					attributeTemplateId: attribute.attributeTemplateId,
 					description: attribute.description,
+					isRequired: attribute.isRequired,
 					listingIndex: index,
 					name: attribute.name.trim(),
 					valueType: attribute.valueType,
@@ -2506,15 +2490,17 @@ function EntityTemplateEditForm({
 													<select
 														aria-label={`${includedLink.name || 'Link'} target entity template`}
 														data-no-drag="true"
-														value={
-															includedLink.targetEntityTemplateId
-														}
+															value={
+																includedLink.targetEntityTemplateId ??
+																''
+															}
 														onChange={(event) =>
-															updateLinkTarget(
-																includedLink.id,
-																event.target
-																	.value,
-															)
+																updateLinkTarget(
+																	includedLink.id,
+																	event.target
+																		.value ||
+																		null,
+																)
 														}
 													>
 														{availableLinkTargets.map(
@@ -2925,10 +2911,12 @@ function EntityTemplateDetailsView({
 									</tr>
 								) : (
 									orderedLinks.map((link) => {
-										const targetEntityTemplate =
-											getLinkedEntityTemplate(
-												link.targetEntityTemplateId,
-											)
+											const targetEntityTemplate =
+												link.targetEntityTemplateId
+													? getLinkedEntityTemplate(
+															link.targetEntityTemplateId,
+														)
+													: undefined
 
 										return (
 											<tr key={link.id}>

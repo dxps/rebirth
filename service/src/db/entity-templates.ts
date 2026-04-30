@@ -38,10 +38,10 @@ interface EntityTemplateRow {
 interface EntityTemplateAttributeRow {
 	id: string
 	entity_template_id: string
-	attribute_template_id: string | null
 	name: string
 	description: string
 	value_type: ValueType
+	is_required: boolean
 	access_level_id: number
 	listing_index: number
 }
@@ -49,7 +49,7 @@ interface EntityTemplateAttributeRow {
 interface EntityTemplateLinkRow {
 	id: string
 	entity_template_id: string
-	target_entity_template_id: string
+	target_entity_template_id: string | null
 	name: string
 	description: string | null
 	listing_index: number
@@ -98,8 +98,8 @@ function normalizeAttributes(
 		.map((attribute, index) => ({
 			id: attribute.id,
 			accessLevelId: attribute.accessLevelId,
-			attributeTemplateId: attribute.attributeTemplateId ?? null,
 			description: attribute.description.trim(),
+			isRequired: attribute.isRequired,
 			listingIndex: attribute.listingIndex ?? index,
 			name: attribute.name.trim(),
 			valueType: attribute.valueType,
@@ -139,8 +139,8 @@ function toEntityTemplate(
 			.map((attributeRow) => ({
 				id: attributeRow.id,
 				accessLevelId: attributeRow.access_level_id,
-				attributeTemplateId: attributeRow.attribute_template_id,
 				description: attributeRow.description,
+				isRequired: attributeRow.is_required,
 				listingIndex: attributeRow.listing_index,
 				name: attributeRow.name,
 				valueType: attributeRow.value_type,
@@ -171,19 +171,29 @@ export async function readEntityTemplateRows(
 ): Promise<EntityTemplate[]> {
 	const rows = id
 		? await client<EntityTemplateRow[]>`
-			SELECT id, name, description, listing_attribute_id
-				, owner_user_id
-				, users.username AS owner_username
+			SELECT
+				entity_templates.id,
+				entity_templates.name,
+				entity_templates.description,
+				entity_templates.listing_attribute_id,
+				entity_templates.owner_user_id,
+				users.username AS owner_username
 			FROM entity_templates
 			INNER JOIN users ON users.id = entity_templates.owner_user_id
 			WHERE entity_templates.id = ${id}
 			ORDER BY entity_templates.name
 		`
 		: await client<EntityTemplateRow[]>`
-			SELECT entity_templates.id, name, description, listing_attribute_id, owner_user_id, users.username AS owner_username
+			SELECT
+				entity_templates.id,
+				entity_templates.name,
+				entity_templates.description,
+				entity_templates.listing_attribute_id,
+				entity_templates.owner_user_id,
+				users.username AS owner_username
 			FROM entity_templates
 			INNER JOIN users ON users.id = entity_templates.owner_user_id
-			ORDER BY name
+			ORDER BY entity_templates.name
 		`
 
 	if (rows.length === 0) {
@@ -192,7 +202,7 @@ export async function readEntityTemplateRows(
 
 	const ids = rows.map((row) => row.id)
 	const attributeRows = await client<EntityTemplateAttributeRow[]>`
-		SELECT id, entity_template_id, attribute_template_id, name, description, value_type, access_level_id, listing_index
+		SELECT id, entity_template_id, name, description, value_type, is_required, access_level_id, listing_index
 		FROM entity_template_attributes
 		WHERE entity_template_id = ANY(${ids})
 		ORDER BY entity_template_id, listing_index
@@ -225,29 +235,29 @@ async function replaceEntityTemplateAttributes(
 			INSERT INTO entity_template_attributes (
 				id,
 				entity_template_id,
-				attribute_template_id,
 				name,
 				description,
 				value_type,
+				is_required,
 				access_level_id,
 				listing_index
 			)
 			VALUES (
 				${attribute.id},
 				${entityTemplateId},
-				${attribute.attributeTemplateId},
 				${attribute.name},
 				${attribute.description},
 				${attribute.valueType},
+				${attribute.isRequired},
 				${attribute.accessLevelId},
 				${attribute.listingIndex}
 			)
 			ON CONFLICT (id) DO UPDATE SET
 				entity_template_id = EXCLUDED.entity_template_id,
-				attribute_template_id = EXCLUDED.attribute_template_id,
 				name = EXCLUDED.name,
 				description = EXCLUDED.description,
 				value_type = EXCLUDED.value_type,
+				is_required = EXCLUDED.is_required,
 				access_level_id = EXCLUDED.access_level_id,
 				listing_index = EXCLUDED.listing_index
 		`
@@ -256,19 +266,6 @@ async function replaceEntityTemplateAttributes(
 	const removedIds = [...existingIds].filter((id) => !nextIds.has(id))
 
 	if (removedIds.length > 0) {
-		const [referencedRow] = await sql<{ id: string }[]>`
-			SELECT id
-			FROM entity_attributes
-			WHERE entity_template_attribute_id = ANY(${removedIds})
-			LIMIT 1
-		`
-
-		if (referencedRow) {
-			throw new Error(
-				'Cannot remove entity template attributes that are used by entities.',
-			)
-		}
-
 		await sql`
 			DELETE FROM entity_template_attributes
 			WHERE id = ANY(${removedIds})
@@ -300,9 +297,9 @@ async function replaceEntityTemplateLinks(
 				listing_index
 			)
 			VALUES (
-				${link.id},
-				${entityTemplateId},
-				${link.targetEntityTemplateId},
+					${link.id},
+					${entityTemplateId},
+					${link.targetEntityTemplateId ?? null},
 				${link.name.trim()},
 				${normalizeNullableText(link.description)},
 				${link.listingIndex}
@@ -319,19 +316,6 @@ async function replaceEntityTemplateLinks(
 	const removedIds = [...existingIds].filter((id) => !nextIds.has(id))
 
 	if (removedIds.length > 0) {
-		const [referencedRow] = await sql<{ id: string }[]>`
-			SELECT id
-			FROM entity_links
-			WHERE entity_template_link_id = ANY(${removedIds})
-			LIMIT 1
-		`
-
-		if (referencedRow) {
-			throw new Error(
-				'Cannot remove entity template links that are used by entities.',
-			)
-		}
-
 		await sql`
 			DELETE FROM entity_template_links
 			WHERE id = ANY(${removedIds})
