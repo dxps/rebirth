@@ -906,15 +906,45 @@ function CreateEntityModal({
 		}
 	}
 
+	function isOwnerViewAccessLevel(accessLevelId: number): boolean {
+		const accessLevel = accessLevels.find(
+			(candidate) => candidate.id === accessLevelId,
+		)
+
+		return accessLevel
+			? accessLevel.name.toLowerCase() === 'owner view'
+			: accessLevelId === 4
+	}
+
+	function isEntityAttributeReadOnly(
+		attribute: EntityFormAttribute,
+	): boolean {
+		return (
+			mode === 'edit' &&
+			!canAssignOwner &&
+			isOwnerViewAccessLevel(attribute.accessLevelId)
+		)
+	}
+
 	function removeAttribute(attributeId: string): void {
-		setIncludedAttributes((current) =>
-			current
+		setIncludedAttributes((current) => {
+			if (
+				current.some(
+					(attribute) =>
+						attribute.id === attributeId &&
+						isEntityAttributeReadOnly(attribute),
+				)
+			) {
+				return current
+			}
+
+			return current
 				.filter((attribute) => attribute.id !== attributeId)
 				.map((attribute, index) => ({
 					...attribute,
 					listingIndex: index,
-				})),
-		)
+				}))
+		})
 	}
 
 	function addLink(): void {
@@ -959,7 +989,8 @@ function CreateEntityModal({
 	): void {
 		setIncludedAttributes((current) =>
 			current.map((attribute) =>
-				attribute.id === attributeId
+				attribute.id === attributeId &&
+				!isEntityAttributeReadOnly(attribute)
 					? { ...attribute, ...update }
 					: attribute,
 			),
@@ -989,6 +1020,10 @@ function CreateEntityModal({
 			const next = current.slice()
 			const [draggedAttribute] = next.splice(draggedIndex, 1)
 			if (!draggedAttribute) {
+				return current
+			}
+
+			if (isEntityAttributeReadOnly(draggedAttribute)) {
 				return current
 			}
 
@@ -1715,6 +1750,9 @@ function CreateEntityModal({
 																	aria-label="Attribute name"
 																	className="entity-template-attribute-name-input"
 																	data-no-drag="true"
+																	disabled={isEntityAttributeReadOnly(
+																		attribute,
+																	)}
 																	type="text"
 																	value={
 																		attribute.name
@@ -1740,6 +1778,9 @@ function CreateEntityModal({
 																		aria-label={`${attribute.name || 'Attribute'} value`}
 																		className="entity-template-attribute-name-input"
 																		data-no-drag="true"
+																		disabled={isEntityAttributeReadOnly(
+																			attribute,
+																		)}
 																		inputMode="decimal"
 																		pattern="[0-9.]*"
 																		type="text"
@@ -1768,6 +1809,9 @@ function CreateEntityModal({
 																			aria-label={`${attribute.name || 'Attribute'} value`}
 																			className="entity-template-attribute-name-input"
 																			data-no-drag="true"
+																			disabled={isEntityAttributeReadOnly(
+																				attribute,
+																			)}
 																			value={
 																				attribute.value ===
 																				'true'
@@ -1802,6 +1846,9 @@ function CreateEntityModal({
 																		aria-label={`${attribute.name || 'Attribute'} value`}
 																		className="entity-template-attribute-name-input"
 																		data-no-drag="true"
+																		disabled={isEntityAttributeReadOnly(
+																			attribute,
+																		)}
 																		mode={
 																			attribute.valueType ===
 																			ValueType.DateTime
@@ -1827,6 +1874,9 @@ function CreateEntityModal({
 																		aria-label={`${attribute.name || 'Attribute'} value`}
 																		className="entity-template-attribute-name-input"
 																		data-no-drag="true"
+																		disabled={isEntityAttributeReadOnly(
+																			attribute,
+																		)}
 																		type="text"
 																		value={
 																			attribute.value
@@ -1851,6 +1901,9 @@ function CreateEntityModal({
 																	<select
 																		aria-label={`${attribute.name || 'Attribute'} value type`}
 																		data-no-drag="true"
+																		disabled={isEntityAttributeReadOnly(
+																			attribute,
+																		)}
 																		value={
 																			attribute.valueType
 																		}
@@ -1901,6 +1954,9 @@ function CreateEntityModal({
 																	<select
 																		aria-label={`${attribute.name || 'Attribute'} access level`}
 																		data-no-drag="true"
+																		disabled={isEntityAttributeReadOnly(
+																			attribute,
+																		)}
 																		value={
 																			attribute.accessLevelId
 																		}
@@ -1962,7 +2018,10 @@ function CreateEntityModal({
 																	data-tooltip="Exclude"
 																	disabled={
 																		includedAttributes.length ===
-																		1
+																			1 ||
+																		isEntityAttributeReadOnly(
+																			attribute,
+																		)
 																	}
 																	type="button"
 																	onClick={() =>
@@ -1980,6 +2039,9 @@ function CreateEntityModal({
 																	data-tooltip={
 																		'Drag up or down\nto reorder'
 																	}
+																	disabled={isEntityAttributeReadOnly(
+																		attribute,
+																	)}
 																	type="button"
 																	onPointerDown={(
 																		event,
@@ -2433,10 +2495,24 @@ function EntityDetailsModal({
 			? accessLevel.name.toLowerCase() === 'public'
 			: accessLevelId === 1
 	}
+	const isOwnerViewAccessLevel = (accessLevelId: number): boolean => {
+		const accessLevel = accessLevels.find(
+			(candidate) => candidate.id === accessLevelId,
+		)
+
+		return accessLevel
+			? accessLevel.name.toLowerCase() === 'owner view'
+			: accessLevelId === 4
+	}
+	const isCurrentUserOwner = Boolean(
+		entity && currentUser && entity.ownerUserId === currentUser.id,
+	)
 	const canAccessAttributeValue = (accessLevelId: number): boolean =>
 		canEdit ||
 		isPublicAccessLevel(accessLevelId) ||
-		grantedAccessLevelIds.includes(accessLevelId)
+		(isOwnerViewAccessLevel(accessLevelId)
+			? isCurrentUserOwner
+			: grantedAccessLevelIds.includes(accessLevelId))
 	const getLinkTargetLabel = (link: EntityLink): string => {
 		const targetEntity = getLinkTargetEntity(link)
 

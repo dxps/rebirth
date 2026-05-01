@@ -94,7 +94,7 @@ const port = Number.parseInt(Bun.env.PORT ?? '9908', 10)
 const uniqueConflictErrorCode = '23505'
 const attributeTemplateUniqueConstraint =
 	'attribute_templates_name_description_unique'
-const builtInAccessLevelMaxId = 3
+const builtInAccessLevelMaxId = 4
 const defaultEntitiesPageSize = 10
 const maxEntitiesPageSize = 50
 const uniqueConflictResponse: ApiErrorResponse = {
@@ -117,6 +117,7 @@ const attributeTemplateUniqueConflictResponse: ApiErrorResponse = {
 	},
 }
 const publicAccessLevelId = 1
+const ownerViewAccessLevelId = 4
 const maskedAttributeValue = '******'
 const springConfigDefaultLabel = 'main'
 const springConfigDefaultProfile = 'default'
@@ -281,25 +282,86 @@ function maskRestrictedEntityValues(entity: Entity): Entity {
 	}
 }
 
+function canViewEntityAttribute(
+	user: User,
+	entity: Entity,
+	attribute: Entity['attributes'][number],
+): boolean {
+	if (attribute.accessLevelId === ownerViewAccessLevelId) {
+		return entity.ownerUserId === user.id
+	}
+
+	return (
+		attribute.accessLevelId === publicAccessLevelId ||
+		user.accessLevels.some(
+			(accessLevel) => accessLevel.id === attribute.accessLevelId,
+		)
+	)
+}
+
 function getVisibleEntity(user: User, entity: Entity): Entity {
 	if (canManageOwnedRecord(user, entity)) {
 		return entity
 	}
 
-	const visibleAccessLevelIds = new Set([
-		publicAccessLevelId,
-		...user.accessLevels.map((accessLevel) => accessLevel.id),
-	])
-
 	return {
 		...entity,
 		attributes: entity.attributes.map((attribute) => ({
 			...attribute,
-			value: visibleAccessLevelIds.has(attribute.accessLevelId)
+			value: canViewEntityAttribute(user, entity, attribute)
 				? attribute.value
 				: maskedAttributeValue,
 		})),
 	}
+}
+
+function areEntityAttributesEquivalent(
+	left: Entity['attributes'][number],
+	right: UpdateEntityAttributeInput,
+): boolean {
+	return (
+		left.id === right.id &&
+		left.accessLevelId === right.accessLevelId &&
+		left.description === right.description.trim() &&
+		left.isRequired === right.isRequired &&
+		left.listingIndex === right.listingIndex &&
+		left.name === right.name.trim() &&
+		left.value === right.value &&
+		left.valueType === right.valueType
+	)
+}
+
+type UpdateEntityAttributeInput = {
+	accessLevelId: number
+	description: string
+	id: string
+	isRequired: boolean
+	listingIndex: number
+	name: string
+	value: string
+	valueType: Entity['attributes'][number]['valueType']
+}
+
+function hasOwnerViewAttributeChanges(
+	existingEntity: Entity,
+	inputAttributes: UpdateEntityAttributeInput[],
+): boolean {
+	const inputAttributesById = new Map(
+		inputAttributes.map((attribute) => [attribute.id, attribute]),
+	)
+
+	return existingEntity.attributes.some((attribute) => {
+		if (attribute.accessLevelId !== ownerViewAccessLevelId) {
+			return false
+		}
+
+		const inputAttribute = inputAttributesById.get(attribute.id)
+
+		return (
+			!inputAttribute ||
+			!areEntityAttributesEquivalent(attribute, inputAttribute)
+		)
+	})
 }
 
 function normalizeConfigMetadataName(name: string): string | null {
@@ -1896,6 +1958,24 @@ const server = Bun.serve({
 						{
 							headers: jsonHeaders,
 							status: 404,
+						},
+					)
+				}
+
+				if (
+					!canManageData(authenticatedUser) &&
+					hasOwnerViewAttributeChanges(
+						existingEntity,
+						input.attributes,
+					)
+				) {
+					return Response.json(
+						{
+							error: 'Owner View attributes can only be viewed by the owner',
+						},
+						{
+							headers: jsonHeaders,
+							status: 403,
 						},
 					)
 				}

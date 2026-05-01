@@ -25,7 +25,8 @@ INSERT INTO "access_levels" ("id", "name", "description")
 VALUES
 	(1, 'Public', 'Publicly visible'),
 	(2, 'Private', 'Private access needed'),
-	(3, 'Confidential', 'A more restricted access')
+	(3, 'Confidential', 'A more restricted access'),
+	(4, 'Owner View', 'The owner of the entity having the attribute can only view it')
 ON CONFLICT ("id") DO UPDATE SET
 	"name" = EXCLUDED."name",
 	"description" = EXCLUDED."description";
