@@ -14,5 +14,13 @@ export {
 	entityTemplateLinks,
 	entityTemplates,
 } from './entity-templates'
-export { entities, entityAttributes, entityLinks } from './entities'
+export {
+	booleanEntityAttributes,
+	dateEntityAttributes,
+	dateTimeEntityAttributes,
+	entities,
+	entityLinks,
+	numberEntityAttributes,
+	textEntityAttributes,
+} from './entities'
 export { userAccessLevels, userPermissions, userSessions, users } from './users'

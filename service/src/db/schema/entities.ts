@@ -1,22 +1,28 @@
 import {
-	entityAttributeModel,
+	booleanEntityAttributeModel,
+	dateEntityAttributeModel,
+	dateTimeEntityAttributeModel,
 	entityLinkModel,
 	entityModel,
+	numberEntityAttributeModel,
+	textEntityAttributeModel,
 } from '@rebirth/shared'
 import { sql } from 'drizzle-orm'
 import {
 	boolean,
 	check,
+	date,
 	foreignKey,
 	integer,
+	numeric,
 	pgTable,
 	text,
+	timestamp,
 	unique,
 	uuid,
 } from 'drizzle-orm/pg-core'
 
 import { accessLevels } from './access-levels'
-import { attributeTemplateValueType } from './attribute-templates'
 import { users } from './users'
 
 export const entities = pgTable(
@@ -35,44 +41,80 @@ export const entities = pgTable(
 	],
 )
 
-export const entityAttributes = pgTable(
-	entityAttributeModel.tableName,
-	{
+function entityAttributeColumns<TValue>(valueColumn: TValue) {
+	return {
 		id: uuid('id').primaryKey(),
 		entityId: uuid('entity_id').notNull(),
 		name: text('name').notNull(),
 		description: text('description').notNull(),
-		valueType: attributeTemplateValueType('value_type').notNull(),
 		isRequired: boolean('is_required').notNull().default(false),
 		accessLevelId: integer('access_level_id').notNull(),
 		listingIndex: integer('listing_index').notNull(),
-		value: text('value').notNull(),
-	},
-	(table) => [
+		value: valueColumn,
+	}
+}
+
+function entityAttributeConstraints(
+	prefix: string,
+	table: Record<string, any>,
+) {
+	return [
 		foreignKey({
 			columns: [table.entityId],
 			foreignColumns: [entities.id],
-			name: 'entity_attrs_entity_id_entities_id_fk',
+			name: `${prefix}_entity_id_entities_id_fk`,
 		}).onDelete('cascade'),
 		foreignKey({
 			columns: [table.accessLevelId],
 			foreignColumns: [accessLevels.id],
-			name: 'entity_attrs_access_level_id_access_levels_id_fk',
+			name: `${prefix}_access_level_id_access_levels_id_fk`,
 		}),
-		unique('entity_attrs_entity_id_listing_idx_unique').on(
+		unique(`${prefix}_entity_id_listing_idx_unique`).on(
 			table.entityId,
 			table.listingIndex,
 		),
-		check('entity_attrs_listing_idx_check', sql`${table.listingIndex} >= 0`),
+		check(`${prefix}_listing_idx_check`, sql`${table.listingIndex} >= 0`),
 		check(
-			'entity_attrs_name_trimmed_check',
+			`${prefix}_name_trimmed_check`,
 			sql`${table.name} = btrim(${table.name})`,
 		),
 		check(
-			'entity_attrs_desc_trimmed_check',
+			`${prefix}_desc_trimmed_check`,
 			sql`${table.description} = btrim(${table.description})`,
 		),
-	],
+	]
+}
+
+export const textEntityAttributes = pgTable(
+	textEntityAttributeModel.tableName,
+	entityAttributeColumns(text('value').notNull()),
+	(table) => entityAttributeConstraints('text_entity_attrs', table),
+)
+
+export const numberEntityAttributes = pgTable(
+	numberEntityAttributeModel.tableName,
+	entityAttributeColumns(numeric('value')),
+	(table) => entityAttributeConstraints('number_entity_attrs', table),
+)
+
+export const booleanEntityAttributes = pgTable(
+	booleanEntityAttributeModel.tableName,
+	entityAttributeColumns(boolean('value').notNull()),
+	(table) => entityAttributeConstraints('boolean_entity_attrs', table),
+)
+
+export const dateEntityAttributes = pgTable(
+	dateEntityAttributeModel.tableName,
+	entityAttributeColumns(date('value')),
+	(table) => entityAttributeConstraints('date_entity_attrs', table),
+)
+
+export const dateTimeEntityAttributes = pgTable(
+	dateTimeEntityAttributeModel.tableName,
+	{
+		...entityAttributeColumns(timestamp('value', { mode: 'string' })),
+	},
+	(table) => entityAttributeConstraints('datetime_entity_attrs', table),
 )
 
 export const entityLinks = pgTable(

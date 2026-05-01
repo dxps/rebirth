@@ -1,6 +1,6 @@
 import {
 	isValueType,
-	type ValueType,
+	ValueType,
 } from './attribute-template'
 import { isAccessLevelId, type AccessLevelId } from '../security/access-level'
 import { isUserId, type UserId } from '../security/user'
@@ -17,27 +17,59 @@ export type EntityId = string
 export type EntityAttributeId = string
 export type EntityLinkId = string
 
-export interface EntityAttribute {
+interface BaseEntityAttribute {
 	id: EntityAttributeId
 	name: string
 	description: string
-	valueType: ValueType
 	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
 	value: string
 }
 
-export interface CreateEntityAttributeInput {
+export interface TextEntityAttribute extends BaseEntityAttribute {
+	valueType: ValueType.Text
+}
+
+export interface NumberEntityAttribute extends BaseEntityAttribute {
+	valueType: ValueType.Number
+}
+
+export interface BooleanEntityAttribute extends BaseEntityAttribute {
+	valueType: ValueType.Boolean
+}
+
+export interface DateEntityAttribute extends BaseEntityAttribute {
+	valueType: ValueType.Date
+}
+
+export interface DateTimeEntityAttribute extends BaseEntityAttribute {
+	valueType: ValueType.DateTime
+}
+
+export type EntityAttribute =
+	| TextEntityAttribute
+	| NumberEntityAttribute
+	| BooleanEntityAttribute
+	| DateEntityAttribute
+	| DateTimeEntityAttribute
+
+interface BaseCreateEntityAttributeInput {
 	id: EntityAttributeId
 	name: string
 	description: string
-	valueType: ValueType
 	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
 	value: string
 }
+
+export type CreateEntityAttributeInput =
+	| (BaseCreateEntityAttributeInput & { valueType: ValueType.Text })
+	| (BaseCreateEntityAttributeInput & { valueType: ValueType.Number })
+	| (BaseCreateEntityAttributeInput & { valueType: ValueType.Boolean })
+	| (BaseCreateEntityAttributeInput & { valueType: ValueType.Date })
+	| (BaseCreateEntityAttributeInput & { valueType: ValueType.DateTime })
 
 export interface EntityLink {
 	id: EntityLinkId
@@ -122,7 +154,43 @@ export const entityModel = {
 
 export const entityAttributeModel = {
 	entityName: 'EntityAttribute',
-	tableName: 'entity_attributes',
+	tableNames: [
+		'text_entity_attributes',
+		'number_entity_attributes',
+		'boolean_entity_attributes',
+		'date_entity_attributes',
+		'datetime_entity_attributes',
+	],
+} as const
+
+export const textEntityAttributeModel = {
+	entityName: 'TextEntityAttribute',
+	tableName: 'text_entity_attributes',
+	valueType: ValueType.Text,
+} as const
+
+export const numberEntityAttributeModel = {
+	entityName: 'NumberEntityAttribute',
+	tableName: 'number_entity_attributes',
+	valueType: ValueType.Number,
+} as const
+
+export const booleanEntityAttributeModel = {
+	entityName: 'BooleanEntityAttribute',
+	tableName: 'boolean_entity_attributes',
+	valueType: ValueType.Boolean,
+} as const
+
+export const dateEntityAttributeModel = {
+	entityName: 'DateEntityAttribute',
+	tableName: 'date_entity_attributes',
+	valueType: ValueType.Date,
+} as const
+
+export const dateTimeEntityAttributeModel = {
+	entityName: 'DateTimeEntityAttribute',
+	tableName: 'datetime_entity_attributes',
+	valueType: ValueType.DateTime,
 } as const
 
 export const entityLinkModel = {

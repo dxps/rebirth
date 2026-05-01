@@ -8,8 +8,8 @@ import type {
 	EntityIncomingLink,
 	EntityLink,
 	UpdateEntityInput,
-	ValueType,
 } from '@rebirth/shared'
+import { ValueType } from '@rebirth/shared'
 import type postgres from 'postgres'
 
 import { createDatabase, getDatabaseUrl } from './client'
@@ -187,6 +187,20 @@ function isMissingRequiredAttributeValue(attribute: EntityAttribute): boolean {
 	return attribute.value.trim().length === 0
 }
 
+function nullableTypedAttributeValue(attribute: EntityAttribute): string | null {
+	const trimmedValue = attribute.value.trim()
+
+	if (
+		attribute.valueType === ValueType.Number ||
+		attribute.valueType === ValueType.Date ||
+		attribute.valueType === ValueType.DateTime
+	) {
+		return trimmedValue.length > 0 ? trimmedValue : null
+	}
+
+	return attribute.value
+}
+
 async function validateRequiredAttributes(
 	attributes: EntityAttribute[],
 ): Promise<void> {
@@ -230,7 +244,22 @@ async function readEntityRows(
 			FROM entities
 			WHERE EXISTS (
 				SELECT 1
-				FROM entity_attributes
+				FROM (
+					SELECT entity_id, name, value
+					FROM text_entity_attributes
+					UNION ALL
+					SELECT entity_id, name, COALESCE(value::text, '') AS value
+					FROM number_entity_attributes
+					UNION ALL
+					SELECT entity_id, name, value::text AS value
+					FROM boolean_entity_attributes
+					UNION ALL
+					SELECT entity_id, name, COALESCE(value::text, '') AS value
+					FROM date_entity_attributes
+					UNION ALL
+					SELECT entity_id, name, COALESCE(value::text, '') AS value
+					FROM datetime_entity_attributes
+				) AS entity_attributes
 				WHERE entity_attributes.entity_id = entities.id
 					AND (
 						entity_attributes.name ILIKE ${searchPattern}
@@ -250,7 +279,67 @@ async function readEntityRows(
 	const ids = rows.map((row) => row.id)
 	const attributeRows = await client<EntityAttributeRow[]>`
 		SELECT id, entity_id, name, description, value_type, is_required, access_level_id, listing_index, value
-		FROM entity_attributes
+		FROM (
+			SELECT
+				id,
+				entity_id,
+				name,
+				description,
+				'text'::attribute_template_value_type AS value_type,
+				is_required,
+				access_level_id,
+				listing_index,
+				value
+			FROM text_entity_attributes
+			UNION ALL
+			SELECT
+				id,
+				entity_id,
+				name,
+				description,
+				'number'::attribute_template_value_type AS value_type,
+				is_required,
+				access_level_id,
+				listing_index,
+				COALESCE(value::text, '') AS value
+			FROM number_entity_attributes
+			UNION ALL
+			SELECT
+				id,
+				entity_id,
+				name,
+				description,
+				'boolean'::attribute_template_value_type AS value_type,
+				is_required,
+				access_level_id,
+				listing_index,
+				value::text AS value
+			FROM boolean_entity_attributes
+			UNION ALL
+			SELECT
+				id,
+				entity_id,
+				name,
+				description,
+				'date'::attribute_template_value_type AS value_type,
+				is_required,
+				access_level_id,
+				listing_index,
+				COALESCE(value::text, '') AS value
+			FROM date_entity_attributes
+			UNION ALL
+			SELECT
+				id,
+				entity_id,
+				name,
+				description,
+				'datetime'::attribute_template_value_type AS value_type,
+				is_required,
+				access_level_id,
+				listing_index,
+				COALESCE(value::text, '') AS value
+			FROM datetime_entity_attributes
+		) AS entity_attributes
 		WHERE entity_id = ANY(${ids})
 		ORDER BY entity_id, listing_index
 	`
@@ -274,7 +363,22 @@ async function readEntityRows(
 			? await client<EntityLabelRow[]>`
 				SELECT entities.id, entity_attributes.value AS label
 				FROM entities
-				LEFT JOIN entity_attributes
+				LEFT JOIN (
+					SELECT id, value
+					FROM text_entity_attributes
+					UNION ALL
+					SELECT id, COALESCE(value::text, '') AS value
+					FROM number_entity_attributes
+					UNION ALL
+					SELECT id, value::text AS value
+					FROM boolean_entity_attributes
+					UNION ALL
+					SELECT id, COALESCE(value::text, '') AS value
+					FROM date_entity_attributes
+					UNION ALL
+					SELECT id, COALESCE(value::text, '') AS value
+					FROM datetime_entity_attributes
+				) AS entity_attributes
 					ON entity_attributes.id = entities.listing_attribute_id
 				WHERE entities.id = ANY(${outgoingTargetEntityIds})
 			`
@@ -296,7 +400,22 @@ async function readEntityRows(
 		FROM entity_links
 		INNER JOIN entities AS source_entities
 			ON source_entities.id = entity_links.entity_id
-		LEFT JOIN entity_attributes AS source_listing_attribute
+		LEFT JOIN (
+			SELECT id, value
+			FROM text_entity_attributes
+			UNION ALL
+			SELECT id, COALESCE(value::text, '') AS value
+			FROM number_entity_attributes
+			UNION ALL
+			SELECT id, value::text AS value
+			FROM boolean_entity_attributes
+			UNION ALL
+			SELECT id, COALESCE(value::text, '') AS value
+			FROM date_entity_attributes
+			UNION ALL
+			SELECT id, COALESCE(value::text, '') AS value
+			FROM datetime_entity_attributes
+		) AS source_listing_attribute
 			ON source_listing_attribute.id = source_entities.listing_attribute_id
 		WHERE entity_links.target_entity_id = ANY(${ids})
 		ORDER BY source_entity_label, entity_links.listing_index
@@ -393,30 +512,133 @@ async function insertEntityAttributes(
 	attributes: EntityAttribute[],
 ): Promise<void> {
 	for (const attribute of attributes) {
-		await sql`
-			INSERT INTO entity_attributes (
-				id,
-				entity_id,
-				name,
-				description,
-				value_type,
-				is_required,
-				access_level_id,
-				listing_index,
-				value
-			)
-			VALUES (
-				${attribute.id},
-				${entityId},
-				${attribute.name},
-				${attribute.description},
-				${attribute.valueType},
-				${attribute.isRequired},
-				${attribute.accessLevelId},
-				${attribute.listingIndex},
-				${attribute.value}
-			)
-		`
+		const nullableValue = nullableTypedAttributeValue(attribute)
+		const commonValues = [
+			attribute.id,
+			entityId,
+			attribute.name,
+			attribute.description,
+			attribute.isRequired,
+			attribute.accessLevelId,
+			attribute.listingIndex,
+		] as const
+
+		if (attribute.valueType === ValueType.Text) {
+			await sql`
+				INSERT INTO text_entity_attributes (
+					id,
+					entity_id,
+					name,
+					description,
+					is_required,
+					access_level_id,
+					listing_index,
+					value
+				)
+				VALUES (
+					${commonValues[0]},
+					${commonValues[1]},
+					${commonValues[2]},
+					${commonValues[3]},
+					${commonValues[4]},
+					${commonValues[5]},
+					${commonValues[6]},
+					${attribute.value}
+				)
+			`
+		} else if (attribute.valueType === ValueType.Number) {
+			await sql`
+				INSERT INTO number_entity_attributes (
+					id,
+					entity_id,
+					name,
+					description,
+					is_required,
+					access_level_id,
+					listing_index,
+					value
+				)
+				VALUES (
+					${commonValues[0]},
+					${commonValues[1]},
+					${commonValues[2]},
+					${commonValues[3]},
+					${commonValues[4]},
+					${commonValues[5]},
+					${commonValues[6]},
+					${nullableValue}::numeric
+				)
+			`
+		} else if (attribute.valueType === ValueType.Boolean) {
+			await sql`
+				INSERT INTO boolean_entity_attributes (
+					id,
+					entity_id,
+					name,
+					description,
+					is_required,
+					access_level_id,
+					listing_index,
+					value
+				)
+				VALUES (
+					${commonValues[0]},
+					${commonValues[1]},
+					${commonValues[2]},
+					${commonValues[3]},
+					${commonValues[4]},
+					${commonValues[5]},
+					${commonValues[6]},
+					${attribute.value === 'true'}
+				)
+			`
+		} else if (attribute.valueType === ValueType.Date) {
+			await sql`
+				INSERT INTO date_entity_attributes (
+					id,
+					entity_id,
+					name,
+					description,
+					is_required,
+					access_level_id,
+					listing_index,
+					value
+				)
+				VALUES (
+					${commonValues[0]},
+					${commonValues[1]},
+					${commonValues[2]},
+					${commonValues[3]},
+					${commonValues[4]},
+					${commonValues[5]},
+					${commonValues[6]},
+					${nullableValue}::date
+				)
+			`
+		} else {
+			await sql`
+				INSERT INTO datetime_entity_attributes (
+					id,
+					entity_id,
+					name,
+					description,
+					is_required,
+					access_level_id,
+					listing_index,
+					value
+				)
+				VALUES (
+					${commonValues[0]},
+					${commonValues[1]},
+					${commonValues[2]},
+					${commonValues[3]},
+					${commonValues[4]},
+					${commonValues[5]},
+					${commonValues[6]},
+					${nullableValue}::timestamp
+				)
+			`
+		}
 	}
 }
 
@@ -453,7 +675,23 @@ async function replaceEntityAttributes(
 	attributes: EntityAttribute[],
 ): Promise<void> {
 	await sql`
-		DELETE FROM entity_attributes
+		DELETE FROM text_entity_attributes
+		WHERE entity_id = ${entityId}
+	`
+	await sql`
+		DELETE FROM number_entity_attributes
+		WHERE entity_id = ${entityId}
+	`
+	await sql`
+		DELETE FROM boolean_entity_attributes
+		WHERE entity_id = ${entityId}
+	`
+	await sql`
+		DELETE FROM date_entity_attributes
+		WHERE entity_id = ${entityId}
+	`
+	await sql`
+		DELETE FROM datetime_entity_attributes
 		WHERE entity_id = ${entityId}
 	`
 	await insertEntityAttributes(sql, entityId, attributes)
@@ -760,7 +998,23 @@ export async function deleteEntity(id: string) {
 				WHERE entity_id = ${id}
 			`
 			await sql`
-				DELETE FROM entity_attributes
+				DELETE FROM text_entity_attributes
+				WHERE entity_id = ${id}
+			`
+			await sql`
+				DELETE FROM number_entity_attributes
+				WHERE entity_id = ${id}
+			`
+			await sql`
+				DELETE FROM boolean_entity_attributes
+				WHERE entity_id = ${id}
+			`
+			await sql`
+				DELETE FROM date_entity_attributes
+				WHERE entity_id = ${id}
+			`
+			await sql`
+				DELETE FROM datetime_entity_attributes
 				WHERE entity_id = ${id}
 			`
 			await sql`

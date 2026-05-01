@@ -501,6 +501,9 @@ export type {
 	CreateAuditEventInput,
 } from './types/audit-event'
 export {
+	booleanEntityAttributeModel,
+	dateEntityAttributeModel,
+	dateTimeEntityAttributeModel,
 	entityAttributeModel,
 	entityLinkModel,
 	entityModel,
@@ -509,13 +512,18 @@ export {
 	isEntityId,
 	isEntityLinkId,
 	isUpdateEntityInput,
+	numberEntityAttributeModel,
+	textEntityAttributeModel,
 } from './types/entity'
 export type {
+	BooleanEntityAttribute,
 	CreateEntityAttributeInput,
 	CreateEntityFromScratchInput,
 	CreateEntityFromTemplateInput,
 	CreateEntityInput,
 	CreateEntityLinkInput,
+	DateEntityAttribute,
+	DateTimeEntityAttribute,
 	Entity,
 	EntityAttribute,
 	EntityAttributeId,
@@ -525,6 +533,8 @@ export type {
 	EntityLinkId,
 	EntityTemplateAttributeValueInput,
 	EntityTemplateLinkTargetInput,
+	NumberEntityAttribute,
+	TextEntityAttribute,
 	UpdateEntityInput,
 } from './types/entity'
 export {
