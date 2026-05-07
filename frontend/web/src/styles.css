@@ -1326,6 +1326,78 @@ button.access-level-refresh-button:hover {
 	text-align: right;
 }
 
+.entity-search-controls {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	justify-content: flex-end;
+	min-width: 0;
+}
+
+.entity-views-manage-button,
+button.entity-views-manage-button {
+	background: transparent;
+	background-color: transparent;
+	border-radius: 999px;
+	color: color-mix(in srgb, var(--fg) 62%, transparent);
+	height: 1.8rem;
+	justify-content: center;
+	min-height: 1.8rem;
+	padding: 0;
+	position: relative;
+	width: 1.8rem;
+}
+
+.entity-views-manage-button:hover,
+button.entity-views-manage-button:hover {
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
+}
+
+.entity-views-manage-button svg {
+	height: 0.88rem;
+	width: 0.88rem;
+}
+
+.entity-view-select-wrap {
+	display: block;
+	position: relative;
+	width: 8.7rem;
+}
+
+.entity-view-select-wrap select {
+	appearance: none;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.82rem;
+	height: 1.9rem;
+	padding: 0.2rem 1.75rem 0.2rem 0.55rem;
+	width: 100%;
+}
+
+.entity-view-select-wrap::after {
+	border-bottom: 1.5px solid var(--fg);
+	border-right: 1.5px solid var(--fg);
+	content: '';
+	height: 0.42rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0.62rem;
+	top: 50%;
+	transform: translateY(-65%) rotate(45deg);
+	width: 0.42rem;
+}
+
+.entity-view-select-wrap select:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
 .entity-search-field {
 	display: block;
 	position: relative;
@@ -1392,6 +1464,172 @@ button.access-level-refresh-button:hover {
 .entity-search-field[data-tooltip]:hover::after {
 	opacity: 1;
 	transform: translateY(0);
+}
+
+.entity-views-manage-button[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 50%;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translate(-50%, -0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 2;
+}
+
+.entity-views-manage-button[data-tooltip]:hover::after,
+.entity-views-manage-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+.data-explorer-views-modal-content {
+	display: block;
+}
+
+.data-explorer-views-form {
+	grid-template-rows: minmax(0, 1fr);
+	height: 100%;
+}
+
+.data-explorer-views-grid {
+	display: grid;
+	gap: 0.8rem;
+	grid-template-columns: minmax(0, 1fr) minmax(13.5rem, 0.78fr);
+	height: 100%;
+	min-height: 0;
+}
+
+.data-explorer-views-list {
+	border-right: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+	display: grid;
+	gap: 0.35rem;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: 0.8rem;
+}
+
+.data-explorer-views-empty {
+	align-self: center;
+	color: var(--muted);
+	font-size: 0.82rem;
+	font-style: italic;
+	justify-self: center;
+	margin: 0;
+}
+
+.data-explorer-view-item {
+	align-items: center;
+	border-radius: 7px;
+	display: grid;
+	gap: 0.25rem;
+	grid-template-columns: minmax(0, 1fr) auto;
+	padding: 0.28rem;
+}
+
+.data-explorer-view-item:hover,
+.data-explorer-view-item.is-selected {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.data-explorer-view-copy,
+button.data-explorer-view-copy {
+	align-items: start;
+	background: transparent;
+	background-color: transparent;
+	color: var(--fg);
+	display: grid;
+	font: inherit;
+	gap: 0.16rem;
+	min-width: 0;
+	padding: 0.14rem 0.22rem;
+	text-align: left;
+}
+
+.data-explorer-view-copy:hover,
+button.data-explorer-view-copy:hover {
+	background: transparent;
+	background-color: transparent;
+	color: var(--fg);
+}
+
+.data-explorer-view-copy strong,
+.data-explorer-view-copy span,
+.data-explorer-view-copy code {
+	display: block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.data-explorer-view-copy strong {
+	font-size: 0.86rem;
+	font-weight: 500;
+}
+
+.data-explorer-view-copy span {
+	color: var(--muted);
+	font-size: 0.76rem;
+}
+
+.data-explorer-view-copy code {
+	color: color-mix(in srgb, var(--fg) 76%, transparent);
+	font-size: 0.75rem;
+}
+
+.data-explorer-view-actions {
+	align-items: center;
+	display: flex;
+	gap: 0.12rem;
+}
+
+.data-explorer-view-editor {
+	align-content: start;
+	display: grid;
+	gap: 0.75rem;
+	min-height: 0;
+}
+
+.data-explorer-view-editor textarea {
+	height: calc((14px * 1.35 * 3) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	resize: vertical;
+}
+
+.data-explorer-view-editor-actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	justify-content: flex-end;
+}
+
+.data-explorer-view-editor-actions button {
+	border-radius: 6px;
+	font-size: 0.82rem;
+	min-height: 1.8rem;
+	padding: 0.24rem 0.55rem;
+}
+
+.data-explorer-view-editor-actions button[type='submit'] {
+	gap: 0.35rem;
+}
+
+.data-explorer-view-editor-actions svg {
+	height: 0.82rem;
+	width: 0.82rem;
 }
 
 .entities-pagination {

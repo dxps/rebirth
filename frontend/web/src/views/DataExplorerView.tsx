@@ -55,6 +55,13 @@ import { DateTimeInput } from '../components/ui/date-time-input'
 import { CustomDropdown } from '../components/ui/custom-dropdown'
 import { DraggableModal as BaseDraggableModal } from '../components/ui/draggable-modal'
 import { Skeleton } from '../components/ui/skeleton'
+import {
+	DataExplorerViewsModal,
+	DataExplorerViewsToolbar,
+	readDataExplorerSavedViews,
+	writeDataExplorerSavedViews,
+	type DataExplorerSavedView,
+} from './DataExplorerViewViewsMgmt'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9908'
 const entityModalHeight = 330
@@ -3247,10 +3254,18 @@ export function DataExplorerView() {
 	const [entityTemplates, setEntityTemplates] = useState<EntityTemplate[]>([])
 	const [accessLevels, setAccessLevels] = useState<AccessLevel[]>([])
 	const [entityOwnerUsers, setEntityOwnerUsers] = useState<RebirthUser[]>([])
+	const [savedExplorerViews, setSavedExplorerViews] = useState<
+		DataExplorerSavedView[]
+	>([])
+	const [selectedExplorerViewId, setSelectedExplorerViewId] = useState('')
 	const [entitySearchTerm, setEntitySearchTerm] = useState('')
 	const [entitiesPage, setEntitiesPage] = useState(1)
 	const [entitiesTotal, setEntitiesTotal] = useState(0)
 	const [entitiesError, setEntitiesError] = useState<string | null>(null)
+	const [isViewsModalOpen, setIsViewsModalOpen] = useState(false)
+	const [viewsModalPosition, setViewsModalPosition] =
+		useState<ModalPosition | null>(null)
+	const [viewsModalZIndex, setViewsModalZIndex] = useState(1)
 	const [createEntityError, setCreateEntityError] = useState<string | null>(
 		null,
 	)
@@ -3337,6 +3352,47 @@ export function DataExplorerView() {
 		modalZIndexRef.current += 1
 		return modalZIndexRef.current
 	}, [])
+
+	const saveExplorerViews = useCallback(
+		(views: DataExplorerSavedView[]) => {
+			setSavedExplorerViews(views)
+			writeDataExplorerSavedViews(storedAuth?.user.id, views)
+			setSelectedExplorerViewId((current) =>
+				views.some((view) => view.id === current) ? current : '',
+			)
+		},
+		[storedAuth?.user.id],
+	)
+
+	const applyExplorerView = useCallback((view: DataExplorerSavedView) => {
+		setEntitiesPage(1)
+		setSelectedExplorerViewId(view.id)
+		setEntitySearchTerm(view.searchText)
+	}, [])
+
+	const openViewsModal = useCallback(
+		(event: ReactMouseEvent<HTMLButtonElement>) => {
+			const rect = event.currentTarget.getBoundingClientRect()
+			const modalWidth = Math.min(560, window.innerWidth - 32)
+			const modalHeight = Math.min(430, window.innerHeight - 32)
+
+			setViewsModalPosition({
+				x: clampToRange(
+					rect.left,
+					entityModalMargin,
+					window.innerWidth - modalWidth - entityModalMargin,
+				),
+				y: clampToRange(
+					rect.bottom + 8,
+					entityModalMargin,
+					window.innerHeight - modalHeight - entityModalMargin,
+				),
+			})
+			setViewsModalZIndex(getNextModalZIndex())
+			setIsViewsModalOpen(true)
+		},
+		[getNextModalZIndex],
+	)
 
 	const loadEntities = useCallback(
 		async (searchTerm = '', page = entitiesPage): Promise<void> => {
@@ -4097,6 +4153,16 @@ export function DataExplorerView() {
 	}, [])
 
 	useEffect(() => {
+		const userId = storedAuth?.user.id
+		const views = readDataExplorerSavedViews(userId)
+
+		setSavedExplorerViews(views)
+		setSelectedExplorerViewId((current) =>
+			views.some((view) => view.id === current) ? current : '',
+		)
+	}, [storedAuth?.user.id])
+
+	useEffect(() => {
 		if (isAuthorized) {
 			void loadEntities(entitySearchTerm)
 		}
@@ -4119,21 +4185,19 @@ export function DataExplorerView() {
 			<div className="types-mgmt-section">
 				<div className="section-heading">
 					<p>Entities</p>
-					<label
-						className="entity-search-field"
-						data-tooltip="Search through entities' attributes names and values"
-					>
-						<input
-							aria-label="Search entities"
-							placeholder="Search"
-							type="search"
-							value={entitySearchTerm}
-							onChange={(event) => {
-								setEntitiesPage(1)
-								setEntitySearchTerm(event.target.value)
-							}}
-						/>
-					</label>
+					<DataExplorerViewsToolbar
+						onClearView={() => setSelectedExplorerViewId('')}
+						onManageViews={openViewsModal}
+						onSearchTermChange={(searchTerm) => {
+							setEntitiesPage(1)
+							setSelectedExplorerViewId('')
+							setEntitySearchTerm(searchTerm)
+						}}
+						onSelectView={applyExplorerView}
+						savedViews={savedExplorerViews}
+						searchTerm={entitySearchTerm}
+						selectedViewId={selectedExplorerViewId}
+					/>
 				</div>
 
 				{entitiesError ? (
@@ -4361,6 +4425,17 @@ export function DataExplorerView() {
 					</div>
 				)}
 			</div>
+			{isViewsModalOpen && viewsModalPosition ? (
+				<DataExplorerViewsModal
+					currentSearchTerm={entitySearchTerm}
+					initialPosition={viewsModalPosition}
+					onApplyView={applyExplorerView}
+					onClose={() => setIsViewsModalOpen(false)}
+					onSaveViews={saveExplorerViews}
+					savedViews={savedExplorerViews}
+					zIndex={viewsModalZIndex}
+				/>
+			) : null}
 			{canCreateManagedData && isCreateChoiceOpen ? (
 				<div
 					className="include-attribute-popover entity-create-popover"
