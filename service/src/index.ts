@@ -91,6 +91,13 @@ import { loadEnvFiles } from './env'
 loadEnvFiles()
 
 const port = Number.parseInt(Bun.env.PORT ?? '9908', 10)
+const logRequestsAndResponses = isEnabledEnvValue(
+	Bun.env.LOG_REQUESTS_AND_RESPONSES,
+)
+const maxLoggedBodyLength = Number.parseInt(
+	Bun.env.LOG_REQUEST_RESPONSE_BODY_LIMIT ?? '4096',
+	10,
+)
 const uniqueConflictErrorCode = '23505'
 const attributeTemplateUniqueConstraint =
 	'attribute_templates_name_description_unique'
@@ -122,6 +129,182 @@ const maskedAttributeValue = '******'
 const springConfigDefaultLabel = 'main'
 const springConfigDefaultProfile = 'default'
 const springConfigSharedApplication = 'application'
+const redactedHeaderNames = new Set([
+	'authorization',
+	'cookie',
+	'proxy-authorization',
+	'set-cookie',
+])
+const redactedBodyFieldNames = new Set([
+	'currentpassword',
+	'newpassword',
+	'password',
+	'passwordhash',
+	'secret',
+	'sessionkey',
+	'token',
+])
+
+function isEnabledEnvValue(value: string | undefined): boolean {
+	return ['1', 'true', 'yes', 'on'].includes(value?.trim().toLowerCase() ?? '')
+}
+
+function getLoggedBodyLimit(): number {
+	return Number.isFinite(maxLoggedBodyLength) && maxLoggedBodyLength > 0
+		? maxLoggedBodyLength
+		: 4096
+}
+
+function getLoggableHeaders(headers: Headers): Record<string, string> {
+	return Object.fromEntries(
+		[...headers.entries()].map(([name, value]) => [
+			name,
+			redactedHeaderNames.has(name.toLowerCase()) ? '[redacted]' : value,
+		]),
+	)
+}
+
+function isLoggableContentType(contentType: string | null): boolean {
+	if (!contentType) {
+		return true
+	}
+
+	const normalizedContentType = contentType.toLowerCase()
+
+	return (
+		normalizedContentType.startsWith('text/') ||
+		normalizedContentType.includes('json') ||
+		normalizedContentType.includes('xml') ||
+		normalizedContentType.includes('x-www-form-urlencoded')
+	)
+}
+
+function truncateLoggedBody(body: string): string {
+	const limit = getLoggedBodyLimit()
+
+	return body.length > limit
+		? `${body.slice(0, limit)}...[truncated ${body.length - limit} chars]`
+		: body
+}
+
+function redactLoggableJsonValue(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		return value.map((item) => redactLoggableJsonValue(item))
+	}
+
+	if (!value || typeof value !== 'object') {
+		return value
+	}
+
+	return Object.fromEntries(
+		Object.entries(value).map(([key, nestedValue]) => [
+			key,
+			redactedBodyFieldNames.has(key.toLowerCase())
+				? '[redacted]'
+				: redactLoggableJsonValue(nestedValue),
+		]),
+	)
+}
+
+function sanitizeLoggableBody(
+	body: string,
+	contentType: string | null,
+): string {
+	if (!contentType?.toLowerCase().includes('json')) {
+		return body
+	}
+
+	try {
+		return JSON.stringify(redactLoggableJsonValue(JSON.parse(body)))
+	} catch {
+		return body
+	}
+}
+
+async function getLoggableRequestBody(
+	request: Request,
+): Promise<string | undefined> {
+	if (request.method === 'GET' || request.method === 'HEAD') {
+		return undefined
+	}
+
+	if (!isLoggableContentType(request.headers.get('content-type'))) {
+		return '[body omitted: non-text content type]'
+	}
+
+	try {
+		const body = await request.clone().text()
+
+		return truncateLoggedBody(
+			sanitizeLoggableBody(body, request.headers.get('content-type')),
+		)
+	} catch {
+		return '[body unavailable]'
+	}
+}
+
+async function getLoggableResponseBody(
+	response: Response,
+): Promise<string | undefined> {
+	if (!response.body) {
+		return undefined
+	}
+
+	if (!isLoggableContentType(response.headers.get('content-type'))) {
+		return '[body omitted: non-text content type]'
+	}
+
+	try {
+		const body = await response.clone().text()
+
+		return truncateLoggedBody(
+			sanitizeLoggableBody(body, response.headers.get('content-type')),
+		)
+	} catch {
+		return '[body unavailable]'
+	}
+}
+
+async function withRequestResponseLogging(
+	request: Request,
+	handler: () => Promise<Response>,
+): Promise<Response> {
+	if (!logRequestsAndResponses) {
+		return await handler()
+	}
+
+	const startedAt = performance.now()
+	const url = new URL(request.url)
+	const requestBody = await getLoggableRequestBody(request)
+
+	console.log(
+		JSON.stringify({
+			body: requestBody,
+			headers: getLoggableHeaders(request.headers),
+			method: request.method,
+			path: `${url.pathname}${url.search}`,
+			type: 'request',
+		}),
+	)
+
+	const response = await handler()
+	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100
+	const responseBody = await getLoggableResponseBody(response)
+
+	console.log(
+		JSON.stringify({
+			body: responseBody,
+			durationMs,
+			headers: getLoggableHeaders(response.headers),
+			method: request.method,
+			path: `${url.pathname}${url.search}`,
+			status: response.status,
+			type: 'response',
+		}),
+	)
+
+	return response
+}
 
 function getErrorProperty(error: unknown, property: string): unknown {
 	if (typeof error !== 'object' || error === null) {
@@ -715,9 +898,7 @@ async function requireAuditViewer(request: Request): Promise<Response | User> {
 
 await runMigrations()
 
-const server = Bun.serve({
-	port,
-	async fetch(request) {
+async function handleRequest(request: Request): Promise<Response> {
 		const url = new URL(request.url)
 
 		if (request.method === 'OPTIONS') {
@@ -2968,6 +3149,14 @@ const server = Bun.serve({
 				headers: jsonHeaders,
 				status: 404,
 			},
+		)
+}
+
+const server = Bun.serve({
+	port,
+	async fetch(request) {
+		return await withRequestResponseLogging(request, () =>
+			handleRequest(request),
 		)
 	},
 })
