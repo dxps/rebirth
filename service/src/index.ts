@@ -31,12 +31,12 @@ import {
 	type EntitiesResponse,
 	type Entity,
 	type EntityResponse,
-	type SpringConfigEnvironment,
-	type SpringConfigPropertySource,
 	type EntityTemplateResponse,
 	type EntityTemplatesResponse,
 	type LoginResponse,
 	type PermissionsResponse,
+	type SpringConfigEnvironment,
+	type SpringConfigPropertySource,
 	type User,
 	type UserResponse,
 	type UsersResponse,
@@ -412,10 +412,7 @@ function isSpringConfigEntityEnabled(entity: Entity): boolean {
 }
 
 function canReadSpringConfigEntity(user: User, entity: Entity): boolean {
-	return (
-		canManageData(user) ||
-		(canManageOwnData(user) && entity.ownerUserId === user.id)
-	)
+	return canManageData(user) || entity.ownerUserId === user.id
 }
 
 function getSpringConfigSource(entity: Entity): Record<string, string> {
@@ -476,11 +473,7 @@ function getSpringConfigEntityRank(input: {
 	}
 
 	const labelRank =
-		labels.length === 0
-			? 1
-			: labels.includes(input.label)
-				? 0
-				: null
+		labels.length === 0 ? 1 : labels.includes(input.label) ? 0 : null
 
 	if (labelRank === null) {
 		return null
@@ -495,7 +488,8 @@ function toSpringConfigPropertySource(
 ): SpringConfigPropertySource & { rank: number } {
 	const application =
 		getConfigMetadataValue(entity, 'config.application') ?? 'unknown'
-	const profile = getConfigMetadataValue(entity, 'config.profile') ?? 'unknown'
+	const profile =
+		getConfigMetadataValue(entity, 'config.profile') ?? 'unknown'
 	const label =
 		getConfigMetadataValue(entity, 'config.label') ??
 		springConfigDefaultLabel
@@ -537,6 +531,63 @@ function getRequestSessionKey(request: Request): string | undefined {
 	return sessionKey.length > 0 ? sessionKey : undefined
 }
 
+function decodeBasicCredentials(
+	encodedCredentials: string,
+): { identifier: string; password: string } | undefined {
+	try {
+		const decodedCredentials = Buffer.from(
+			encodedCredentials.trim(),
+			'base64',
+		).toString('utf8')
+		const separatorIndex = decodedCredentials.indexOf(':')
+
+		if (separatorIndex < 0) {
+			return undefined
+		}
+
+		const identifier = decodedCredentials.slice(0, separatorIndex)
+		const password = decodedCredentials.slice(separatorIndex + 1)
+
+		if (!identifier || !password) {
+			return undefined
+		}
+
+		return {
+			identifier,
+			password,
+		}
+	} catch {
+		return undefined
+	}
+}
+
+async function getSpringConfigAuthenticatedUser(
+	request: Request,
+): Promise<User | undefined> {
+	const bearerAuthenticatedUser = await getAuthenticatedUser(request)
+
+	if (bearerAuthenticatedUser) {
+		return bearerAuthenticatedUser
+	}
+
+	const authorization = request.headers.get('authorization')
+	const basicMatch = authorization
+		? /^Basic\s+(.+)$/i.exec(authorization)
+		: null
+
+	if (!basicMatch) {
+		return undefined
+	}
+
+	const credentials = decodeBasicCredentials(basicMatch[1] ?? '')
+
+	if (!credentials) {
+		return undefined
+	}
+
+	return await authenticateUser(credentials.identifier, credentials.password)
+}
+
 function authenticationRequiredResponse(): Response {
 	return Response.json(
 		{
@@ -568,6 +619,18 @@ async function requireAuthenticatedUser(
 	request: Request,
 ): Promise<Response | User> {
 	const user = await getAuthenticatedUser(request)
+
+	if (!user) {
+		return authenticationRequiredResponse()
+	}
+
+	return user
+}
+
+async function requireSpringConfigAuthenticatedUser(
+	request: Request,
+): Promise<Response | User> {
+	const user = await getSpringConfigAuthenticatedUser(request)
 
 	if (!user) {
 		return authenticationRequiredResponse()
@@ -671,12 +734,12 @@ const server = Bun.serve({
 		}
 
 		const springConfigMatch =
-			/^\/config\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/i.exec(
-				url.pathname,
-			)
+			/^\/config\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/i.exec(url.pathname)
 
+		// GET /config/{application}/{profile}/{label}
 		if (request.method === 'GET' && springConfigMatch) {
-			const authenticatedUser = await requireAuthenticatedUser(request)
+			const authenticatedUser =
+				await requireSpringConfigAuthenticatedUser(request)
 
 			if (authenticatedUser instanceof Response) {
 				return authenticatedUser
@@ -689,9 +752,10 @@ const server = Bun.serve({
 				const profileSegment = decodeURIComponent(
 					springConfigMatch[2] ?? '',
 				).trim()
+				const requestedLabel = springConfigMatch[3]
 				const label =
 					decodeURIComponent(
-						springConfigMatch[3] ?? springConfigDefaultLabel,
+						requestedLabel ?? springConfigDefaultLabel,
 					).trim() || springConfigDefaultLabel
 				const profiles = profileSegment
 					.split(',')
@@ -745,27 +809,18 @@ const server = Bun.serve({
 					)
 					.map(({ rank: _rank, ...propertySource }) => propertySource)
 
-				if (propertySources.length === 0) {
-					return Response.json(
-						{
-							error: 'Configuration not found',
-						},
-						{
-							headers: jsonHeaders,
-							status: 404,
-						},
-					)
-				}
-
 				const response: SpringConfigEnvironment = {
-					label,
+					label: requestedLabel === undefined ? null : label,
 					name: application,
 					profiles,
 					propertySources,
 					state: null,
-					version: propertySources
-						.map((propertySource) => propertySource.name)
-						.join('|'),
+					version:
+						propertySources.length === 0
+							? null
+							: propertySources
+									.map((propertySource) => propertySource.name)
+									.join('|'),
 				}
 
 				return Response.json(response, {
@@ -786,6 +841,7 @@ const server = Bun.serve({
 			}
 		}
 
+		// GET /auth/me
 		if (request.method === 'GET' && url.pathname === apiRoutes.authMe) {
 			const authenticatedUser = await requireAuthenticatedUser(request)
 
@@ -802,6 +858,7 @@ const server = Bun.serve({
 			})
 		}
 
+		// POST /auth/login
 		if (request.method === 'POST' && url.pathname === apiRoutes.authLogin) {
 			try {
 				const input = await request.json()
@@ -1703,14 +1760,10 @@ const server = Bun.serve({
 									(attribute) =>
 										attribute.name
 											.toLowerCase()
-											.includes(
-												normalizedSearchTerm,
-											) ||
+											.includes(normalizedSearchTerm) ||
 										attribute.value
 											.toLowerCase()
-											.includes(
-												normalizedSearchTerm,
-											),
+											.includes(normalizedSearchTerm),
 								),
 							)
 						: visibleEntities
