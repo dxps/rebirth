@@ -2041,13 +2041,6 @@ button.data-explorer-view-copy:hover {
 	white-space: nowrap;
 }
 
-.entity-attribute-value-view-sensitive .entity-attribute-value-text {
-	font-family:
-		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-		'Liberation Mono', 'Courier New', monospace;
-	letter-spacing: 0;
-}
-
 .entity-attribute-value-actions {
 	align-items: center;
 	display: inline-flex;
