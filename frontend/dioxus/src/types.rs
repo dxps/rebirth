@@ -44,6 +44,18 @@ pub enum Route {
 }
 
 impl Route {
+    pub fn from_path(path: &str) -> Self {
+        match path {
+            "/data-explorer" => Self::DataExplorer,
+            "/templates" | "/types" => Self::Templates,
+            "/security" => Self::Security,
+            "/audit" => Self::Audit,
+            "/user-profile" | "/profile" => Self::Profile,
+            "/login" => Self::Login,
+            _ => Self::Home,
+        }
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Self::Home => "Home",
@@ -53,6 +65,19 @@ impl Route {
             Self::Audit => "Audit",
             Self::Profile => "Profile",
             Self::Login => "Login",
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn path(self) -> &'static str {
+        match self {
+            Self::Home => "/",
+            Self::DataExplorer => "/data-explorer",
+            Self::Templates => "/templates",
+            Self::Security => "/security",
+            Self::Audit => "/audit",
+            Self::Profile => "/user-profile",
+            Self::Login => "/login",
         }
     }
 }

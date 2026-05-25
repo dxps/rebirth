@@ -48,10 +48,47 @@ fn store_theme_value(theme: &str) {
 #[cfg(not(target_arch = "wasm32"))]
 fn store_theme_value(_theme: &str) {}
 
+fn load_initial_route() -> Route {
+    Route::from_path(current_path().as_deref().unwrap_or("/"))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn current_path() -> Option<String> {
+    web_sys::window()
+        .and_then(|window| window.location().pathname().ok())
+        .filter(|path| !path.is_empty())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn current_path() -> Option<String> {
+    None
+}
+
+fn navigate_to(route: Route, current_route: &mut Signal<Route>) {
+    current_route.set(route);
+    push_route_path(route);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn push_route_path(route: Route) {
+    if let Some(window) = web_sys::window() {
+        let next_path = route.path();
+        if window.location().pathname().ok().as_deref() != Some(next_path) {
+            if let Ok(history) = window.history() {
+                let _ =
+                    history.push_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(next_path));
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn push_route_path(_route: Route) {}
+
 #[component]
 pub fn App() -> Element {
     let mut theme = use_signal(load_stored_theme);
-    let mut route = use_signal(|| Route::Home);
+    let mut route = use_signal(load_initial_route);
     let mut menu_open = use_signal(|| false);
     let mut logged_in = use_signal(|| true);
     let modals = use_signal(Vec::<OpenModal>::new);
@@ -68,7 +105,7 @@ pub fn App() -> Element {
                 menu_open: menu_open(),
                 logged_in: logged_in(),
                 on_route: move |next| {
-                    route.set(next);
+                    navigate_to(next, &mut route);
                     menu_open.set(false);
                 },
                 on_toggle_menu: move |_| menu_open.toggle(),
@@ -80,7 +117,7 @@ pub fn App() -> Element {
                 },
                 on_logout: move |_| {
                     logged_in.set(false);
-                    route.set(Route::Home);
+                    navigate_to(Route::Home, &mut route);
                     menu_open.set(false);
                 },
             }
@@ -108,7 +145,7 @@ pub fn App() -> Element {
                         LoginView {
                             on_login: move |_| {
                                 logged_in.set(true);
-                                route.set(Route::Home);
+                                navigate_to(Route::Home, &mut route);
                             },
                         }
                     },

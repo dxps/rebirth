@@ -4181,6 +4181,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "lucide-dioxus",
+ "wasm-bindgen",
  "web-sys",
 ]
 
