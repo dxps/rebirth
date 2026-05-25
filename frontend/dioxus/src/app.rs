@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::components::header::Header;
 use crate::components::modal::ModalLayer;
-use crate::types::{OpenModal, Route, Theme, FAVICON, MAIN_CSS};
+use crate::types::{AuthSession, OpenModal, Route, Theme, FAVICON, MAIN_CSS};
 use crate::views::audit::AuditView;
 use crate::views::data_explorer::DataExplorerView;
 use crate::views::home::HomeView;
@@ -13,6 +13,8 @@ use crate::views::templates::TemplatesView;
 
 #[cfg(target_arch = "wasm32")]
 const THEME_STORAGE_KEY: &str = "rebirth.theme";
+#[cfg(target_arch = "wasm32")]
+const AUTH_STORAGE_KEY: &str = "rebirth.auth";
 
 fn load_stored_theme() -> Theme {
     load_stored_theme_value()
@@ -47,6 +49,56 @@ fn store_theme_value(theme: &str) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn store_theme_value(_theme: &str) {}
+
+fn load_stored_auth_session() -> Option<AuthSession> {
+    load_stored_auth_session_value().and_then(|auth| serde_json::from_str(&auth).ok())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn load_stored_auth_session_value() -> Option<String> {
+    web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item(AUTH_STORAGE_KEY).ok().flatten())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn load_stored_auth_session_value() -> Option<String> {
+    None
+}
+
+fn store_auth_session(auth_session: &AuthSession) {
+    if let Ok(auth) = serde_json::to_string(auth_session) {
+        store_auth_session_value(&auth);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn store_auth_session_value(auth_session: &str) {
+    if let Some(storage) =
+        web_sys::window().and_then(|window| window.local_storage().ok().flatten())
+    {
+        let _ = storage.set_item(AUTH_STORAGE_KEY, auth_session);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn store_auth_session_value(_auth_session: &str) {}
+
+fn clear_stored_auth_session() {
+    clear_stored_auth_session_value();
+}
+
+#[cfg(target_arch = "wasm32")]
+fn clear_stored_auth_session_value() {
+    if let Some(storage) =
+        web_sys::window().and_then(|window| window.local_storage().ok().flatten())
+    {
+        let _ = storage.remove_item(AUTH_STORAGE_KEY);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn clear_stored_auth_session_value() {}
 
 fn load_initial_route() -> Route {
     Route::from_path(current_path().as_deref().unwrap_or("/"))
@@ -90,7 +142,7 @@ pub fn App() -> Element {
     let mut theme = use_signal(load_stored_theme);
     let mut route = use_signal(load_initial_route);
     let mut menu_open = use_signal(|| false);
-    let mut logged_in = use_signal(|| true);
+    let mut auth_session = use_signal(load_stored_auth_session);
     let modals = use_signal(Vec::<OpenModal>::new);
     let next_modal_id = use_signal(|| 1_u32);
 
@@ -103,7 +155,7 @@ pub fn App() -> Element {
                 route: route(),
                 theme: theme(),
                 menu_open: menu_open(),
-                logged_in: logged_in(),
+                logged_in: auth_session.read().is_some(),
                 on_route: move |next| {
                     navigate_to(next, &mut route);
                     menu_open.set(false);
@@ -116,7 +168,8 @@ pub fn App() -> Element {
                     menu_open.set(false);
                 },
                 on_logout: move |_| {
-                    logged_in.set(false);
+                    auth_session.set(None);
+                    clear_stored_auth_session();
                     navigate_to(Route::Home, &mut route);
                     menu_open.set(false);
                 },
@@ -139,12 +192,19 @@ pub fn App() -> Element {
                         AuditView { modals, next_modal_id }
                     },
                     Route::Profile => rsx! {
-                        ProfileView { logged_in: logged_in() }
+                        ProfileView {
+                            auth_session: auth_session(),
+                            on_auth_update: move |next_session| {
+                                store_auth_session(&next_session);
+                                auth_session.set(Some(next_session));
+                            },
+                        }
                     },
                     Route::Login => rsx! {
                         LoginView {
-                            on_login: move |_| {
-                                logged_in.set(true);
+                            on_login: move |next_session| {
+                                store_auth_session(&next_session);
+                                auth_session.set(Some(next_session));
                                 navigate_to(Route::Home, &mut route);
                             },
                         }

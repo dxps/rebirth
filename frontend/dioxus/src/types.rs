@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub const FAVICON: Asset = asset!("/assets/favicon.ico");
 pub const LOGO: Asset = asset!("/assets/logo1.png");
@@ -8,6 +9,8 @@ pub const MODAL_DEFAULT_HEIGHT: f64 = 360.0;
 pub const MODAL_DEFAULT_WIDTH: f64 = 520.0;
 pub const MODAL_MIN_HEIGHT: f64 = 300.0;
 pub const MODAL_MIN_WIDTH: f64 = 400.0;
+
+pub const API_BASE_URL: &str = "http://localhost:9908";
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Theme {
@@ -123,4 +126,65 @@ pub struct OpenModal {
     pub size: ModalSize,
     pub title: &'static str,
     pub z_index: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessLevel {
+    pub description: String,
+    pub id: u32,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Permission {
+    pub description: String,
+    pub id: u32,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct User {
+    pub access_levels: Vec<AccessLevel>,
+    pub email: String,
+    pub first_name: String,
+    pub id: String,
+    pub last_name: String,
+    pub permissions: Vec<Permission>,
+    pub username: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthSession {
+    pub session_key: String,
+    pub user: User,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginInput {
+    pub identifier: String,
+    pub password: String,
+}
+
+#[derive(Deserialize)]
+pub struct LoginResponse {
+    pub data: AuthSession,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUserInfoInput {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String,
+}
+
+#[derive(Deserialize)]
+pub struct UserResponse {
+    pub data: User,
 }
