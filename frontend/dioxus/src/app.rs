@@ -11,9 +11,46 @@ use crate::views::profile::ProfileView;
 use crate::views::security::SecurityView;
 use crate::views::templates::TemplatesView;
 
+#[cfg(target_arch = "wasm32")]
+const THEME_STORAGE_KEY: &str = "rebirth.theme";
+
+fn load_stored_theme() -> Theme {
+    load_stored_theme_value()
+        .and_then(|theme| Theme::from_str(&theme))
+        .unwrap_or(Theme::Light)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn load_stored_theme_value() -> Option<String> {
+    web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item(THEME_STORAGE_KEY).ok().flatten())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn load_stored_theme_value() -> Option<String> {
+    None
+}
+
+fn store_theme(theme: Theme) {
+    store_theme_value(theme.as_str());
+}
+
+#[cfg(target_arch = "wasm32")]
+fn store_theme_value(theme: &str) {
+    if let Some(storage) =
+        web_sys::window().and_then(|window| window.local_storage().ok().flatten())
+    {
+        let _ = storage.set_item(THEME_STORAGE_KEY, theme);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn store_theme_value(_theme: &str) {}
+
 #[component]
 pub fn App() -> Element {
-    let mut theme = use_signal(|| Theme::Light);
+    let mut theme = use_signal(load_stored_theme);
     let mut route = use_signal(|| Route::Home);
     let mut menu_open = use_signal(|| false);
     let mut logged_in = use_signal(|| true);
@@ -22,7 +59,7 @@ pub fn App() -> Element {
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
-        document::Link { rel: "stylesheet", href: MAIN_CSS }
+        document::Stylesheet { href: MAIN_CSS }
 
         div { class: "app-root", "data-theme": "{theme.read().as_str()}",
             Header {
@@ -38,6 +75,7 @@ pub fn App() -> Element {
                 on_toggle_theme: move |_| {
                     let next = if theme() == Theme::Light { Theme::Dark } else { Theme::Light };
                     theme.set(next);
+                    store_theme(next);
                     menu_open.set(false);
                 },
                 on_logout: move |_| {

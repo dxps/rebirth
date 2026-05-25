@@ -22,6 +22,14 @@ impl Theme {
             Self::Dark => "dark",
         }
     }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "light" => Some(Self::Light),
+            "dark" => Some(Self::Dark),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
