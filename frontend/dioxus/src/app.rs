@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::components::header::Header;
 use crate::components::modal::ModalLayer;
-use crate::types::{AuthSession, OpenModal, Route, Theme, FAVICON, MAIN_CSS};
+use crate::types::{
+    AuthSession, OpenModal, Route, Theme, FAVICON, MAIN_CSS, WORK_SANS_300_NORMAL,
+    WORK_SANS_400_ITALIC, WORK_SANS_400_NORMAL, WORK_SANS_600_NORMAL,
+};
 use crate::views::audit::AuditView;
 use crate::views::data_explorer::DataExplorerView;
 use crate::views::home::HomeView;
@@ -148,6 +151,41 @@ pub fn App() -> Element {
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
+        document::Style {
+            r#"
+                @font-face {{
+                    font-family: "Work Sans";
+                    font-style: normal;
+                    font-weight: 300;
+                    font-display: swap;
+                    src: url("{WORK_SANS_300_NORMAL}") format("woff2");
+                }}
+
+                @font-face {{
+                    font-family: "Work Sans";
+                    font-style: normal;
+                    font-weight: 400;
+                    font-display: swap;
+                    src: url("{WORK_SANS_400_NORMAL}") format("woff2");
+                }}
+
+                @font-face {{
+                    font-family: "Work Sans";
+                    font-style: italic;
+                    font-weight: 400;
+                    font-display: swap;
+                    src: url("{WORK_SANS_400_ITALIC}") format("woff2");
+                }}
+
+                @font-face {{
+                    font-family: "Work Sans";
+                    font-style: normal;
+                    font-weight: 600;
+                    font-display: swap;
+                    src: url("{WORK_SANS_600_NORMAL}") format("woff2");
+                }}
+            "#
+        }
         document::Stylesheet { href: MAIN_CSS }
 
         div { class: "app-root", "data-theme": "{theme.read().as_str()}",

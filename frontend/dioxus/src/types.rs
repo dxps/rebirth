@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 pub const FAVICON: Asset = asset!("/assets/favicon.ico");
 pub const LOGO: Asset = asset!("/assets/logo1.png");
 pub const MAIN_CSS: Asset = asset!("/assets/main.css");
+pub const WORK_SANS_300_NORMAL: Asset = asset!("/assets/fonts/work-sans-latin-300-normal.woff2");
+pub const WORK_SANS_400_ITALIC: Asset = asset!("/assets/fonts/work-sans-latin-400-italic.woff2");
+pub const WORK_SANS_400_NORMAL: Asset = asset!("/assets/fonts/work-sans-latin-400-normal.woff2");
+pub const WORK_SANS_600_NORMAL: Asset = asset!("/assets/fonts/work-sans-latin-600-normal.woff2");
 
 pub const MODAL_DEFAULT_HEIGHT: f64 = 360.0;
 pub const MODAL_DEFAULT_WIDTH: f64 = 520.0;
