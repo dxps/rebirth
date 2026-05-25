@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use lucide_dioxus::{ExternalLink, Plus};
 
 use crate::components::modal::open_modal;
 use crate::types::OpenModal;
@@ -14,9 +15,24 @@ struct UserRow {
 #[component]
 pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> Element {
     let users = [
-        UserRow { username: "admin", email: "admin@rebirth.local", permissions: "Admin, Audit", access: "System" },
-        UserRow { username: "editor", email: "editor@rebirth.local", permissions: "Editor", access: "Curated Data" },
-        UserRow { username: "viewer", email: "viewer@rebirth.local", permissions: "Viewer", access: "Published Data" },
+        UserRow {
+            username: "admin",
+            email: "admin@rebirth.local",
+            permissions: "Admin, Audit",
+            access: "System",
+        },
+        UserRow {
+            username: "editor",
+            email: "editor@rebirth.local",
+            permissions: "Editor",
+            access: "Curated Data",
+        },
+        UserRow {
+            username: "viewer",
+            email: "viewer@rebirth.local",
+            permissions: "Viewer",
+            access: "Published Data",
+        },
     ];
 
     rsx! {
@@ -25,8 +41,10 @@ pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) 
                 p { "Access Levels" }
                 button {
                     class: "section-action-button",
+                    title: "Create access level",
+                    aria_label: "Create access level",
                     onclick: move |_| open_modal(modals, next_modal_id, "Access Level :: New"),
-                    "+"
+                    Plus { class: "app-icon", size: 16 }
                 }
             }
             div { class: "data-table-wrap security-table-wrap",
@@ -51,8 +69,10 @@ pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) 
                                 td {
                                     button {
                                         class: "icon-only-button",
+                                        title: "Open access level",
+                                        aria_label: "Open access level",
                                         onclick: move |_| open_modal(modals, next_modal_id, row.0),
-                                        "Open"
+                                        ExternalLink { class: "app-icon", size: 15 }
                                     }
                                 }
                             }
@@ -64,8 +84,10 @@ pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) 
                 p { "Users" }
                 button {
                     class: "section-action-button",
+                    title: "Create user",
+                    aria_label: "Create user",
                     onclick: move |_| open_modal(modals, next_modal_id, "User :: New"),
-                    "+"
+                    Plus { class: "app-icon", size: 16 }
                 }
             }
             div { class: "data-table-wrap security-table-wrap",
@@ -89,8 +111,10 @@ pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) 
                                 td {
                                     button {
                                         class: "icon-only-button",
+                                        title: "Open user",
+                                        aria_label: "Open user",
                                         onclick: move |_| open_modal(modals, next_modal_id, user.username),
-                                        "Open"
+                                        ExternalLink { class: "app-icon", size: 15 }
                                     }
                                 }
                             }

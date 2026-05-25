@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use lucide_dioxus::{ExternalLink, Plus};
 
 use crate::components::modal::open_modal;
 use crate::types::OpenModal;
@@ -15,10 +16,34 @@ struct EntityRow {
 #[component]
 pub fn DataExplorerView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> Element {
     let entities = [
-        EntityRow { name: "Person", value: "Ada Lovelace", template: "Researcher", outgoing: 4, incoming: 2 },
-        EntityRow { name: "Concept", value: "Analytical Engine", template: "Machine", outgoing: 2, incoming: 6 },
-        EntityRow { name: "Archive", value: "Notes on Menabrea", template: "Document", outgoing: 3, incoming: 1 },
-        EntityRow { name: "Project", value: "Ontology migration", template: "Workstream", outgoing: 8, incoming: 3 },
+        EntityRow {
+            name: "Person",
+            value: "Ada Lovelace",
+            template: "Researcher",
+            outgoing: 4,
+            incoming: 2,
+        },
+        EntityRow {
+            name: "Concept",
+            value: "Analytical Engine",
+            template: "Machine",
+            outgoing: 2,
+            incoming: 6,
+        },
+        EntityRow {
+            name: "Archive",
+            value: "Notes on Menabrea",
+            template: "Document",
+            outgoing: 3,
+            incoming: 1,
+        },
+        EntityRow {
+            name: "Project",
+            value: "Ontology migration",
+            template: "Workstream",
+            outgoing: 8,
+            incoming: 3,
+        },
     ];
 
     rsx! {
@@ -34,8 +59,9 @@ pub fn DataExplorerView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u3
                     button {
                         class: "section-action-button",
                         title: "Create entity",
+                        aria_label: "Create entity",
                         onclick: move |_| open_modal(modals, next_modal_id, "Entity :: New"),
-                        "+"
+                        Plus { class: "app-icon", size: 16 }
                     }
                 }
             }
@@ -64,8 +90,9 @@ pub fn DataExplorerView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u3
                                     button {
                                         class: "icon-only-button",
                                         title: "Open entity",
+                                        aria_label: "Open entity",
                                         onclick: move |_| open_modal(modals, next_modal_id, entity.value),
-                                        "Open"
+                                        ExternalLink { class: "app-icon", size: 15 }
                                     }
                                 }
                             }

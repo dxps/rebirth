@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use lucide_dioxus::{Shield, User};
 
 #[component]
 pub fn ProfileView(logged_in: bool) -> Element {
@@ -20,7 +21,7 @@ pub fn ProfileView(logged_in: bool) -> Element {
             div { class: "profile-forms",
                 form { class: "profile-form",
                     div { class: "profile-form-heading",
-                        span { class: "heading-icon", "U" }
+                        User { class: "heading-icon", size: 18 }
                         h2 { "User Info" }
                     }
                     div { class: "profile-name-row",
@@ -44,7 +45,7 @@ pub fn ProfileView(logged_in: bool) -> Element {
                 }
                 form { class: "profile-form",
                     div { class: "profile-form-heading",
-                        span { class: "heading-icon", "S" }
+                        Shield { class: "heading-icon", size: 18 }
                         h2 { "Authorization" }
                     }
                     div { class: "profile-authorization-list",

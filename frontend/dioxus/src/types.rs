@@ -47,18 +47,6 @@ impl Route {
             Self::Login => "Login",
         }
     }
-
-    pub fn icon(self) -> &'static str {
-        match self {
-            Self::Home => "H",
-            Self::DataExplorer => "D",
-            Self::Templates => "T",
-            Self::Security => "S",
-            Self::Audit => "A",
-            Self::Profile => "U",
-            Self::Login => "L",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq)]

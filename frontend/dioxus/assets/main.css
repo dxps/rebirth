@@ -190,19 +190,15 @@ textarea {
 	color: var(--button-fg);
 }
 
-.nav-icon,
-.menu-icon,
+.app-icon,
 .heading-icon,
 .button-icon {
-	align-items: center;
-	border: 1px solid color-mix(in srgb, var(--fg) 28%, transparent);
-	border-radius: 999px;
-	display: inline-flex;
-	font-size: 0.68rem;
-	height: 1.15rem;
-	justify-content: center;
-	line-height: 1;
-	width: 1.15rem;
+	display: block;
+	flex: 0 0 auto;
+}
+
+.heading-icon {
+	color: var(--accent-strong);
 }
 
 .header-actions {
@@ -210,35 +206,6 @@ textarea {
 	display: flex;
 	gap: 0.35rem;
 	position: relative;
-}
-
-.menu-lines,
-.menu-lines::before,
-.menu-lines::after {
-	background: currentColor;
-	border-radius: 99px;
-	display: block;
-	height: 2px;
-	width: 1.05rem;
-}
-
-.menu-lines {
-	position: relative;
-}
-
-.menu-lines::before,
-.menu-lines::after {
-	content: "";
-	left: 0;
-	position: absolute;
-}
-
-.menu-lines::before {
-	top: -0.34rem;
-}
-
-.menu-lines::after {
-	top: 0.34rem;
 }
 
 .user-menu {
@@ -624,9 +591,12 @@ textarea {
 }
 
 .draggable-modal-body {
+	cursor: grab;
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr);
 	height: 100%;
+	touch-action: none;
+	user-select: none;
 }
 
 .draggable-modal-header {
@@ -638,11 +608,9 @@ textarea {
 	justify-content: space-between;
 	min-height: 2.65rem;
 	padding: 0.35rem 0.5rem 0.35rem 0.75rem;
-	touch-action: none;
-	user-select: none;
 }
 
-.draggable-modal.is-dragging .draggable-modal-header {
+.draggable-modal.is-dragging .draggable-modal-body {
 	cursor: grabbing;
 }
 
@@ -667,6 +635,10 @@ textarea {
 .draggable-modal-content {
 	overflow: auto;
 	padding: 0.75rem;
+}
+
+.draggable-modal :where(button, input, label, textarea) {
+	user-select: auto;
 }
 
 .entity-template-edit-form {

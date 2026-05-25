@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use lucide_dioxus::{ArrowLeft, Pencil, X};
 
 use crate::types::{
     ModalDrag, ModalInteraction, ModalPosition, ModalResize, ModalSize, OpenModal,
@@ -31,12 +32,7 @@ pub fn open_modal(
 }
 
 fn next_modal_z_index(modals: &[OpenModal]) -> u32 {
-    modals
-        .iter()
-        .map(|modal| modal.z_index)
-        .max()
-        .unwrap_or(20)
-        + 1
+    modals.iter().map(|modal| modal.z_index).max().unwrap_or(20) + 1
 }
 
 #[component]
@@ -110,33 +106,34 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                 open_modal.z_index = next_z_index;
                             }
                         },
-                        div { class: "draggable-modal-body",
+                        div {
+                            class: "draggable-modal-body",
+                            onpointerdown: move |event| {
+                                event.stop_propagation();
+
+                                let point = event.data().client_coordinates();
+                                let next_z_index = next_modal_z_index(&modals.read());
+
+                                if let Some(open_modal) = modals
+                                    .write()
+                                    .iter_mut()
+                                    .find(|open_modal| open_modal.id == modal.id)
+                                {
+                                    open_modal.z_index = next_z_index;
+                                }
+                                modal_interaction
+                                    .set(
+                                        Some(
+                                            ModalInteraction::Drag(ModalDrag {
+                                                modal_id: modal.id,
+                                                offset_x: point.x - modal.position.x,
+                                                offset_y: point.y - modal.position.y,
+                                            }),
+                                        ),
+                                    );
+                            },
                             div {
                                 class: "draggable-modal-header",
-                                onpointerdown: move |event| {
-                                    event.stop_propagation();
-
-                                    let point = event.data().client_coordinates();
-                                    let next_z_index = next_modal_z_index(&modals.read());
-
-                                    if let Some(open_modal) = modals
-                                        .write()
-                                        .iter_mut()
-                                        .find(|open_modal| open_modal.id == modal.id)
-                                    {
-                                        open_modal.z_index = next_z_index;
-                                    }
-                                    modal_interaction
-                                        .set(
-                                            Some(
-                                                ModalInteraction::Drag(ModalDrag {
-                                                    modal_id: modal.id,
-                                                    offset_x: point.x - modal.position.x,
-                                                    offset_y: point.y - modal.position.y,
-                                                }),
-                                            ),
-                                        );
-                                },
                                 h2 { "{modal.title}" }
                                 div {
                                     class: "draggable-modal-titlebar-actions",
@@ -144,27 +141,31 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     button {
                                         class: "draggable-modal-titlebar-button",
                                         title: "Back",
-                                        "<"
+                                        aria_label: "Back",
+                                        ArrowLeft { class: "app-icon", size: 15 }
                                     }
                                     button {
                                         class: "draggable-modal-titlebar-button",
                                         title: "Edit",
-                                        "Edit"
+                                        aria_label: "Edit",
+                                        Pencil { class: "app-icon", size: 15 }
                                     }
                                     button {
                                         class: "draggable-modal-titlebar-button draggable-modal-close",
                                         title: "Close",
+                                        aria_label: "Close",
                                         onclick: move |_| {
                                             modal_interaction.set(None);
                                             modals.write().retain(|open_modal| open_modal.id != modal.id);
                                         },
-                                        "X"
+                                        X { class: "app-icon", size: 15 }
                                     }
                                 }
                             }
                             div { class: "draggable-modal-content",
                                 div { class: "entity-template-edit-form entity-template-view-form",
                                     label {
+                                        onpointerdown: move |event| event.stop_propagation(),
                                         span { "Name" }
                                         input {
                                             value: "{modal.title}",
@@ -172,6 +173,7 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                         }
                                     }
                                     label {
+                                        onpointerdown: move |event| event.stop_propagation(),
                                         span { "Description" }
                                         textarea { readonly: true,
                                             "Dioxus modal surface mirroring the draggable editor/detail panels from the TypeScript UI."
@@ -180,18 +182,21 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     div { class: "entity-template-tabs",
                                         div { class: "entity-template-tab-list",
                                             button { class: "entity-template-tab is-active",
+                                                onpointerdown: move |event| event.stop_propagation(),
                                                 "Attributes"
                                                 span { class: "entity-template-tab-badge",
                                                     "4"
                                                 }
                                             }
                                             button { class: "entity-template-tab",
+                                                onpointerdown: move |event| event.stop_propagation(),
                                                 "Links"
                                                 span { class: "entity-template-tab-badge",
                                                     "2"
                                                 }
                                             }
                                             button { class: "entity-template-tab",
+                                                onpointerdown: move |event| event.stop_propagation(),
                                                 "Inlinks"
                                                 span { class: "entity-template-tab-badge",
                                                     "1"

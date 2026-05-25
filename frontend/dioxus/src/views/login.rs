@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use lucide_dioxus::{Eye, EyeOff, LogIn};
 
 #[component]
 pub fn LoginView(on_login: EventHandler<MouseEvent>) -> Element {
@@ -13,7 +14,7 @@ pub fn LoginView(on_login: EventHandler<MouseEvent>) -> Element {
                     event.prevent_default();
                 },
                 div { class: "login-heading",
-                    span { class: "heading-icon", "L" }
+                    LogIn { class: "heading-icon", size: 18 }
                     h1 { id: "login-title", "Login" }
                 }
                 label {
@@ -39,9 +40,9 @@ pub fn LoginView(on_login: EventHandler<MouseEvent>) -> Element {
                             aria_label: if password_visible() { "Hide password" } else { "Show password" },
                             onclick: move |_| password_visible.toggle(),
                             if password_visible() {
-                                "Hide"
+                                Eye { class: "app-icon", size: 16 }
                             } else {
-                                "Show"
+                                EyeOff { class: "app-icon", size: 16 }
                             }
                         }
                     }
@@ -49,7 +50,7 @@ pub fn LoginView(on_login: EventHandler<MouseEvent>) -> Element {
                 button {
                     r#type: "button",
                     onclick: move |event| on_login.call(event),
-                    span { class: "button-icon", "L" }
+                    LogIn { class: "app-icon", size: 16 }
                     "Login"
                 }
             }

@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use lucide_dioxus::{ExternalLink, Plus};
 
 use crate::components::modal::open_modal;
 use crate::types::OpenModal;
@@ -14,14 +15,44 @@ struct TemplateRow {
 #[component]
 pub fn TemplatesView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> Element {
     let entity_templates = [
-        TemplateRow { name: "Researcher", description: "People, teams, and organizations that create knowledge.", owner: "admin", details: "6 attributes, 3 links" },
-        TemplateRow { name: "Document", description: "Source material with provenance and version metadata.", owner: "editor", details: "8 attributes, 2 links" },
-        TemplateRow { name: "Workstream", description: "Operational units for ongoing knowledge work.", owner: "admin", details: "5 attributes, 5 links" },
+        TemplateRow {
+            name: "Researcher",
+            description: "People, teams, and organizations that create knowledge.",
+            owner: "admin",
+            details: "6 attributes, 3 links",
+        },
+        TemplateRow {
+            name: "Document",
+            description: "Source material with provenance and version metadata.",
+            owner: "editor",
+            details: "8 attributes, 2 links",
+        },
+        TemplateRow {
+            name: "Workstream",
+            description: "Operational units for ongoing knowledge work.",
+            owner: "admin",
+            details: "5 attributes, 5 links",
+        },
     ];
     let attribute_templates = [
-        TemplateRow { name: "Title", description: "Human readable display name.", owner: "admin", details: "Text, required" },
-        TemplateRow { name: "Published at", description: "Date or timestamp for source publication.", owner: "editor", details: "DateTime" },
-        TemplateRow { name: "Verified", description: "Review state used by knowledge curators.", owner: "admin", details: "Boolean" },
+        TemplateRow {
+            name: "Title",
+            description: "Human readable display name.",
+            owner: "admin",
+            details: "Text, required",
+        },
+        TemplateRow {
+            name: "Published at",
+            description: "Date or timestamp for source publication.",
+            owner: "editor",
+            details: "DateTime",
+        },
+        TemplateRow {
+            name: "Verified",
+            description: "Review state used by knowledge curators.",
+            owner: "admin",
+            details: "Boolean",
+        },
     ];
 
     rsx! {
@@ -56,8 +87,9 @@ fn TemplateSection(
                 button {
                     class: "section-action-button",
                     title: "Create template",
+                    aria_label: "Create template",
                     onclick: move |_| open_modal(modals, next_modal_id, "Template :: New"),
-                    "+"
+                    Plus { class: "app-icon", size: 16 }
                 }
             }
             div { class: "data-table-wrap templates-table-wrap",
@@ -82,8 +114,9 @@ fn TemplateSection(
                                     button {
                                         class: "icon-only-button",
                                         title: "Open template",
+                                        aria_label: "Open template",
                                         onclick: move |_| open_modal(modals, next_modal_id, row.name),
-                                        "Open"
+                                        ExternalLink { class: "app-icon", size: 15 }
                                     }
                                 }
                             }
