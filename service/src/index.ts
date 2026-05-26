@@ -17,6 +17,7 @@ import {
 	isUpdateEntityInput,
 	isUpdateEntityTemplateInput,
 	isUpdatePasswordInput,
+	isUpdatePasswordInputWithShortNewPassword,
 	isUpdateUserInfoInput,
 	isUpdateUserInput,
 	isUserId,
@@ -1143,6 +1144,18 @@ async function handleRequest(request: Request): Promise<Response> {
 
 			try {
 				const input = await request.json()
+
+				if (isUpdatePasswordInputWithShortNewPassword(input)) {
+					return Response.json(
+						{
+							error: 'Password must be at least 8 characters long',
+						},
+						{
+							headers: jsonHeaders,
+							status: 400,
+						},
+					)
+				}
 
 				if (!isUpdatePasswordInput(input)) {
 					return Response.json(

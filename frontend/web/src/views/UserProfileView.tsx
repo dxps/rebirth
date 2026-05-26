@@ -17,6 +17,7 @@ export function UserProfileView() {
 	const [username, setUsername] = useState(storedAuth?.user.username ?? '')
 	const [currentPassword, setCurrentPassword] = useState('')
 	const [newPassword, setNewPassword] = useState('')
+	const [confirmPassword, setConfirmPassword] = useState('')
 	const [userInfoStatus, setUserInfoStatus] = useState<string | null>(null)
 	const [passwordStatus, setPasswordStatus] = useState<string | null>(null)
 	const [userInfoError, setUserInfoError] = useState<string | null>(null)
@@ -26,7 +27,8 @@ export function UserProfileView() {
 	const canUpdatePassword =
 		currentPassword.length > 0 &&
 		newPassword.length > 0 &&
-		currentPassword === newPassword
+		confirmPassword.length > 0 &&
+		newPassword === confirmPassword
 
 	useEffect(() => {
 		const nextAuth = getStoredAuth()
@@ -147,7 +149,7 @@ export function UserProfileView() {
 		}
 
 		if (!canUpdatePassword) {
-			setPasswordError('Both password fields must be filled with the same value.')
+			setPasswordError('New password and confirm password must match.')
 			return
 		}
 
@@ -181,6 +183,7 @@ export function UserProfileView() {
 
 			setCurrentPassword('')
 			setNewPassword('')
+			setConfirmPassword('')
 			setPasswordStatus('Password updated.')
 		} catch (error) {
 			setPasswordError(
@@ -300,6 +303,17 @@ export function UserProfileView() {
 							value={newPassword}
 							onChange={(event) =>
 								setNewPassword(event.target.value)
+							}
+						/>
+					</label>
+					<label>
+						<span>Confirm password</span>
+						<input
+							autoComplete="new-password"
+							type="password"
+							value={confirmPassword}
+							onChange={(event) =>
+								setConfirmPassword(event.target.value)
 							}
 						/>
 					</label>

@@ -294,6 +294,24 @@ export function isUpdatePasswordInput(
 	)
 }
 
+export function isUpdatePasswordInputWithShortNewPassword(
+	value: unknown,
+): value is UpdatePasswordInput {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const input = value as Record<string, unknown>
+
+	return (
+		typeof input.currentPassword === 'string' &&
+		input.currentPassword.length > 0 &&
+		typeof input.newPassword === 'string' &&
+		input.newPassword.length > 0 &&
+		input.newPassword.length < 8
+	)
+}
+
 export function isUpdateUserInput(value: unknown): value is UpdateUserInput {
 	if (!value || typeof value !== 'object') {
 		return false

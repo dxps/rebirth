@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
 use gloo_net::http::Request;
-use lucide_dioxus::{Eye, EyeOff, LogIn};
+use lucide_dioxus::LogIn;
 
+use crate::components::password_input::PasswordInput;
 use crate::types::{AuthSession, LoginInput, LoginResponse, API_BASE_URL};
 
 #[component]
 pub fn LoginView(on_login: EventHandler<AuthSession>) -> Element {
-    let mut password_visible = use_signal(|| false);
     let mut identifier = use_signal(String::new);
     let mut password = use_signal(String::new);
     let mut error = use_signal(|| None::<String>);
@@ -74,28 +74,12 @@ pub fn LoginView(on_login: EventHandler<AuthSession>) -> Element {
                         oninput: move |event| identifier.set(event.value()),
                     }
                 }
-                label {
-                    span { "Password" }
-                    span { class: "security-user-password-wrap login-password-wrap",
-                        input {
-                            name: "password",
-                            autocomplete: "current-password",
-                            r#type: if password_visible() { "text" } else { "password" },
-                            value: "{password}",
-                            oninput: move |event| password.set(event.value()),
-                        }
-                        button {
-                            class: "security-user-password-toggle",
-                            r#type: "button",
-                            aria_label: if password_visible() { "Hide password" } else { "Show password" },
-                            onclick: move |_| password_visible.toggle(),
-                            if password_visible() {
-                                Eye { class: "app-icon", size: 16 }
-                            } else {
-                                EyeOff { class: "app-icon", size: 16 }
-                            }
-                        }
-                    }
+                PasswordInput {
+                    label: "Password",
+                    name: "password",
+                    autocomplete: "current-password",
+                    value: password(),
+                    on_change: move |value| password.set(value),
                 }
                 if let Some(message) = error() {
                     p { class: "form-error", "{message}" }

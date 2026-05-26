@@ -188,6 +188,14 @@ pub struct UpdateUserInfoInput {
     pub username: String,
 }
 
+#[derive(Serialize)]
+pub struct UpdatePasswordInput {
+    #[serde(rename = "currentPassword")]
+    pub current_password: String,
+    #[serde(rename = "newPassword")]
+    pub new_password: String,
+}
+
 #[derive(Deserialize)]
 pub struct UserResponse {
     pub data: User,
