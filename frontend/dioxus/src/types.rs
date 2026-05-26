@@ -123,12 +123,12 @@ pub enum ModalInteraction {
     Resize(ModalResize),
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct OpenModal {
     pub id: u32,
     pub position: ModalPosition,
     pub size: ModalSize,
-    pub title: &'static str,
+    pub title: String,
     pub z_index: u32,
 }
 
@@ -177,6 +177,21 @@ pub struct LoginInput {
 #[derive(Deserialize)]
 pub struct LoginResponse {
     pub data: AuthSession,
+}
+
+#[derive(Deserialize)]
+pub struct AccessLevelsResponse {
+    pub data: Vec<AccessLevel>,
+}
+
+#[derive(Deserialize)]
+pub struct PermissionsResponse {
+    pub data: Vec<Permission>,
+}
+
+#[derive(Deserialize)]
+pub struct UsersResponse {
+    pub data: Vec<User>,
 }
 
 #[derive(Serialize)]

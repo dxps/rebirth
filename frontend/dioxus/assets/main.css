@@ -614,6 +614,83 @@ textarea {
 	width: 3.4rem;
 }
 
+.data-table .data-table-empty-cell {
+	color: var(--muted);
+	font-style: italic;
+	text-align: center;
+}
+
+.data-table td.data-table-empty-cell:last-child {
+	text-align: center;
+	width: auto;
+}
+
+.security-access-levels-table,
+.security-users-table {
+	table-layout: fixed;
+}
+
+.security-access-levels-table th:first-child,
+.security-access-levels-table td:first-child,
+.security-users-table .security-users-username-column,
+.security-users-table td:first-child {
+	width: 18%;
+}
+
+.security-users-table .security-users-email-column,
+.security-users-table td:nth-child(2) {
+	width: 30%;
+}
+
+.security-users-table .security-users-permissions-column,
+.security-users-table td:nth-child(3) {
+	width: 23%;
+}
+
+.security-users-table .security-users-access-levels-column,
+.security-users-table td:nth-child(4) {
+	width: 26%;
+}
+
+.security-access-levels-table th.data-table-action-heading,
+.security-access-levels-table td:last-child,
+.security-users-table th.data-table-action-heading,
+.security-users-table td:last-child {
+	width: 2.15rem;
+}
+
+.security-access-levels-table th.data-table-action-heading,
+.security-users-table th.data-table-action-heading {
+	padding-right: 0.55rem;
+	text-align: right;
+}
+
+.security-table-wrap .data-table td {
+	background: transparent;
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+.security-table-wrap .data-table th {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+.security-table-wrap .data-table td:first-child,
+.security-table-wrap .data-table td:last-child {
+	border-radius: 0;
+}
+
+.security-table-wrap .data-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.security-table-wrap .data-table-row {
+	cursor: pointer;
+}
+
+.security-table-wrap .data-table-row:hover td {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
 .entity-link-summary {
 	background: color-mix(in srgb, var(--blue) 18%, transparent);
 	border-radius: 999px;

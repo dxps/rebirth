@@ -224,7 +224,11 @@ pub fn App() -> Element {
                         TemplatesView { modals, next_modal_id }
                     },
                     Route::Security => rsx! {
-                        SecurityView { modals, next_modal_id }
+                        SecurityView {
+                            auth_session: auth_session(),
+                            modals,
+                            next_modal_id,
+                        }
                     },
                     Route::Audit => rsx! {
                         AuditView { modals, next_modal_id }

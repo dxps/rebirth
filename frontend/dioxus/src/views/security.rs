@@ -1,78 +1,155 @@
 use dioxus::prelude::*;
-use lucide_dioxus::{ExternalLink, Plus};
+use gloo_net::http::Request;
+use lucide_dioxus::{Plus, RefreshCw};
 
 use crate::components::modal::open_modal;
-use crate::types::OpenModal;
-
-#[derive(Clone, Copy)]
-struct UserRow {
-    username: &'static str,
-    email: &'static str,
-    permissions: &'static str,
-    access: &'static str,
-}
+use crate::types::{
+    AccessLevel, AccessLevelsResponse, AuthSession, OpenModal, Permission, PermissionsResponse,
+    User, UsersResponse, API_BASE_URL,
+};
 
 #[component]
-pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> Element {
-    let users = [
-        UserRow {
-            username: "admin",
-            email: "admin@rebirth.local",
-            permissions: "Admin, Audit",
-            access: "System",
-        },
-        UserRow {
-            username: "editor",
-            email: "editor@rebirth.local",
-            permissions: "Editor",
-            access: "Curated Data",
-        },
-        UserRow {
-            username: "viewer",
-            email: "viewer@rebirth.local",
-            permissions: "Viewer",
-            access: "Published Data",
-        },
-    ];
+pub fn SecurityView(
+    auth_session: Option<AuthSession>,
+    modals: Signal<Vec<OpenModal>>,
+    next_modal_id: Signal<u32>,
+) -> Element {
+    let is_authenticated = auth_session.is_some();
+    let is_authorized = auth_session
+        .as_ref()
+        .is_some_and(|session| has_admin_permission(session));
+    let session_key = auth_session
+        .as_ref()
+        .filter(|session| has_admin_permission(session))
+        .map(|session| session.session_key.clone());
+    let initial_session_key = session_key.clone();
+    let access_refresh_session_key = session_key.clone();
+    let users_refresh_session_key = session_key.clone();
+    let access_levels = use_signal(Vec::<AccessLevel>::new);
+    let users = use_signal(Vec::<User>::new);
+    let _permissions = use_signal(Vec::<Permission>::new);
+    let access_levels_error = use_signal(|| None::<String>);
+    let users_error = use_signal(|| None::<String>);
+    let is_access_levels_loading = use_signal(|| is_authorized);
+    let is_users_loading = use_signal(|| is_authorized);
+    let mut has_loaded_security_data = use_signal(|| false);
+
+    use_effect(move || {
+        if has_loaded_security_data() {
+            return;
+        }
+
+        has_loaded_security_data.set(true);
+
+        if let Some(session_key) = initial_session_key.clone() {
+            load_access_levels(
+                session_key.clone(),
+                access_levels,
+                access_levels_error,
+                is_access_levels_loading,
+            );
+            load_users_and_permissions(
+                session_key,
+                users,
+                _permissions,
+                users_error,
+                is_users_loading,
+            );
+        }
+    });
+
+    if !is_authorized {
+        return rsx! {
+            section { class: "security-view",
+                div { class: "access-level-unavailable", role: "status",
+                    p {
+                        if is_authenticated {
+                            "You are not authorized to access this section."
+                        } else {
+                            "You must be authenticated to access this section."
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    let access_level_rows = access_levels.read().clone();
+    let user_rows = users.read().clone();
 
     rsx! {
         section { class: "security-view",
             div { class: "section-heading",
                 p { "Access Levels" }
-                button {
-                    class: "section-action-button",
-                    title: "Create access level",
-                    aria_label: "Create access level",
-                    onclick: move |_| open_modal(modals, next_modal_id, "Access Level :: New"),
-                    Plus { class: "app-icon", size: 16 }
-                }
             }
-            div { class: "data-table-wrap security-table-wrap",
-                table { class: "data-table security-access-levels-table",
-                    thead {
-                        tr {
-                            th { "Name" }
-                            th { "Description" }
-                            th { class: "data-table-action-heading", "" }
-                        }
+
+            if let Some(message) = access_levels_error() {
+                div { class: "access-level-unavailable", role: "status",
+                    p { "{message}" }
+                    button {
+                        class: "access-level-refresh-button",
+                        title: "Try again",
+                        aria_label: "Refresh access levels",
+                        onclick: move |_| {
+                            if let Some(session_key) = access_refresh_session_key.clone() {
+                                load_access_levels(
+                                    session_key,
+                                    access_levels,
+                                    access_levels_error,
+                                    is_access_levels_loading,
+                                );
+                            }
+                        },
+                        RefreshCw { class: "app-icon", size: 16 }
                     }
-                    tbody {
-                        for row in [
-                            ("System", "Full administrative control."),
-                            ("Curated Data", "Can create and update owned knowledge records."),
-                            ("Published Data", "Read-only access to released records."),
-                        ]
-                        {
-                            tr { class: "data-table-row",
-                                td { "{row.0}" }
-                                td { "{row.1}" }
-                                td {
+                }
+            } else {
+                div { class: "data-table-wrap security-table-wrap",
+                    table { class: "data-table security-access-levels-table",
+                        thead {
+                            tr {
+                                th { "name" }
+                                th { "description" }
+                                th { class: "data-table-action-heading",
                                     button {
-                                        class: "icon-only-button",
-                                        title: "Open access level",
-                                        aria_label: "Open access level",
-                                        onclick: move |_| open_modal(modals, next_modal_id, row.0),
-                                        ExternalLink { class: "app-icon", size: 15 }
+                                        class: "section-action-button",
+                                        title: "Add an access level",
+                                        aria_label: "Create access level",
+                                        onclick: move |_| open_modal(
+                                            modals,
+                                            next_modal_id,
+                                            "Access Level :: New",
+                                        ),
+                                        Plus { class: "app-icon", size: 16 }
+                                    }
+                                }
+                            }
+                        }
+                        tbody {
+                            if is_access_levels_loading() {
+                                tr {
+                                    td { colspan: "3", "Loading access levels" }
+                                }
+                            } else if access_level_rows.is_empty() {
+                                tr {
+                                    td { class: "data-table-empty-cell", colspan: "3",
+                                        span { "There are no entries" }
+                                    }
+                                }
+                            } else {
+                                for access_level in access_level_rows {
+                                    tr {
+                                        key: "{access_level.id}",
+                                        class: "data-table-row",
+                                        tabindex: "0",
+                                        onclick: move |_| open_modal(
+                                            modals,
+                                            next_modal_id,
+                                            access_level.name.clone(),
+                                        ),
+                                        td { "{access_level.name}" }
+                                        td { "{access_level.description}" }
+                                        td { aria_hidden: "true", "" }
                                     }
                                 }
                             }
@@ -80,41 +157,83 @@ pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) 
                     }
                 }
             }
+
             div { class: "section-heading security-users-heading",
                 p { "Users" }
-                button {
-                    class: "section-action-button",
-                    title: "Create user",
-                    aria_label: "Create user",
-                    onclick: move |_| open_modal(modals, next_modal_id, "User :: New"),
-                    Plus { class: "app-icon", size: 16 }
-                }
             }
-            div { class: "data-table-wrap security-table-wrap",
-                table { class: "data-table security-users-table",
-                    thead {
-                        tr {
-                            th { "Username" }
-                            th { "Email" }
-                            th { "Permissions" }
-                            th { "Access Levels" }
-                            th { class: "data-table-action-heading", "" }
-                        }
+
+            if let Some(message) = users_error() {
+                div { class: "access-level-unavailable", role: "status",
+                    p { "{message}" }
+                    button {
+                        class: "access-level-refresh-button",
+                        title: "Try again",
+                        aria_label: "Refresh users",
+                        onclick: move |_| {
+                            if let Some(session_key) = users_refresh_session_key.clone() {
+                                load_users_and_permissions(
+                                    session_key,
+                                    users,
+                                    _permissions,
+                                    users_error,
+                                    is_users_loading,
+                                );
+                            }
+                        },
+                        RefreshCw { class: "app-icon", size: 16 }
                     }
-                    tbody {
-                        for user in users {
-                            tr { class: "data-table-row",
-                                td { "{user.username}" }
-                                td { "{user.email}" }
-                                td { "{user.permissions}" }
-                                td { "{user.access}" }
-                                td {
+                }
+            } else {
+                div { class: "data-table-wrap security-table-wrap",
+                    table { class: "data-table security-users-table",
+                        thead {
+                            tr {
+                                th { class: "security-users-username-column", "username" }
+                                th { class: "security-users-email-column", "email" }
+                                th { class: "security-users-permissions-column", "permissions" }
+                                th { class: "security-users-access-levels-column", "access levels" }
+                                th { class: "data-table-action-heading",
                                     button {
-                                        class: "icon-only-button",
-                                        title: "Open user",
-                                        aria_label: "Open user",
-                                        onclick: move |_| open_modal(modals, next_modal_id, user.username),
-                                        ExternalLink { class: "app-icon", size: 15 }
+                                        class: "section-action-button",
+                                        title: "Add a user",
+                                        aria_label: "Create user",
+                                        onclick: move |_| open_modal(
+                                            modals,
+                                            next_modal_id,
+                                            "User :: New",
+                                        ),
+                                        Plus { class: "app-icon", size: 16 }
+                                    }
+                                }
+                            }
+                        }
+                        tbody {
+                            if is_users_loading() {
+                                tr {
+                                    td { colspan: "5", "Loading users" }
+                                }
+                            } else if user_rows.is_empty() {
+                                tr {
+                                    td { class: "data-table-empty-cell", colspan: "5",
+                                        span { "There are no entries" }
+                                    }
+                                }
+                            } else {
+                                for user in user_rows {
+                                    tr {
+                                        key: "{user.id}",
+                                        class: "data-table-row",
+                                        tabindex: "0",
+                                        onclick: move |_| open_modal(
+                                            modals,
+                                            next_modal_id,
+                                            user.username.clone(),
+                                        ),
+                                        td { "{user.username}" }
+                                        td { "{user.email}" }
+                                        td { "{permission_names(&user)}" }
+                                        td { "{access_level_names(&user)}" }
+                                        td { aria_hidden: "true", "" }
                                     }
                                 }
                             }
@@ -124,4 +243,138 @@ pub fn SecurityView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) 
             }
         }
     }
+}
+
+fn has_admin_permission(session: &AuthSession) -> bool {
+    session
+        .user
+        .permissions
+        .iter()
+        .any(|permission| permission.name == "Admin")
+}
+
+fn load_access_levels(
+    session_key: String,
+    mut access_levels: Signal<Vec<AccessLevel>>,
+    mut access_levels_error: Signal<Option<String>>,
+    mut is_access_levels_loading: Signal<bool>,
+) {
+    is_access_levels_loading.set(true);
+
+    spawn(async move {
+        let result = fetch_access_levels(session_key).await;
+
+        match result {
+            Ok(next_access_levels) => {
+                access_levels.set(next_access_levels);
+                access_levels_error.set(None);
+            }
+            Err(message) => access_levels_error.set(Some(message)),
+        }
+
+        is_access_levels_loading.set(false);
+    });
+}
+
+async fn fetch_access_levels(session_key: String) -> Result<Vec<AccessLevel>, String> {
+    let response = Request::get(&format!("{API_BASE_URL}/access-levels"))
+        .header("Authorization", &format!("Bearer {session_key}"))
+        .send()
+        .await
+        .map_err(|_| "Data is unavailable".to_string())?;
+
+    if !response.ok() {
+        return Err("Data is unavailable".to_string());
+    }
+
+    response
+        .json::<AccessLevelsResponse>()
+        .await
+        .map(|payload| payload.data)
+        .map_err(|_| "Data is unavailable".to_string())
+}
+
+fn load_users_and_permissions(
+    session_key: String,
+    mut users: Signal<Vec<User>>,
+    mut permissions: Signal<Vec<Permission>>,
+    mut users_error: Signal<Option<String>>,
+    mut is_users_loading: Signal<bool>,
+) {
+    is_users_loading.set(true);
+
+    spawn(async move {
+        let result = fetch_users_and_permissions(session_key).await;
+
+        match result {
+            Ok((next_users, next_permissions)) => {
+                users.set(
+                    next_users
+                        .into_iter()
+                        .filter(|user| user.username != "admin")
+                        .collect(),
+                );
+                permissions.set(next_permissions);
+                users_error.set(None);
+            }
+            Err(message) => users_error.set(Some(message)),
+        }
+
+        is_users_loading.set(false);
+    });
+}
+
+async fn fetch_users_and_permissions(
+    session_key: String,
+) -> Result<(Vec<User>, Vec<Permission>), String> {
+    let permissions_response = Request::get(&format!("{API_BASE_URL}/permissions"))
+        .send()
+        .await
+        .map_err(|_| "Unable to load permissions".to_string())?;
+
+    if !permissions_response.ok() {
+        return Err("Unable to load permissions".to_string());
+    }
+
+    let users_response = Request::get(&format!("{API_BASE_URL}/users"))
+        .header("Authorization", &format!("Bearer {session_key}"))
+        .send()
+        .await
+        .map_err(|_| "Users are unavailable".to_string())?;
+
+    if !users_response.ok() {
+        return Err(match users_response.status() {
+            401 | 403 => "Admin permission is required to manage users".to_string(),
+            _ => "Unable to load users".to_string(),
+        });
+    }
+
+    let permissions = permissions_response
+        .json::<PermissionsResponse>()
+        .await
+        .map(|payload| payload.data)
+        .map_err(|_| "Unable to load permissions".to_string())?;
+    let users = users_response
+        .json::<UsersResponse>()
+        .await
+        .map(|payload| payload.data)
+        .map_err(|_| "Users are unavailable".to_string())?;
+
+    Ok((users, permissions))
+}
+
+fn permission_names(user: &User) -> String {
+    user.permissions
+        .iter()
+        .map(|permission| permission.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn access_level_names(user: &User) -> String {
+    user.access_levels
+        .iter()
+        .map(|access_level| access_level.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
 }

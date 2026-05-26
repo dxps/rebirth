@@ -9,7 +9,7 @@ use crate::types::{
 pub fn open_modal(
     mut modals: Signal<Vec<OpenModal>>,
     mut next_modal_id: Signal<u32>,
-    title: &'static str,
+    title: impl Into<String>,
 ) {
     let id = next_modal_id();
     let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
@@ -26,7 +26,7 @@ pub fn open_modal(
             height: MODAL_DEFAULT_HEIGHT,
             width: MODAL_DEFAULT_WIDTH,
         },
-        title,
+        title: title.into(),
         z_index,
     });
 }
@@ -83,7 +83,7 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                 onpointerup: move |_| modal_interaction.set(None),
                 onpointercancel: move |_| modal_interaction.set(None),
 
-                for modal in modals.read().iter().copied() {
+                for modal in modals.read().iter().cloned() {
                     div {
                         key: "{modal.id}",
                         class: match modal_interaction() {
