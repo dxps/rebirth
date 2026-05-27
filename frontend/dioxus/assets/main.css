@@ -128,9 +128,7 @@ textarea:focus {
 	display: none;
 }
 
-[data-tooltip]:hover::after,
-[data-tooltip]:focus-visible::after,
-[data-tooltip]:focus-within::after {
+[data-tooltip]:hover::after {
 	opacity: 1;
 	transform: var(--tooltip-visible-transform);
 }
@@ -826,7 +824,7 @@ textarea {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	overflow: hidden;
+	overflow: visible;
 	position: relative;
 	touch-action: none;
 	user-select: none;
@@ -930,14 +928,17 @@ textarea {
 	position: absolute;
 	top: calc(100% + 0.45rem);
 	transform: translateX(-50%);
+	user-select: text;
 	z-index: 3;
 }
 
 .entity-id-popover-title {
 	color: var(--fg);
+	cursor: text;
 	font-size: 0.78rem;
 	line-height: 1.2;
 	margin: 0;
+	user-select: text;
 	white-space: nowrap;
 }
 

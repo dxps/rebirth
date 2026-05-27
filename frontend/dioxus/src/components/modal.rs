@@ -406,6 +406,26 @@ fn set_access_level_delete_confirm(
     }
 }
 
+fn close_modal_popovers(mut modals: Signal<Vec<OpenModal>>, modal_id: u32) {
+    if let Some(open_modal) = modals
+        .write()
+        .iter_mut()
+        .find(|open_modal| open_modal.id == modal_id)
+    {
+        match &mut open_modal.content {
+            ModalContent::AccessLevel(access_level) => {
+                access_level.is_delete_confirm_open = false;
+                access_level.is_info_open = false;
+            }
+            ModalContent::User(user) => {
+                user.is_delete_confirm_open = false;
+                user.is_info_open = false;
+            }
+            ModalContent::Generic => {}
+        }
+    }
+}
+
 fn is_built_in_access_level(access_level: &AccessLevelModal) -> bool {
     access_level.id.is_some_and(|id| id <= 4)
 }
@@ -923,12 +943,15 @@ fn ModalTitlebarActions(
                                 aria_expanded: "{is_info_open}",
                                 onclick: move |_| toggle_access_level_info(modals, modal_id),
                                 Info { class: "app-icon", size: 15 }
-                            }
-                            if is_info_open {
-                                div { class: "entity-id-popover",
-                                    p {
-                                        class: "entity-id-popover-title",
-                                        "data-selectable": "true",
+                                }
+                                if is_info_open {
+                                    div {
+                                        class: "entity-id-popover",
+                                        onclick: move |event| event.stop_propagation(),
+                                        onpointerdown: move |event| event.stop_propagation(),
+                                        p {
+                                            class: "entity-id-popover-title",
+                                            "data-selectable": "true",
                                         "id: {id}"
                                     }
                                 }
@@ -1050,12 +1073,15 @@ fn ModalTitlebarActions(
                                     |user| user.is_info_open = !user.is_info_open,
                                 ),
                                 Info { class: "app-icon", size: 15 }
-                            }
-                            if is_info_open {
-                                div { class: "entity-id-popover",
-                                    p {
-                                        class: "entity-id-popover-title",
-                                        "data-selectable": "true",
+                                }
+                                if is_info_open {
+                                    div {
+                                        class: "entity-id-popover",
+                                        onclick: move |event| event.stop_propagation(),
+                                        onpointerdown: move |event| event.stop_propagation(),
+                                        p {
+                                            class: "entity-id-popover-title",
+                                            "data-selectable": "true",
                                         "id: {id}"
                                     }
                                 }
@@ -1192,12 +1218,13 @@ fn DeleteConfirmPopover(
     on_confirm: EventHandler<MouseEvent>,
 ) -> Element {
     rsx! {
-        div {
-            class: "delete-confirm-popover",
-            role: "dialog",
-            aria_label: "Confirm delete access level",
-            onpointerdown: move |event| event.stop_propagation(),
-            p { "Delete this entry?" }
+            div {
+                class: "delete-confirm-popover",
+                role: "dialog",
+                aria_label: "Confirm delete access level",
+                onclick: move |event| event.stop_propagation(),
+                onpointerdown: move |event| event.stop_propagation(),
+                p { "Delete this entry?" }
             div {
                 button {
                     class: "delete-confirm-secondary",
@@ -1623,24 +1650,26 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                 open_modal.z_index = next_z_index;
                             }
                         },
-                        div {
-                            class: "draggable-modal-body",
-                            onpointerdown: move |event| {
-                                event.stop_propagation();
+                            div {
+                                class: "draggable-modal-body",
+                                onclick: move |_| close_modal_popovers(modals, modal.id),
+                                onpointerdown: move |event| {
+                                    event.stop_propagation();
 
-                                let point = event.data().client_coordinates();
-                                let next_z_index = next_modal_z_index(&modals.read());
+                                    let point = event.data().client_coordinates();
+                                    let next_z_index = next_modal_z_index(&modals.read());
 
-                                if let Some(open_modal) = modals
-                                    .write()
-                                    .iter_mut()
-                                    .find(|open_modal| open_modal.id == modal.id)
-                                {
-                                    open_modal.z_index = next_z_index;
-                                }
-                                modal_interaction
-                                    .set(
-                                        Some(
+                                    if let Some(open_modal) = modals
+                                        .write()
+                                        .iter_mut()
+                                        .find(|open_modal| open_modal.id == modal.id)
+                                    {
+                                        open_modal.z_index = next_z_index;
+                                    }
+                                    close_modal_popovers(modals, modal.id);
+                                    modal_interaction
+                                        .set(
+                                            Some(
                                             ModalInteraction::Drag(ModalDrag {
                                                 modal_id: modal.id,
                                                 offset_x: point.x - modal.position.x,
@@ -1649,12 +1678,13 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                         ),
                                     );
                             },
-                            div { class: "draggable-modal-header",
-                                h2 { "{modal.title}" }
-                                div {
-                                    class: "draggable-modal-titlebar-actions",
-                                    onpointerdown: move |event| event.stop_propagation(),
-                                    ModalTitlebarActions {
+                                div { class: "draggable-modal-header",
+                                    h2 { "{modal.title}" }
+                                    div {
+                                        class: "draggable-modal-titlebar-actions",
+                                        onclick: move |event| event.stop_propagation(),
+                                        onpointerdown: move |event| event.stop_propagation(),
+                                        ModalTitlebarActions {
                                         modal: modal.clone(),
                                         modals,
                                         modal_interaction,
@@ -1671,9 +1701,9 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     }
                                 }
                             }
-                            div { class: "draggable-modal-content",
-                                ModalContentView { modal: modal.clone(), modals }
-                            }
+                                div { class: "draggable-modal-content",
+                                    ModalContentView { modal: modal.clone(), modals }
+                                }
                         }
                         span {
                             class: "draggable-modal-resize",
