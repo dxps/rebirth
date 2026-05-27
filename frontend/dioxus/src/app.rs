@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 use crate::components::header::Header;
 use crate::components::modal::ModalLayer;
@@ -18,6 +20,13 @@ use crate::views::templates::TemplatesView;
 const THEME_STORAGE_KEY: &str = "rebirth.theme";
 #[cfg(target_arch = "wasm32")]
 const AUTH_STORAGE_KEY: &str = "rebirth.auth";
+
+#[cfg(target_arch = "wasm32")]
+const FONT_FACE_STYLE_ID: &str = "rebirth-work-sans-fonts";
+#[cfg(target_arch = "wasm32")]
+const FAVICON_LINK_ID: &str = "rebirth-favicon";
+#[cfg(target_arch = "wasm32")]
+const MAIN_CSS_LINK_ID: &str = "rebirth-main-css";
 
 fn load_stored_theme() -> Theme {
     load_stored_theme_value()
@@ -140,6 +149,141 @@ fn push_route_path(route: Route) {
 #[cfg(not(target_arch = "wasm32"))]
 fn push_route_path(_route: Route) {}
 
+fn install_head_assets() {
+    install_head_assets_value(
+        &FAVICON.to_string(),
+        &MAIN_CSS.to_string(),
+        &WORK_SANS_300_NORMAL.to_string(),
+        &WORK_SANS_400_NORMAL.to_string(),
+        &WORK_SANS_400_ITALIC.to_string(),
+        &WORK_SANS_600_NORMAL.to_string(),
+    );
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_head_assets_value(
+    favicon: &str,
+    main_css: &str,
+    work_sans_300_normal: &str,
+    work_sans_400_normal: &str,
+    work_sans_400_italic: &str,
+    work_sans_600_normal: &str,
+) {
+    let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+        return;
+    };
+    let Some(head) = document.head() else {
+        return;
+    };
+
+    cleanup_legacy_head_assets(&document);
+
+    if document.get_element_by_id(FAVICON_LINK_ID).is_none() {
+        if let Ok(link) = document.create_element("link") {
+            link.set_id(FAVICON_LINK_ID);
+            let _ = link.set_attribute("rel", "icon");
+            let _ = link.set_attribute("href", favicon);
+            let _ = head.append_child(&link);
+        }
+    }
+
+    if document.get_element_by_id(MAIN_CSS_LINK_ID).is_none() {
+        if let Ok(link) = document.create_element("link") {
+            link.set_id(MAIN_CSS_LINK_ID);
+            let _ = link.set_attribute("rel", "stylesheet");
+            let _ = link.set_attribute("type", "text/css");
+            let _ = link.set_attribute("href", main_css);
+            let _ = head.append_child(&link);
+        }
+    }
+
+    if document.get_element_by_id(FONT_FACE_STYLE_ID).is_none() {
+        if let Ok(style) = document.create_element("style") {
+            style.set_id(FONT_FACE_STYLE_ID);
+            style.set_text_content(Some(&format!(
+                r#"
+@font-face {{
+    font-display: swap;
+    font-family: "Work Sans";
+    font-style: normal;
+    font-weight: 300;
+    src: url("{work_sans_300_normal}") format("woff2");
+}}
+
+@font-face {{
+    font-display: swap;
+    font-family: "Work Sans";
+    font-style: normal;
+    font-weight: 400;
+    src: url("{work_sans_400_normal}") format("woff2");
+}}
+
+@font-face {{
+    font-display: swap;
+    font-family: "Work Sans";
+    font-style: italic;
+    font-weight: 400;
+    src: url("{work_sans_400_italic}") format("woff2");
+}}
+
+@font-face {{
+    font-display: swap;
+    font-family: "Work Sans";
+    font-style: normal;
+    font-weight: 600;
+    src: url("{work_sans_600_normal}") format("woff2");
+}}
+"#
+            )));
+            let _ = head.append_child(&style);
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn cleanup_legacy_head_assets(document: &web_sys::Document) {
+    if let Ok(nodes) = document.query_selector_all("style, link") {
+        for index in 0..nodes.length() {
+            let Some(node) = nodes.item(index) else {
+                continue;
+            };
+            let Some(element) = node.dyn_ref::<web_sys::Element>() else {
+                continue;
+            };
+
+            if !element.id().is_empty() {
+                continue;
+            }
+
+            let tag_name = element.tag_name();
+            let text = element.text_content().unwrap_or_default();
+            let href = element.get_attribute("href").unwrap_or_default();
+            let rel = element.get_attribute("rel").unwrap_or_default();
+            let is_legacy_font_style =
+                tag_name == "STYLE" && text.contains("Work Sans") && text.contains("@font-face");
+            let is_legacy_main_css =
+                tag_name == "LINK" && rel == "stylesheet" && href.contains("/assets/main-");
+            let is_legacy_favicon =
+                tag_name == "LINK" && rel == "icon" && href.contains("/assets/favicon-");
+
+            if is_legacy_font_style || is_legacy_main_css || is_legacy_favicon {
+                element.remove();
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn install_head_assets_value(
+    _favicon: &str,
+    _main_css: &str,
+    _work_sans_300_normal: &str,
+    _work_sans_400_normal: &str,
+    _work_sans_400_italic: &str,
+    _work_sans_600_normal: &str,
+) {
+}
+
 #[component]
 pub fn App() -> Element {
     let mut theme = use_signal(load_stored_theme);
@@ -151,46 +295,9 @@ pub fn App() -> Element {
     let mut security_access_levels = use_signal(Vec::<AccessLevel>::new);
     let mut security_users = use_signal(Vec::<User>::new);
     let mut security_permissions = use_signal(Vec::<Permission>::new);
+    use_hook(install_head_assets);
 
     rsx! {
-        document::Link { rel: "icon", href: FAVICON }
-        document::Style {
-            r#"
-                @font-face {{
-                    font-family: "Work Sans";
-                    font-style: normal;
-                    font-weight: 300;
-                    font-display: swap;
-                    src: url("{WORK_SANS_300_NORMAL}") format("woff2");
-                }}
-
-                @font-face {{
-                    font-family: "Work Sans";
-                    font-style: normal;
-                    font-weight: 400;
-                    font-display: swap;
-                    src: url("{WORK_SANS_400_NORMAL}") format("woff2");
-                }}
-
-                @font-face {{
-                    font-family: "Work Sans";
-                    font-style: italic;
-                    font-weight: 400;
-                    font-display: swap;
-                    src: url("{WORK_SANS_400_ITALIC}") format("woff2");
-                }}
-
-                @font-face {{
-                    font-family: "Work Sans";
-                    font-style: normal;
-                    font-weight: 600;
-                    font-display: swap;
-                    src: url("{WORK_SANS_600_NORMAL}") format("woff2");
-                }}
-            "#
-        }
-        document::Stylesheet { href: MAIN_CSS }
-
         div { class: "app-root", "data-theme": "{theme.read().as_str()}",
             Header {
                 route: route(),
