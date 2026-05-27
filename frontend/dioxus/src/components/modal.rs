@@ -144,6 +144,10 @@ fn set_access_level_mode(
             open_modal.title = access_level_modal_title(mode).to_string();
         }
     }
+
+    if mode == SecurityModalMode::Edit {
+        focus_element_by_id_after_tick(&format!("access-level-name-{modal_id}-edit"));
+    }
 }
 
 fn update_access_level_name(mut modals: Signal<Vec<OpenModal>>, modal_id: u32, name: String) {
@@ -409,6 +413,47 @@ fn json_string(value: &str) -> String {
     )
 }
 
+fn focus_element_by_id(id: &str) {
+    focus_element_by_id_impl(id);
+}
+
+fn focus_element_by_id_after_tick(id: &str) {
+    focus_element_by_id_after_tick_impl(id);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn focus_element_by_id_impl(id: &str) {
+    if let Some(element) = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.get_element_by_id(id))
+    {
+        if let Some(element) = wasm_bindgen::JsCast::dyn_ref::<web_sys::HtmlElement>(&element) {
+            let _ = element.focus();
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn focus_element_by_id_after_tick_impl(id: &str) {
+    if let Some(window) = web_sys::window() {
+        let id = id.to_string();
+        let callback = wasm_bindgen::closure::Closure::once(move || {
+            focus_element_by_id(&id);
+        });
+        let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+            wasm_bindgen::JsCast::unchecked_ref(callback.as_ref()),
+            0,
+        );
+        callback.forget();
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn focus_element_by_id_impl(_id: &str) {}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn focus_element_by_id_after_tick_impl(_id: &str) {}
+
 #[component]
 fn ModalTitlebarActions(
     modal: OpenModal,
@@ -511,20 +556,17 @@ fn ModalTitlebarActions(
                             }
                         }
                     }
-                    button {
-                        class: "draggable-modal-titlebar-button",
-                        "data-tooltip": "Back to view",
-                        aria_label: "Back to access level details",
-                        disabled: is_saving,
-                        onclick: move |_| {
-                            if has_id {
+                    if has_id {
+                        button {
+                            class: "draggable-modal-titlebar-button",
+                            "data-tooltip": "Back to view",
+                            aria_label: "Back to access level details",
+                            disabled: is_saving,
+                            onclick: move |_| {
                                 set_access_level_mode(modals, modal_id, SecurityModalMode::Details);
-                            } else {
-                                modal_interaction.set(None);
-                                modals.write().retain(|open_modal| open_modal.id != modal_id);
-                            }
-                        },
-                        ArrowLeft { class: "app-icon", size: 15 }
+                            },
+                            ArrowLeft { class: "app-icon", size: 15 }
+                        }
                     }
                     button {
                         class: "draggable-modal-titlebar-button",
@@ -604,12 +646,35 @@ fn ModalContentView(modal: OpenModal, modals: Signal<Vec<OpenModal>>) -> Element
             } else {
                 "access-level-edit-form"
             };
+            let form_key = match access_level.mode {
+                SecurityModalMode::Create => "create",
+                SecurityModalMode::Details => "details",
+                SecurityModalMode::Edit => "edit",
+            };
+            let name_input_id = format!("access-level-name-{}-{form_key}", modal.id);
+            let focus_input_id = name_input_id.clone();
+
+            use_effect(move || {
+                if !is_readonly {
+                    focus_element_by_id(&focus_input_id);
+                }
+            });
 
             rsx! {
-                div { class: "{form_class}", "data-selectable": "true",
+                div {
+                    class: "{form_class}",
+                    "data-selectable": "true",
                     label { onpointerdown: move |event| event.stop_propagation(),
                         span { "name" }
                         input {
+                            key: "{modal.id}-{form_key}-name",
+                            id: "{name_input_id}",
+                            autofocus: !is_readonly,
+                            onmounted: move |event| async move {
+                                if !is_readonly {
+                                    let _ = event.set_focus(true).await;
+                                }
+                            },
                             readonly: is_readonly,
                             disabled: access_level.is_saving,
                             r#type: "text",
