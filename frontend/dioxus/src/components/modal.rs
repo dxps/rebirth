@@ -386,6 +386,9 @@ fn toggle_access_level_info(mut modals: Signal<Vec<OpenModal>>, modal_id: u32) {
     {
         if let ModalContent::AccessLevel(access_level) = &mut open_modal.content {
             access_level.is_info_open = !access_level.is_info_open;
+            if access_level.is_info_open {
+                access_level.is_delete_confirm_open = false;
+            }
         }
     }
 }
@@ -402,6 +405,9 @@ fn set_access_level_delete_confirm(
     {
         if let ModalContent::AccessLevel(access_level) = &mut open_modal.content {
             access_level.is_delete_confirm_open = is_open;
+            if is_open {
+                access_level.is_info_open = false;
+            }
         }
     }
 }
@@ -1070,7 +1076,12 @@ fn ModalTitlebarActions(
                                 onclick: move |_| update_user_modal(
                                     modals,
                                     modal_id,
-                                    |user| user.is_info_open = !user.is_info_open,
+                                    |user| {
+                                        user.is_info_open = !user.is_info_open;
+                                        if user.is_info_open {
+                                            user.is_delete_confirm_open = false;
+                                        }
+                                    },
                                 ),
                                 Info { class: "app-icon", size: 15 }
                                 }
@@ -1095,11 +1106,14 @@ fn ModalTitlebarActions(
                             aria_label: "Delete user",
                             aria_expanded: "{is_delete_confirm_open}",
                             disabled: is_saving,
-                            onclick: move |_| update_user_modal(
-                                modals,
-                                modal_id,
-                                |user| user.is_delete_confirm_open = true,
-                            ),
+                                onclick: move |_| update_user_modal(
+                                    modals,
+                                    modal_id,
+                                    |user| {
+                                        user.is_delete_confirm_open = true;
+                                        user.is_info_open = false;
+                                    },
+                                ),
                             Trash2 { class: "app-icon", size: 15 }
                         }
                         if is_delete_confirm_open {
@@ -1133,11 +1147,14 @@ fn ModalTitlebarActions(
                                 aria_label: "Delete user",
                                 aria_expanded: "{is_delete_confirm_open}",
                                 disabled: is_saving,
-                                onclick: move |_| update_user_modal(
-                                    modals,
-                                    modal_id,
-                                    |user| user.is_delete_confirm_open = true,
-                                ),
+                                    onclick: move |_| update_user_modal(
+                                        modals,
+                                        modal_id,
+                                        |user| {
+                                            user.is_delete_confirm_open = true;
+                                            user.is_info_open = false;
+                                        },
+                                    ),
                                 Trash2 { class: "app-icon", size: 15 }
                             }
                             if is_delete_confirm_open {
