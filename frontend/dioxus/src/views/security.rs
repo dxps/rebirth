@@ -74,7 +74,14 @@ pub fn SecurityView(
         };
     }
 
-    let access_level_rows = access_levels.read().clone();
+    let access_level_modal_session_key = session_key.clone().unwrap_or_default();
+    let access_level_create_session_key = access_level_modal_session_key.clone();
+    let access_level_rows = access_levels
+        .read()
+        .iter()
+        .cloned()
+        .map(|access_level| (access_level, access_level_modal_session_key.clone()))
+        .collect::<Vec<_>>();
     let user_rows = users.read().clone();
 
     rsx! {
@@ -118,6 +125,8 @@ pub fn SecurityView(
                                         onclick: move |_| open_access_level_modal(
                                             modals,
                                             next_modal_id,
+                                            access_level_create_session_key.clone(),
+                                            access_levels,
                                             None,
                                         ),
                                         Plus { class: "app-icon", size: 16 }
@@ -137,7 +146,7 @@ pub fn SecurityView(
                                     }
                                 }
                             } else {
-                                for access_level in access_level_rows {
+                                for (access_level, row_session_key) in access_level_rows {
                                     tr {
                                         key: "{access_level.id}",
                                         class: "data-table-row",
@@ -145,10 +154,12 @@ pub fn SecurityView(
                                         onclick: move |_| open_access_level_modal(
                                             modals,
                                             next_modal_id,
+                                            row_session_key.clone(),
+                                            access_levels,
                                             Some(access_level.clone()),
                                         ),
                                         td { "{access_level.name}" }
-                                        td { "{access_level.description}" }
+                                        td { class: "data-table-muted-cell", "{access_level.description}" }
                                         td { aria_hidden: "true", "" }
                                     }
                                 }

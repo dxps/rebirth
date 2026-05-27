@@ -131,10 +131,16 @@ pub enum SecurityModalMode {
 
 #[derive(Clone, PartialEq)]
 pub struct AccessLevelModal {
+    pub access_levels: Signal<Vec<AccessLevel>>,
     pub description: String,
+    pub error: Option<String>,
     pub id: Option<u32>,
+    pub is_delete_confirm_open: bool,
+    pub is_info_open: bool,
+    pub is_saving: bool,
     pub mode: SecurityModalMode,
     pub name: String,
+    pub session_key: String,
 }
 
 #[derive(Clone, PartialEq)]
@@ -203,6 +209,23 @@ pub struct LoginResponse {
 #[derive(Deserialize)]
 pub struct AccessLevelsResponse {
     pub data: Vec<AccessLevel>,
+}
+
+#[derive(Deserialize)]
+pub struct AccessLevelResponse {
+    pub data: AccessLevel,
+}
+
+#[derive(Deserialize)]
+pub struct ApiErrorPayload {
+    pub error: ApiErrorValue,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum ApiErrorValue {
+    Message(String),
+    Details { message: String },
 }
 
 #[derive(Deserialize)]

@@ -124,6 +124,10 @@ textarea:focus {
 	z-index: 50;
 }
 
+[data-tooltip='']::after {
+	display: none;
+}
+
 [data-tooltip]:hover::after,
 [data-tooltip]:focus-visible::after,
 [data-tooltip]:focus-within::after {
@@ -679,6 +683,10 @@ textarea {
 	text-align: center;
 }
 
+.data-table-muted-cell {
+	color: var(--muted);
+}
+
 .data-table td.data-table-empty-cell:last-child {
 	text-align: center;
 	width: auto;
@@ -851,6 +859,18 @@ textarea {
 	gap: 0.25rem;
 }
 
+.draggable-modal-info-action {
+	align-items: center;
+	display: inline-flex;
+	position: relative;
+}
+
+.draggable-modal-delete-action {
+	align-items: center;
+	display: inline-flex;
+	position: relative;
+}
+
 .draggable-modal-titlebar-button {
 	border-radius: 999px;
 	color: color-mix(in srgb, var(--fg) 62%, transparent);
@@ -886,6 +906,97 @@ textarea {
 .draggable-modal-close:hover {
 	background: var(--button-hover-bg);
 	color: var(--button-fg);
+}
+
+.draggable-modal-titlebar-button:disabled {
+	background: transparent;
+	color: color-mix(in srgb, var(--fg) 36%, transparent);
+	cursor: default;
+}
+
+.draggable-modal-titlebar-button:disabled:hover {
+	background: transparent;
+	color: color-mix(in srgb, var(--fg) 36%, transparent);
+}
+
+.entity-id-popover {
+	background: var(--menu-bg);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 12px 26px color-mix(in srgb, #000000 24%, transparent);
+	left: 50%;
+	min-width: 9rem;
+	padding: 0.55rem 0.65rem;
+	position: absolute;
+	top: calc(100% + 0.45rem);
+	transform: translateX(-50%);
+	z-index: 3;
+}
+
+.entity-id-popover-title {
+	color: var(--fg);
+	font-size: 0.78rem;
+	line-height: 1.2;
+	margin: 0;
+	white-space: nowrap;
+}
+
+.delete-confirm-popover {
+	background: var(--menu-bg);
+	border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 12px 26px color-mix(in srgb, #000000 24%, transparent);
+	display: grid;
+	gap: 0.55rem;
+	left: 50%;
+	min-width: 11rem;
+	padding: 0.65rem;
+	position: absolute;
+	top: calc(100% + 0.45rem);
+	transform: translateX(-50%);
+	z-index: 3;
+}
+
+.delete-confirm-popover p {
+	color: var(--fg);
+	font-size: 0.82rem;
+	line-height: 1.25;
+	margin: 0;
+	white-space: nowrap;
+}
+
+.delete-confirm-popover div {
+	align-items: center;
+	display: flex;
+	gap: 0.45rem;
+	justify-content: flex-end;
+}
+
+.delete-confirm-secondary,
+.delete-confirm-danger {
+	border-radius: 6px;
+	min-height: 1.65rem;
+	padding: 0.28rem 0.56rem;
+}
+
+.delete-confirm-secondary {
+	background: transparent;
+	color: var(--fg);
+}
+
+.delete-confirm-secondary:hover {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	color: var(--fg);
+}
+
+.delete-confirm-danger {
+	background: var(--button-hover-bg);
+	color: var(--button-fg);
+}
+
+.delete-confirm-danger:hover {
+	background: var(--accent-strong);
+	color: #ffffff;
 }
 
 .draggable-modal-content {
