@@ -58,7 +58,7 @@ pub fn DataExplorerView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u3
                     }
                     button {
                         class: "section-action-button",
-                        title: "Create entity",
+                        "data-tooltip": "Create entity",
                         aria_label: "Create entity",
                         onclick: move |_| open_modal(modals, next_modal_id, "Entity :: New"),
                         Plus { class: "app-icon", size: 16 }
@@ -89,7 +89,7 @@ pub fn DataExplorerView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u3
                                 td {
                                     button {
                                         class: "icon-only-button",
-                                        title: "Open entity",
+                                        "data-tooltip": "Open entity",
                                         aria_label: "Open entity",
                                         onclick: move |_| open_modal(modals, next_modal_id, entity.value),
                                         ExternalLink { class: "app-icon", size: 15 }

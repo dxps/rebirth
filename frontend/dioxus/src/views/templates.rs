@@ -86,7 +86,7 @@ fn TemplateSection(
                 p { "{title}" }
                 button {
                     class: "section-action-button",
-                    title: "Create template",
+                    "data-tooltip": "Create template",
                     aria_label: "Create template",
                     onclick: move |_| open_modal(modals, next_modal_id, "Template :: New"),
                     Plus { class: "app-icon", size: 16 }
@@ -113,7 +113,7 @@ fn TemplateSection(
                                 td {
                                     button {
                                         class: "icon-only-button",
-                                        title: "Open template",
+                                        "data-tooltip": "Open template",
                                         aria_label: "Open template",
                                         onclick: move |_| open_modal(modals, next_modal_id, row.name),
                                         ExternalLink { class: "app-icon", size: 15 }

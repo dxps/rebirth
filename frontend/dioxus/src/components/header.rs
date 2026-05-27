@@ -29,7 +29,7 @@ pub fn Header(
                 for item in [Route::Home, Route::DataExplorer, Route::Templates, Route::Security, Route::Audit] {
                     button {
                         class: if route == item { "header-nav-link is-active" } else { "header-nav-link" },
-                        title: "{item.label()}",
+                        "data-tooltip": "{item.label()}",
                         aria_label: "{item.label()}",
                         onclick: move |_| on_route.call(item),
                         RouteIcon { route: item }
@@ -72,7 +72,7 @@ pub fn Header(
                         button {
                             class: "theme-toggle",
                             role: "menuitem",
-                            title: if theme == Theme::Light { "Switch to dark theme" } else { "Switch to light theme" },
+                            "data-tooltip": if theme == Theme::Light { "Switch to dark theme" } else { "Switch to light theme" },
                             onclick: move |event| on_toggle_theme.call(event),
                             if theme == Theme::Light {
                                 Moon { class: "app-icon", size: 16 }

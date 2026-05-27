@@ -92,6 +92,45 @@ textarea:focus {
 	outline-offset: 2px;
 }
 
+[data-tooltip] {
+	--tooltip-left: 50%;
+	--tooltip-right: auto;
+	--tooltip-top: calc(100% + 0.35rem);
+	--tooltip-hidden-transform: translate(-50%, -0.1rem);
+	--tooltip-visible-transform: translate(-50%, 0);
+	position: relative;
+}
+
+[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: var(--tooltip-left);
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	right: var(--tooltip-right);
+	top: var(--tooltip-top);
+	transform: var(--tooltip-hidden-transform);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: nowrap;
+	z-index: 50;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after,
+[data-tooltip]:focus-within::after {
+	opacity: 1;
+	transform: var(--tooltip-visible-transform);
+}
+
 input,
 textarea {
 	background: color-mix(in srgb, var(--bg) 82%, var(--fg) 18%);
@@ -555,6 +594,14 @@ textarea {
 	width: 1.45rem;
 }
 
+.section-action-button[data-tooltip],
+.icon-only-button[data-tooltip] {
+	--tooltip-left: auto;
+	--tooltip-right: 0;
+	--tooltip-hidden-transform: translateY(-0.1rem);
+	--tooltip-visible-transform: translateY(0);
+}
+
 .section-heading > .section-action-button {
 	position: absolute;
 	right: 0;
@@ -840,6 +887,11 @@ textarea {
 }
 
 .draggable-modal-resize {
+	--tooltip-left: auto;
+	--tooltip-right: calc(100% + 0.35rem);
+	--tooltip-top: 50%;
+	--tooltip-hidden-transform: translate(0.1rem, -50%);
+	--tooltip-visible-transform: translate(0, -50%);
 	border-bottom: 2px solid color-mix(in srgb, var(--fg) 45%, transparent);
 	border-right: 2px solid color-mix(in srgb, var(--fg) 45%, transparent);
 	bottom: 0.45rem;

@@ -88,7 +88,7 @@ pub fn SecurityView(
                     p { "{message}" }
                     button {
                         class: "access-level-refresh-button",
-                        title: "Try again",
+                        "data-tooltip": "Try again",
                         aria_label: "Refresh access levels",
                         onclick: move |_| {
                             if let Some(session_key) = access_refresh_session_key.clone() {
@@ -113,7 +113,7 @@ pub fn SecurityView(
                                 th { class: "data-table-action-heading",
                                     button {
                                         class: "section-action-button",
-                                        title: "Add an access level",
+                                        "data-tooltip": "Add an access level",
                                         aria_label: "Create access level",
                                         onclick: move |_| open_modal(
                                             modals,
@@ -167,7 +167,7 @@ pub fn SecurityView(
                     p { "{message}" }
                     button {
                         class: "access-level-refresh-button",
-                        title: "Try again",
+                        "data-tooltip": "Try again",
                         aria_label: "Refresh users",
                         onclick: move |_| {
                             if let Some(session_key) = users_refresh_session_key.clone() {
@@ -195,7 +195,7 @@ pub fn SecurityView(
                                 th { class: "data-table-action-heading",
                                     button {
                                         class: "section-action-button",
-                                        title: "Add a user",
+                                        "data-tooltip": "Add a user",
                                         aria_label: "Create user",
                                         onclick: move |_| open_modal(
                                             modals,

@@ -42,7 +42,7 @@ pub fn AuditView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> 
                     p { "Audit Events" }
                     button {
                         class: "access-level-refresh-button",
-                        title: "Refresh",
+                        "data-tooltip": "Refresh",
                         aria_label: "Refresh audit events",
                         RefreshCw { class: "app-icon", size: 16 }
                     }
@@ -68,7 +68,7 @@ pub fn AuditView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> 
                                     td {
                                         button {
                                             class: "icon-only-button",
-                                            title: "Open audit event",
+                                            "data-tooltip": "Open audit event",
                                             aria_label: "Open audit event",
                                             onclick: move |_| open_modal(modals, next_modal_id, event.event),
                                             ExternalLink { class: "app-icon", size: 15 }

@@ -26,7 +26,7 @@ pub fn PasswordInput(
                     class: "password-input-toggle",
                     r#type: "button",
                     aria_label: if is_visible() { "Hide password" } else { "Show password" },
-                    title: if is_visible() { "Hide password" } else { "Show password" },
+                    "data-tooltip": if is_visible() { "Hide password" } else { "Show password" },
                     onclick: move |_| is_visible.toggle(),
                     if is_visible() {
                         Eye { class: "app-icon", size: 16 }

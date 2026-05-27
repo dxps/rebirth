@@ -140,19 +140,19 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     onpointerdown: move |event| event.stop_propagation(),
                                     button {
                                         class: "draggable-modal-titlebar-button",
-                                        title: "Back",
+                                        "data-tooltip": "Back",
                                         aria_label: "Back",
                                         ArrowLeft { class: "app-icon", size: 15 }
                                     }
                                     button {
                                         class: "draggable-modal-titlebar-button",
-                                        title: "Edit",
+                                        "data-tooltip": "Edit",
                                         aria_label: "Edit",
                                         Pencil { class: "app-icon", size: 15 }
                                     }
                                     button {
                                         class: "draggable-modal-titlebar-button draggable-modal-close",
-                                        title: "Close",
+                                        "data-tooltip": "Close",
                                         aria_label: "Close",
                                         onclick: move |_| {
                                             modal_interaction.set(None);
@@ -209,7 +209,7 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                         }
                         span {
                             class: "draggable-modal-resize",
-                            title: "Resize",
+                            "data-tooltip": "Resize",
                             onpointerdown: move |event| {
                                 event.stop_propagation();
 
