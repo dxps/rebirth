@@ -11,6 +11,9 @@ use crate::types::{
 #[component]
 pub fn SecurityView(
     auth_session: Option<AuthSession>,
+    access_levels: Signal<Vec<AccessLevel>>,
+    users: Signal<Vec<User>>,
+    permissions: Signal<Vec<Permission>>,
     modals: Signal<Vec<OpenModal>>,
     next_modal_id: Signal<u32>,
 ) -> Element {
@@ -25,9 +28,6 @@ pub fn SecurityView(
     let initial_session_key = session_key.clone();
     let access_refresh_session_key = session_key.clone();
     let users_refresh_session_key = session_key.clone();
-    let access_levels = use_signal(Vec::<AccessLevel>::new);
-    let users = use_signal(Vec::<User>::new);
-    let permissions = use_signal(Vec::<Permission>::new);
     let access_levels_error = use_signal(|| None::<String>);
     let users_error = use_signal(|| None::<String>);
     let is_access_levels_loading = use_signal(|| is_authorized);

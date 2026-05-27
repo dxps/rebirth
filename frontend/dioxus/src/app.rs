@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::components::header::Header;
 use crate::components::modal::ModalLayer;
 use crate::types::{
-    AuthSession, OpenModal, Route, Theme, FAVICON, MAIN_CSS, WORK_SANS_300_NORMAL,
-    WORK_SANS_400_ITALIC, WORK_SANS_400_NORMAL, WORK_SANS_600_NORMAL,
+    AccessLevel, AuthSession, OpenModal, Permission, Route, Theme, User, FAVICON, MAIN_CSS,
+    WORK_SANS_300_NORMAL, WORK_SANS_400_ITALIC, WORK_SANS_400_NORMAL, WORK_SANS_600_NORMAL,
 };
 use crate::views::audit::AuditView;
 use crate::views::data_explorer::DataExplorerView;
@@ -148,6 +148,9 @@ pub fn App() -> Element {
     let mut auth_session = use_signal(load_stored_auth_session);
     let modals = use_signal(Vec::<OpenModal>::new);
     let next_modal_id = use_signal(|| 1_u32);
+    let mut security_access_levels = use_signal(Vec::<AccessLevel>::new);
+    let mut security_users = use_signal(Vec::<User>::new);
+    let mut security_permissions = use_signal(Vec::<Permission>::new);
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
@@ -207,6 +210,9 @@ pub fn App() -> Element {
                 },
                 on_logout: move |_| {
                     auth_session.set(None);
+                    security_access_levels.write().clear();
+                    security_users.write().clear();
+                    security_permissions.write().clear();
                     clear_stored_auth_session();
                     navigate_to(Route::Home, &mut route);
                     menu_open.set(false);
@@ -226,6 +232,9 @@ pub fn App() -> Element {
                     Route::Security => rsx! {
                         SecurityView {
                             auth_session: auth_session(),
+                            access_levels: security_access_levels,
+                            users: security_users,
+                            permissions: security_permissions,
                             modals,
                             next_modal_id,
                         }
