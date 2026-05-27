@@ -144,9 +144,34 @@ pub struct AccessLevelModal {
 }
 
 #[derive(Clone, PartialEq)]
+pub struct UserModal {
+    pub access_level_ids: Vec<u32>,
+    pub access_levels: Vec<AccessLevel>,
+    pub email: String,
+    pub error: Option<String>,
+    pub first_name: String,
+    pub id: Option<String>,
+    pub is_access_level_menu_open: bool,
+    pub is_delete_confirm_open: bool,
+    pub is_info_open: bool,
+    pub is_password_visible: bool,
+    pub is_permission_menu_open: bool,
+    pub is_saving: bool,
+    pub last_name: String,
+    pub mode: SecurityModalMode,
+    pub password: String,
+    pub permission_ids: Vec<u32>,
+    pub permissions: Vec<Permission>,
+    pub session_key: String,
+    pub username: String,
+    pub users: Signal<Vec<User>>,
+}
+
+#[derive(Clone, PartialEq)]
 pub enum ModalContent {
     AccessLevel(AccessLevelModal),
     Generic,
+    User(UserModal),
 }
 
 #[derive(Clone, PartialEq)]
@@ -238,6 +263,11 @@ pub struct UsersResponse {
     pub data: Vec<User>,
 }
 
+#[derive(Deserialize)]
+pub struct UserResponse {
+    pub data: User,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUserInfoInput {
@@ -253,9 +283,4 @@ pub struct UpdatePasswordInput {
     pub current_password: String,
     #[serde(rename = "newPassword")]
     pub new_password: String,
-}
-
-#[derive(Deserialize)]
-pub struct UserResponse {
-    pub data: User,
 }

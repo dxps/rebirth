@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use gloo_net::http::Request;
 use lucide_dioxus::{Plus, RefreshCw};
 
-use crate::components::modal::{open_access_level_modal, open_modal};
+use crate::components::modal::{open_access_level_modal, open_user_modal};
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AuthSession, OpenModal, Permission, PermissionsResponse,
     User, UsersResponse, API_BASE_URL,
@@ -27,7 +27,7 @@ pub fn SecurityView(
     let users_refresh_session_key = session_key.clone();
     let access_levels = use_signal(Vec::<AccessLevel>::new);
     let users = use_signal(Vec::<User>::new);
-    let _permissions = use_signal(Vec::<Permission>::new);
+    let permissions = use_signal(Vec::<Permission>::new);
     let access_levels_error = use_signal(|| None::<String>);
     let users_error = use_signal(|| None::<String>);
     let is_access_levels_loading = use_signal(|| is_authorized);
@@ -51,7 +51,7 @@ pub fn SecurityView(
             load_users_and_permissions(
                 session_key,
                 users,
-                _permissions,
+                permissions,
                 users_error,
                 is_users_loading,
             );
@@ -82,7 +82,14 @@ pub fn SecurityView(
         .cloned()
         .map(|access_level| (access_level, access_level_modal_session_key.clone()))
         .collect::<Vec<_>>();
-    let user_rows = users.read().clone();
+    let user_modal_session_key = session_key.clone().unwrap_or_default();
+    let user_create_session_key = user_modal_session_key.clone();
+    let user_rows = users
+        .read()
+        .iter()
+        .cloned()
+        .map(|user| (user, user_modal_session_key.clone()))
+        .collect::<Vec<_>>();
 
     rsx! {
         section { class: "security-view",
@@ -185,7 +192,7 @@ pub fn SecurityView(
                                 load_users_and_permissions(
                                     session_key,
                                     users,
-                                    _permissions,
+                                    permissions,
                                     users_error,
                                     is_users_loading,
                                 );
@@ -208,10 +215,14 @@ pub fn SecurityView(
                                         class: "section-action-button",
                                         "data-tooltip": "Add a user",
                                         aria_label: "Create user",
-                                        onclick: move |_| open_modal(
+                                        onclick: move |_| open_user_modal(
                                             modals,
                                             next_modal_id,
-                                            "User :: New",
+                                            user_create_session_key.clone(),
+                                            users,
+                                            permissions,
+                                            access_levels,
+                                            None,
                                         ),
                                         Plus { class: "app-icon", size: 16 }
                                     }
@@ -230,18 +241,22 @@ pub fn SecurityView(
                                     }
                                 }
                             } else {
-                                for user in user_rows {
+                                for (user, row_session_key) in user_rows {
                                     tr {
                                         key: "{user.id}",
                                         class: "data-table-row",
                                         tabindex: "0",
-                                        onclick: move |_| open_modal(
+                                        onclick: move |_| open_user_modal(
                                             modals,
                                             next_modal_id,
-                                            user.username.clone(),
+                                            row_session_key.clone(),
+                                            users,
+                                            permissions,
+                                            access_levels,
+                                            Some(user.clone()),
                                         ),
                                         td { "{user.username}" }
-                                        td { "{user.email}" }
+                                        td { class: "data-table-muted-cell", "{user.email}" }
                                         td { "{permission_names(&user)}" }
                                         td { "{access_level_names(&user)}" }
                                         td { aria_hidden: "true", "" }
