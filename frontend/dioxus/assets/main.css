@@ -826,7 +826,7 @@ textarea {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	overflow: visible;
+	overflow: hidden;
 	position: relative;
 	touch-action: none;
 	user-select: none;
@@ -1003,7 +1003,9 @@ textarea {
 	cursor: grab;
 	flex: 1;
 	min-height: 0;
-	overflow: visible;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	padding: 0.55rem 0.9rem 1rem;
 	user-select: none;
 }
