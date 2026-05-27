@@ -1,10 +1,12 @@
 use dioxus::prelude::*;
-use lucide_dioxus::{ArrowLeft, Pencil, X};
+use lucide_dioxus::{ArrowLeft, Info, Pencil, Save, Trash2, X};
 
 use crate::types::{
-    ModalDrag, ModalInteraction, ModalPosition, ModalResize, ModalSize, OpenModal,
-    MODAL_DEFAULT_HEIGHT, MODAL_DEFAULT_WIDTH, MODAL_MIN_HEIGHT, MODAL_MIN_WIDTH,
+    AccessLevel, AccessLevelModal, ModalContent, ModalDrag, ModalInteraction, ModalPosition,
+    ModalResize, ModalSize, OpenModal, SecurityModalMode,
+    MODAL_DEFAULT_WIDTH, MODAL_MIN_HEIGHT, MODAL_MIN_WIDTH,
 };
+
 
 pub fn open_modal(
     mut modals: Signal<Vec<OpenModal>>,
@@ -17,13 +19,14 @@ pub fn open_modal(
 
     next_modal_id.set(id + 1);
     modals.write().push(OpenModal {
+        content: ModalContent::Generic,
         id,
         position: ModalPosition {
             x: 420.0 + offset,
             y: 100.0 + offset,
         },
         size: ModalSize {
-            height: MODAL_DEFAULT_HEIGHT,
+            height: 150.0,
             width: MODAL_DEFAULT_WIDTH,
         },
         title: title.into(),
@@ -31,8 +34,285 @@ pub fn open_modal(
     });
 }
 
+pub fn open_access_level_modal(
+    mut modals: Signal<Vec<OpenModal>>,
+    mut next_modal_id: Signal<u32>,
+    access_level: Option<AccessLevel>,
+) {
+    let id = next_modal_id();
+    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
+    let z_index = next_modal_z_index(&modals.read());
+    let content = access_level
+        .map(|access_level| AccessLevelModal {
+            description: access_level.description,
+            id: Some(access_level.id),
+            mode: SecurityModalMode::Details,
+            name: access_level.name,
+        })
+        .unwrap_or_else(|| AccessLevelModal {
+            description: String::new(),
+            id: None,
+            mode: SecurityModalMode::Create,
+            name: String::new(),
+        });
+    let title = access_level_modal_title(content.mode);
+
+    next_modal_id.set(id + 1);
+    modals.write().push(OpenModal {
+        content: ModalContent::AccessLevel(content),
+        id,
+        position: ModalPosition {
+            x: 420.0 + offset,
+            y: 100.0 + offset,
+        },
+        size: ModalSize {
+            height: 120.0,
+            width: 360.0,
+        },
+        title: title.to_string(),
+        z_index,
+    });
+}
+
+fn access_level_modal_title(mode: SecurityModalMode) -> &'static str {
+    match mode {
+        SecurityModalMode::Create => "Access Level :: New",
+        SecurityModalMode::Details => "Access Level",
+        SecurityModalMode::Edit => "Access Level :: Edit",
+    }
+}
+
 fn next_modal_z_index(modals: &[OpenModal]) -> u32 {
     modals.iter().map(|modal| modal.z_index).max().unwrap_or(20) + 1
+}
+
+fn set_access_level_mode(
+    mut modals: Signal<Vec<OpenModal>>,
+    modal_id: u32,
+    mode: SecurityModalMode,
+) {
+    if let Some(open_modal) = modals
+        .write()
+        .iter_mut()
+        .find(|open_modal| open_modal.id == modal_id)
+    {
+        if let ModalContent::AccessLevel(access_level) = &mut open_modal.content {
+            access_level.mode = mode;
+            open_modal.title = access_level_modal_title(mode).to_string();
+        }
+    }
+}
+
+fn update_access_level_name(mut modals: Signal<Vec<OpenModal>>, modal_id: u32, name: String) {
+    if let Some(open_modal) = modals
+        .write()
+        .iter_mut()
+        .find(|open_modal| open_modal.id == modal_id)
+    {
+        if let ModalContent::AccessLevel(access_level) = &mut open_modal.content {
+            access_level.name = name;
+        }
+    }
+}
+
+fn update_access_level_description(
+    mut modals: Signal<Vec<OpenModal>>,
+    modal_id: u32,
+    description: String,
+) {
+    if let Some(open_modal) = modals
+        .write()
+        .iter_mut()
+        .find(|open_modal| open_modal.id == modal_id)
+    {
+        if let ModalContent::AccessLevel(access_level) = &mut open_modal.content {
+            access_level.description = description;
+        }
+    }
+}
+
+#[component]
+fn ModalTitlebarActions(
+    modal: OpenModal,
+    modals: Signal<Vec<OpenModal>>,
+    modal_interaction: Signal<Option<ModalInteraction>>,
+) -> Element {
+    match modal.content.clone() {
+        ModalContent::AccessLevel(access_level) => {
+            let is_save_disabled =
+                access_level.mode != SecurityModalMode::Details && access_level.name.trim().is_empty();
+
+            rsx! {
+                if access_level.mode == SecurityModalMode::Details {
+                    if let Some(id) = access_level.id {
+                        button {
+                            class: "draggable-modal-titlebar-button draggable-modal-info-button",
+                            "data-tooltip": "Info",
+                            aria_label: "Show id",
+                            Info { class: "app-icon", size: 15 }
+                            span { class: "sr-only", "{id}" }
+                        }
+                    }
+                    button {
+                        class: "draggable-modal-titlebar-button draggable-modal-delete-button",
+                        "data-tooltip": "Delete",
+                        aria_label: "Delete access level",
+                        onclick: move |_| {
+                            modal_interaction.set(None);
+                            modals.write().retain(|open_modal| open_modal.id != modal.id);
+                        },
+                        Trash2 { class: "app-icon", size: 15 }
+                    }
+                    button {
+                        class: "draggable-modal-titlebar-button",
+                        "data-tooltip": "Edit",
+                        aria_label: "Edit access level",
+                        onclick: move |_| {
+                            set_access_level_mode(modals, modal.id, SecurityModalMode::Edit);
+                        },
+                        Pencil { class: "app-icon", size: 15 }
+                    }
+                } else {
+                    if access_level.mode == SecurityModalMode::Edit {
+                        button {
+                            class: "draggable-modal-titlebar-button draggable-modal-delete-button",
+                            "data-tooltip": "Delete",
+                            aria_label: "Delete access level",
+                            onclick: move |_| {
+                                modal_interaction.set(None);
+                                modals.write().retain(|open_modal| open_modal.id != modal.id);
+                            },
+                            Trash2 { class: "app-icon", size: 15 }
+                        }
+                    }
+                    button {
+                        class: "draggable-modal-titlebar-button",
+                        "data-tooltip": "Back to view",
+                        aria_label: "Back to access level details",
+                        onclick: move |_| {
+                            if access_level.id.is_some() {
+                                set_access_level_mode(modals, modal.id, SecurityModalMode::Details);
+                            } else {
+                                modal_interaction.set(None);
+                                modals.write().retain(|open_modal| open_modal.id != modal.id);
+                            }
+                        },
+                        ArrowLeft { class: "app-icon", size: 15 }
+                    }
+                    button {
+                        class: "draggable-modal-titlebar-button",
+                        "data-tooltip": if is_save_disabled { "A name is required" } else { "Save" },
+                        aria_label: "Save access level",
+                        disabled: is_save_disabled,
+                        onclick: move |_| {
+                            if !is_save_disabled {
+                                set_access_level_mode(modals, modal.id, SecurityModalMode::Details);
+                            }
+                        },
+                        Save { class: "app-icon", size: 15 }
+                    }
+                }
+            }
+        }
+        ModalContent::Generic => rsx! {
+            button {
+                class: "draggable-modal-titlebar-button draggable-modal-info-button",
+                "data-tooltip": "Info",
+                aria_label: "Info",
+                Info { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button draggable-modal-delete-button",
+                "data-tooltip": "Delete",
+                aria_label: "Delete",
+                Trash2 { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": "Edit",
+                aria_label: "Edit",
+                Pencil { class: "app-icon", size: 15 }
+            }
+        },
+    }
+}
+
+#[component]
+fn ModalContentView(modal: OpenModal, modals: Signal<Vec<OpenModal>>) -> Element {
+    match modal.content.clone() {
+        ModalContent::AccessLevel(access_level) => {
+            let is_readonly = access_level.mode == SecurityModalMode::Details;
+            let form_class = if is_readonly {
+                "access-level-edit-form access-level-details-form access-level-view-form"
+            } else {
+                "access-level-edit-form"
+            };
+
+            rsx! {
+                div { class: "{form_class}", "data-selectable": "true",
+                    label { onpointerdown: move |event| event.stop_propagation(),
+                        span { "name" }
+                        input {
+                            readonly: is_readonly,
+                            r#type: "text",
+                            value: "{access_level.name}",
+                            oninput: move |event| {
+                                update_access_level_name(modals, modal.id, event.value());
+                            },
+                        }
+                    }
+                    label { onpointerdown: move |event| event.stop_propagation(),
+                        span { "description" }
+                        textarea {
+                            class: "access-level-description-input",
+                            readonly: is_readonly,
+                            rows: "1",
+                            value: "{access_level.description}",
+                            oninput: move |event| {
+                                update_access_level_description(modals, modal.id, event.value());
+                            },
+                        }
+                    }
+                }
+            }
+        }
+        ModalContent::Generic => rsx! {
+            div { class: "entity-template-edit-form entity-template-view-form",
+                label { onpointerdown: move |event| event.stop_propagation(),
+                    span { "Name" }
+                    input { value: "{modal.title}", readonly: true }
+                }
+                label { onpointerdown: move |event| event.stop_propagation(),
+                    span { "Description" }
+                    textarea { readonly: true,
+                        "Dioxus modal surface mirroring the draggable editor/detail panels from the TypeScript UI."
+                    }
+                }
+                div { class: "entity-template-tabs",
+                    div { class: "entity-template-tab-list",
+                        button {
+                            class: "entity-template-tab is-active",
+                            onpointerdown: move |event| event.stop_propagation(),
+                            "Attributes"
+                            span { class: "entity-template-tab-badge", "4" }
+                        }
+                        button {
+                            class: "entity-template-tab",
+                            onpointerdown: move |event| event.stop_propagation(),
+                            "Links"
+                            span { class: "entity-template-tab-badge", "2" }
+                        }
+                        button {
+                            class: "entity-template-tab",
+                            onpointerdown: move |event| event.stop_propagation(),
+                            "Inlinks"
+                            span { class: "entity-template-tab-badge", "1" }
+                        }
+                    }
+                }
+            }
+        },
+    }
 }
 
 #[component]
@@ -132,23 +412,15 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                         ),
                                     );
                             },
-                            div {
-                                class: "draggable-modal-header",
+                            div { class: "draggable-modal-header",
                                 h2 { "{modal.title}" }
                                 div {
                                     class: "draggable-modal-titlebar-actions",
                                     onpointerdown: move |event| event.stop_propagation(),
-                                    button {
-                                        class: "draggable-modal-titlebar-button",
-                                        "data-tooltip": "Back",
-                                        aria_label: "Back",
-                                        ArrowLeft { class: "app-icon", size: 15 }
-                                    }
-                                    button {
-                                        class: "draggable-modal-titlebar-button",
-                                        "data-tooltip": "Edit",
-                                        aria_label: "Edit",
-                                        Pencil { class: "app-icon", size: 15 }
+                                    ModalTitlebarActions {
+                                        modal: modal.clone(),
+                                        modals,
+                                        modal_interaction,
                                     }
                                     button {
                                         class: "draggable-modal-titlebar-button draggable-modal-close",
@@ -163,48 +435,7 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                 }
                             }
                             div { class: "draggable-modal-content",
-                                div { class: "entity-template-edit-form entity-template-view-form",
-                                    label {
-                                        onpointerdown: move |event| event.stop_propagation(),
-                                        span { "Name" }
-                                        input {
-                                            value: "{modal.title}",
-                                            readonly: true,
-                                        }
-                                    }
-                                    label {
-                                        onpointerdown: move |event| event.stop_propagation(),
-                                        span { "Description" }
-                                        textarea { readonly: true,
-                                            "Dioxus modal surface mirroring the draggable editor/detail panels from the TypeScript UI."
-                                        }
-                                    }
-                                    div { class: "entity-template-tabs",
-                                        div { class: "entity-template-tab-list",
-                                            button { class: "entity-template-tab is-active",
-                                                onpointerdown: move |event| event.stop_propagation(),
-                                                "Attributes"
-                                                span { class: "entity-template-tab-badge",
-                                                    "4"
-                                                }
-                                            }
-                                            button { class: "entity-template-tab",
-                                                onpointerdown: move |event| event.stop_propagation(),
-                                                "Links"
-                                                span { class: "entity-template-tab-badge",
-                                                    "2"
-                                                }
-                                            }
-                                            button { class: "entity-template-tab",
-                                                onpointerdown: move |event| event.stop_propagation(),
-                                                "Inlinks"
-                                                span { class: "entity-template-tab-badge",
-                                                    "1"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                ModalContentView { modal: modal.clone(), modals }
                             }
                         }
                         span {
@@ -237,7 +468,9 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                         ),
                                     );
                             },
-                            ""
+                            for _ in 0..6 {
+                                span {}
+                            }
                         }
                     }
                 }

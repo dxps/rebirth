@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use gloo_net::http::Request;
 use lucide_dioxus::{Plus, RefreshCw};
 
-use crate::components::modal::open_modal;
+use crate::components::modal::{open_access_level_modal, open_modal};
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AuthSession, OpenModal, Permission, PermissionsResponse,
     User, UsersResponse, API_BASE_URL,
@@ -115,10 +115,10 @@ pub fn SecurityView(
                                         class: "section-action-button",
                                         "data-tooltip": "Add an access level",
                                         aria_label: "Create access level",
-                                        onclick: move |_| open_modal(
+                                        onclick: move |_| open_access_level_modal(
                                             modals,
                                             next_modal_id,
-                                            "Access Level :: New",
+                                            None,
                                         ),
                                         Plus { class: "app-icon", size: 16 }
                                     }
@@ -142,10 +142,10 @@ pub fn SecurityView(
                                         key: "{access_level.id}",
                                         class: "data-table-row",
                                         tabindex: "0",
-                                        onclick: move |_| open_modal(
+                                        onclick: move |_| open_access_level_modal(
                                             modals,
                                             next_modal_id,
-                                            access_level.name.clone(),
+                                            Some(access_level.clone()),
                                         ),
                                         td { "{access_level.name}" }
                                         td { "{access_level.description}" }

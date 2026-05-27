@@ -156,6 +156,18 @@ textarea {
 	min-height: 100vh;
 }
 
+.sr-only {
+	clip: rect(0, 0, 0, 0);
+	border: 0;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
 .app-shell {
 	align-items: center;
 	display: flex;
@@ -781,38 +793,43 @@ textarea {
 }
 
 .draggable-modal {
-	background: var(--surface);
-	border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
 	border-radius: 8px;
-	box-shadow: 0 20px 54px color-mix(in srgb, #000000 24%, transparent);
-	overflow: hidden;
+	box-shadow:
+		0 0 32px rgb(0 0 0 / 58%),
+		0 0 10px rgb(0 0 0 / 44%),
+		0 0 0 1px rgb(255 255 255 / 8%);
 	pointer-events: auto;
 	position: absolute;
 }
 
 .draggable-modal.is-dragging,
 .draggable-modal.is-resizing {
-	box-shadow: 0 24px 64px color-mix(in srgb, #000000 30%, transparent);
+	box-shadow:
+		0 0 36px rgb(0 0 0 / 64%),
+		0 0 12px rgb(0 0 0 / 48%),
+		0 0 0 1px rgb(255 255 255 / 8%);
 }
 
 .draggable-modal-body {
+	background: var(--menu-bg);
+	border: 0;
+	border-radius: 8px;
 	cursor: grab;
-	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
+	display: flex;
+	flex-direction: column;
 	height: 100%;
+	overflow: visible;
+	position: relative;
 	touch-action: none;
 	user-select: none;
 }
 
 .draggable-modal-header {
 	align-items: center;
-	background: color-mix(in srgb, var(--surface) 78%, var(--bg) 22%);
-	border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-	cursor: grab;
 	display: flex;
-	justify-content: space-between;
-	min-height: 2.65rem;
-	padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+	gap: 0.6rem;
+	min-height: 2.35rem;
+	padding: 0.25rem 0.35rem 0.25rem 0.75rem;
 }
 
 .draggable-modal.is-dragging .draggable-modal-body {
@@ -820,9 +837,11 @@ textarea {
 }
 
 .draggable-modal-header h2 {
-	font-size: 0.95rem;
-	font-weight: 600;
-	line-height: 1;
+	color: color-mix(in srgb, var(--fg) 78%, transparent);
+	flex: 1;
+	font-size: 0.86rem;
+	font-weight: 500;
+	line-height: 1.2;
 	margin: 0;
 }
 
@@ -832,33 +851,126 @@ textarea {
 	gap: 0.25rem;
 }
 
+.draggable-modal-titlebar-button {
+	border-radius: 999px;
+	color: color-mix(in srgb, var(--fg) 62%, transparent);
+	font-size: 1rem;
+	height: 1.45rem;
+	line-height: 1;
+	min-height: 1.45rem;
+	padding: 0;
+	position: relative;
+	width: 1.45rem;
+}
+
+.draggable-modal-titlebar-button svg {
+	height: 0.72rem;
+	width: 0.72rem;
+}
+
+.draggable-modal-info-button {
+	color: color-mix(in srgb, var(--fg) 44%, transparent);
+}
+
+.draggable-modal-info-button svg {
+	height: 0.68rem;
+	width: 0.68rem;
+}
+
+.draggable-modal-close svg {
+	height: 0.82rem;
+	width: 0.82rem;
+}
+
+.draggable-modal-titlebar-button:hover,
 .draggable-modal-close:hover {
-	background: var(--accent-strong);
-	color: #fff;
+	background: var(--button-hover-bg);
+	color: var(--button-fg);
 }
 
 .draggable-modal-content {
-	overflow: auto;
-	padding: 0.75rem;
+	cursor: grab;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	padding: 0.55rem 0.9rem 1rem;
+	user-select: none;
 }
 
 .draggable-modal :where(button, input, label, textarea) {
 	user-select: auto;
 }
 
+.access-level-edit-form,
 .entity-template-edit-form {
 	display: grid;
-	gap: 0.85rem;
+	gap: 0.8rem;
 }
 
+.access-level-edit-form label,
 .entity-template-edit-form label {
 	display: grid;
 	gap: 0.35rem;
 }
 
+.access-level-edit-form label > span,
 .entity-template-edit-form label > span {
 	color: var(--muted);
 	font-size: 0.78rem;
+	line-height: 1.2;
+}
+
+.access-level-edit-form label > span {
+	padding-left: 0.36rem;
+}
+
+.access-level-edit-form input,
+.access-level-edit-form textarea {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 14px;
+	line-height: 1.35;
+	padding: 0.16rem 0.36rem;
+}
+
+.access-level-edit-form input {
+	height: 1.72rem;
+	min-height: 1.72rem;
+}
+
+.access-level-edit-form input:read-only {
+	cursor: default;
+}
+
+.access-level-edit-form textarea {
+	height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	resize: none;
+}
+
+.access-level-edit-form:not(.access-level-view-form)
+	.access-level-description-input {
+	height: calc((14px * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
+	resize: vertical;
+}
+
+.access-level-view-form .access-level-description-input {
+	height: auto;
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
+	overflow-y: auto;
+	resize: none;
+}
+
+.access-level-edit-form input:focus,
+.access-level-edit-form textarea:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
 }
 
 .entity-template-tab-list {
@@ -892,20 +1004,62 @@ textarea {
 	--tooltip-top: 50%;
 	--tooltip-hidden-transform: translate(0.1rem, -50%);
 	--tooltip-visible-transform: translate(0, -50%);
-	border-bottom: 2px solid color-mix(in srgb, var(--fg) 45%, transparent);
-	border-right: 2px solid color-mix(in srgb, var(--fg) 45%, transparent);
-	bottom: 0.45rem;
+	background: transparent;
+	border-radius: 0;
+	bottom: 0;
 	cursor: nwse-resize;
-	height: 0.65rem;
+	height: 1.25rem;
+	overflow: hidden;
+	padding: 0;
 	pointer-events: auto;
 	position: absolute;
-	right: 0.45rem;
+	right: 0;
 	touch-action: none;
-	width: 0.65rem;
+	width: 1.25rem;
 }
 
 .draggable-modal-resize:hover {
-	border-color: var(--focus-ring);
+	background: transparent;
+}
+
+.draggable-modal-resize span {
+	background: var(--muted);
+	border: 0;
+	border-radius: 1px;
+	height: 0.15rem;
+	opacity: 0.32;
+	position: absolute;
+	width: 0.15rem;
+}
+
+.draggable-modal-resize span:nth-child(1) {
+	bottom: 0.22rem;
+	right: 0.22rem;
+}
+
+.draggable-modal-resize span:nth-child(2) {
+	bottom: 0.22rem;
+	right: 0.46rem;
+}
+
+.draggable-modal-resize span:nth-child(3) {
+	bottom: 0.22rem;
+	right: 0.7rem;
+}
+
+.draggable-modal-resize span:nth-child(4) {
+	bottom: 0.46rem;
+	right: 0.22rem;
+}
+
+.draggable-modal-resize span:nth-child(5) {
+	bottom: 0.46rem;
+	right: 0.46rem;
+}
+
+.draggable-modal-resize span:nth-child(6) {
+	bottom: 0.7rem;
+	right: 0.22rem;
 }
 
 @media (max-width: 760px) {

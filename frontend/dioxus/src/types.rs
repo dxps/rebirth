@@ -9,9 +9,8 @@ pub const WORK_SANS_400_ITALIC: Asset = asset!("/assets/fonts/work-sans-latin-40
 pub const WORK_SANS_400_NORMAL: Asset = asset!("/assets/fonts/work-sans-latin-400-normal.woff2");
 pub const WORK_SANS_600_NORMAL: Asset = asset!("/assets/fonts/work-sans-latin-600-normal.woff2");
 
-pub const MODAL_DEFAULT_HEIGHT: f64 = 360.0;
 pub const MODAL_DEFAULT_WIDTH: f64 = 520.0;
-pub const MODAL_MIN_HEIGHT: f64 = 300.0;
+pub const MODAL_MIN_HEIGHT: f64 = 200.0;
 pub const MODAL_MIN_WIDTH: f64 = 400.0;
 
 pub const API_BASE_URL: &str = "http://localhost:9908";
@@ -123,8 +122,30 @@ pub enum ModalInteraction {
     Resize(ModalResize),
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum SecurityModalMode {
+    Create,
+    Details,
+    Edit,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct AccessLevelModal {
+    pub description: String,
+    pub id: Option<u32>,
+    pub mode: SecurityModalMode,
+    pub name: String,
+}
+
+#[derive(Clone, PartialEq)]
+pub enum ModalContent {
+    AccessLevel(AccessLevelModal),
+    Generic,
+}
+
 #[derive(Clone, PartialEq)]
 pub struct OpenModal {
+    pub content: ModalContent,
     pub id: u32,
     pub position: ModalPosition,
     pub size: ModalSize,
