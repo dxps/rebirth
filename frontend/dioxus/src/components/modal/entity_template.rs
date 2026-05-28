@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use gloo_net::http::Request;
 use lucide_dioxus::{
     ArrowLeft, ExternalLink, GripVertical, Info, Pencil, Plus, Save, Trash2, User, X,
 };
@@ -6,11 +7,12 @@ use lucide_dioxus::{
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AttributeTemplate, EntityTemplate, EntityTemplateAttribute,
-    EntityTemplateAttributeSourceTab, EntityTemplateLink, EntityTemplateModal, EntityTemplateTab,
-    ModalContent, ModalInteraction, ModalSize, OpenModal, SecurityModalMode, User as RebirthUser,
+    EntityTemplateAttributeSourceTab, EntityTemplateLink, EntityTemplateModal,
+    EntityTemplateResponse, EntityTemplateTab, ModalContent, ModalInteraction, ModalSize,
+    OpenModal, SecurityModalMode, User as RebirthUser, API_BASE_URL,
 };
 
-use super::{next_modal_z_index, DeleteConfirmPopover};
+use super::{json_string, next_modal_z_index, read_response_error, DeleteConfirmPopover};
 
 const VALUE_TYPES: [&str; 5] = ["text", "number", "boolean", "date", "datetime"];
 
@@ -209,9 +211,23 @@ pub(super) fn EntityTemplateTitlebarActions(
     let can_edit = entity_template.can_edit;
     let owner_label = owner_label(&entity_template);
     let is_create = entity_template.mode == SecurityModalMode::Create;
-    let can_save_create = is_create
-        && !entity_template.entity_template.name.trim().is_empty()
-        && !entity_template.entity_template.attributes.is_empty();
+    let save_modal = modal.clone();
+    let can_save_create =
+        is_create
+            && !entity_template.entity_template.name.trim().is_empty()
+            && !entity_template.entity_template.attributes.is_empty()
+            && !entity_template
+                .entity_template
+                .listing_attribute_id
+                .is_empty()
+            && entity_template
+                .entity_template
+                .attributes
+                .iter()
+                .all(|attribute| !attribute.name.trim().is_empty())
+            && entity_template.entity_template.links.iter().all(|link| {
+                !link.name.trim().is_empty() && link.target_entity_template_id.is_some()
+            });
 
     if is_create {
         return rsx! {
@@ -242,9 +258,14 @@ pub(super) fn EntityTemplateTitlebarActions(
             }
             button {
                 class: "draggable-modal-titlebar-button",
-                "data-tooltip": if can_save_create { "Save" } else { "An entity template must have a name and include at least one attribute" },
+                "data-tooltip": if can_save_create { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
                 aria_label: "Save entity template",
-                disabled: !can_save_create,
+                disabled: !can_save_create || entity_template.is_saving,
+                onclick: move |_| {
+                    if can_save_create {
+                        save_entity_template_modal(modals, save_modal.clone());
+                    }
+                },
                 Save { class: "app-icon", size: 15 }
             }
             if is_ownership_open {
@@ -377,6 +398,204 @@ pub(super) fn EntityTemplateTitlebarActions(
             }
         }
     }
+}
+
+fn save_entity_template_modal(mut modals: Signal<Vec<OpenModal>>, modal: OpenModal) {
+    let ModalContent::EntityTemplate(mut entity_template) = modal.content.clone() else {
+        return;
+    };
+    let template = entity_template.entity_template.clone();
+    let name = template.name.trim().to_string();
+
+    if name.is_empty() {
+        update_entity_template_modal(modals, modal.id, |entity_template| {
+            entity_template.is_saving = false;
+            entity_template.error = Some("Name is required".to_string());
+        });
+        return;
+    }
+
+    if template.attributes.is_empty() {
+        update_entity_template_modal(modals, modal.id, |entity_template| {
+            entity_template.is_saving = false;
+            entity_template.error = Some("Include at least one attribute".to_string());
+        });
+        return;
+    }
+
+    if template.listing_attribute_id.is_empty() {
+        update_entity_template_modal(modals, modal.id, |entity_template| {
+            entity_template.is_saving = false;
+            entity_template.error = Some("Select a listing attribute".to_string());
+        });
+        return;
+    }
+
+    if template
+        .attributes
+        .iter()
+        .any(|attribute| attribute.name.trim().is_empty())
+    {
+        update_entity_template_modal(modals, modal.id, |entity_template| {
+            entity_template.is_saving = false;
+            entity_template.error = Some("Included attributes must have names".to_string());
+        });
+        return;
+    }
+
+    if template.links.iter().any(|link| {
+        link.name.trim().is_empty()
+            || link
+                .target_entity_template_id
+                .as_deref()
+                .unwrap_or("")
+                .is_empty()
+    }) {
+        update_entity_template_modal(modals, modal.id, |entity_template| {
+            entity_template.is_saving = false;
+            entity_template.error = Some("Links must have names and targets".to_string());
+        });
+        return;
+    }
+
+    update_entity_template_modal(modals, modal.id, |entity_template| {
+        entity_template.is_saving = true;
+        entity_template.error = None;
+    });
+
+    spawn(async move {
+        match save_entity_template_request(&entity_template.session_key, &template).await {
+            Ok(saved_entity_template) => {
+                let saved_entity_template_id = saved_entity_template.id.clone();
+                {
+                    let mut entity_templates = entity_template.entity_templates.write();
+                    if let Some(existing) = entity_templates
+                        .iter_mut()
+                        .find(|item| item.id == saved_entity_template_id)
+                    {
+                        *existing = saved_entity_template.clone();
+                    } else {
+                        entity_templates.push(saved_entity_template);
+                    }
+                    entity_templates.sort_by(|left, right| {
+                        left.name
+                            .to_ascii_lowercase()
+                            .cmp(&right.name.to_ascii_lowercase())
+                    });
+                }
+
+                modals
+                    .write()
+                    .retain(|open_modal| open_modal.id != modal.id);
+            }
+            Err(message) => update_entity_template_modal(modals, modal.id, |entity_template| {
+                entity_template.is_saving = false;
+                entity_template.error = Some(message);
+            }),
+        }
+    });
+}
+
+async fn save_entity_template_request(
+    session_key: &str,
+    entity_template: &EntityTemplate,
+) -> Result<EntityTemplate, String> {
+    let response = Request::post(&format!("{API_BASE_URL}/entity-templates"))
+        .header("Authorization", &format!("Bearer {session_key}"))
+        .header("Content-Type", "application/json")
+        .body(entity_template_create_body(entity_template))
+        .map_err(|_| "Unable to create entity template".to_string())?
+        .send()
+        .await
+        .map_err(|_| "Unable to create entity template".to_string())?;
+
+    parse_entity_template_response(response, "Unable to create entity template").await
+}
+
+async fn parse_entity_template_response(
+    response: gloo_net::http::Response,
+    fallback: &str,
+) -> Result<EntityTemplate, String> {
+    if response.ok() {
+        response
+            .json::<EntityTemplateResponse>()
+            .await
+            .map(|payload| payload.data)
+            .map_err(|_| fallback.to_string())
+    } else {
+        Err(read_response_error(response, fallback).await)
+    }
+}
+
+fn entity_template_create_body(entity_template: &EntityTemplate) -> String {
+    let attributes_json = ordered_attributes(entity_template)
+        .iter()
+        .enumerate()
+        .map(|(index, attribute)| {
+            format!(
+                "{{\"accessLevelId\":{},\"description\":{},\"id\":{},\"isRequired\":{},\"listingIndex\":{},\"name\":{},\"valueType\":{}}}",
+                attribute.access_level_id,
+                json_string(&attribute.description),
+                json_string(&attribute.id),
+                attribute.is_required,
+                index,
+                json_string(attribute.name.trim()),
+                json_string(&attribute.value_type),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let links_json = ordered_links(entity_template)
+        .iter()
+        .enumerate()
+        .map(|(index, link)| {
+            let id_json = if link.id.starts_with("draft-link-") {
+                String::new()
+            } else {
+                format!("\"id\":{},", json_string(&link.id))
+            };
+            let description = link
+                .description
+                .as_deref()
+                .map(str::trim)
+                .filter(|description| !description.is_empty())
+                .map(json_string)
+                .unwrap_or_else(|| "null".to_string());
+            let target_entity_template_id = link
+                .target_entity_template_id
+                .as_deref()
+                .map(json_string)
+                .unwrap_or_else(|| "null".to_string());
+
+            format!(
+                "{{{}\"description\":{},\"listingIndex\":{},\"name\":{},\"targetEntityTemplateId\":{}}}",
+                id_json,
+                description,
+                index,
+                json_string(link.name.trim()),
+                target_entity_template_id,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let owner_user_id_json = if entity_template.owner_user_id.trim().is_empty() {
+        String::new()
+    } else {
+        format!(
+            ",\"ownerUserId\":{}",
+            json_string(entity_template.owner_user_id.trim())
+        )
+    };
+
+    format!(
+        "{{\"attributes\":[{}],\"description\":{},\"links\":[{}],\"listingAttributeId\":{},\"name\":{}{} }}",
+        attributes_json,
+        json_string(entity_template.description.trim()),
+        links_json,
+        json_string(&entity_template.listing_attribute_id),
+        json_string(entity_template.name.trim()),
+        owner_user_id_json,
+    )
 }
 
 #[component]
@@ -602,6 +821,12 @@ pub(super) fn EntityTemplateContentView(
                         }
                     },
                 }
+            }
+            if let Some(error) = &entity_template.error {
+                p { class: "form-error", "{error}" }
+            }
+            if entity_template.is_saving {
+                p { class: "form-status", "Saving" }
             }
         }
     }

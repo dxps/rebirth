@@ -376,6 +376,11 @@ pub struct EntityTemplatesResponse {
 }
 
 #[derive(Deserialize)]
+pub struct EntityTemplateResponse {
+    pub data: EntityTemplate,
+}
+
+#[derive(Deserialize)]
 pub struct ApiErrorPayload {
     pub error: ApiErrorValue,
 }
