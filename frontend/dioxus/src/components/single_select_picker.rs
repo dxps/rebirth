@@ -9,7 +9,7 @@ pub struct SingleSelectOption {
 #[component]
 pub fn SingleSelectPicker(
     disabled: bool,
-    empty_text: &'static str,
+    empty_text: String,
     is_open: bool,
     on_select_item: EventHandler<String>,
     on_toggle_open: EventHandler<MouseEvent>,

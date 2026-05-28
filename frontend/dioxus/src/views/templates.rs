@@ -3,7 +3,7 @@ use gloo_net::http::Request;
 use lucide_dioxus::{Plus, RefreshCw};
 
 use crate::components::modal::{
-    open_attribute_template_modal, open_entity_template_modal, open_modal,
+    open_attribute_template_modal, open_create_entity_template_modal, open_entity_template_modal,
 };
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AttributeTemplate, AttributeTemplatesResponse, AuthSession,
@@ -115,6 +115,10 @@ pub fn TemplatesView(
     let create_access_level_rows = access_level_rows.clone();
     let create_owner_user_rows = owner_user_rows.clone();
     let create_attribute_session_key = create_session_key.clone();
+    let create_entity_access_level_rows = access_level_rows.clone();
+    let create_entity_owner_user_rows = owner_user_rows.clone();
+    let create_entity_session_key = create_session_key.clone();
+    let create_entity_owner_user_id = current_user_id.clone();
 
     rsx! {
         section { class: "types-mgmt-view",
@@ -134,7 +138,16 @@ pub fn TemplatesView(
                                             class: "section-action-button",
                                             "data-tooltip": "Add an entity template",
                                             aria_label: "Create entity template",
-                                            onclick: move |_| open_modal(modals, next_modal_id, "Entity Template :: New"),
+                                            onclick: move |_| open_create_entity_template_modal(
+                                                modals,
+                                                next_modal_id,
+                                                create_entity_session_key.clone(),
+                                                attribute_templates,
+                                                entity_templates,
+                                                create_entity_access_level_rows.clone(),
+                                                create_entity_owner_user_rows.clone(),
+                                                create_entity_owner_user_id.clone(),
+                                            ),
                                             Plus { class: "app-icon", size: 16 }
                                         }
                                     }
@@ -157,6 +170,7 @@ pub fn TemplatesView(
                                 EntityTemplateTableRow {
                                     key: "{entity_template.id}",
                                     access_levels: access_level_rows.clone(),
+                                    attribute_templates,
                                     can_edit: can_edit_entity_template,
                                     entity_template,
                                     entity_templates,
@@ -271,6 +285,7 @@ pub fn TemplatesView(
 #[component]
 fn EntityTemplateTableRow(
     access_levels: Vec<AccessLevel>,
+    attribute_templates: Signal<Vec<AttributeTemplate>>,
     can_edit: bool,
     entity_template: EntityTemplate,
     entity_templates: Signal<Vec<EntityTemplate>>,
@@ -287,6 +302,7 @@ fn EntityTemplateTableRow(
                 modals,
                 next_modal_id,
                 session_key.clone(),
+                attribute_templates,
                 entity_templates,
                 access_levels.clone(),
                 owner_users.clone(),

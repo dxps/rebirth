@@ -201,17 +201,36 @@ pub enum EntityTemplateTab {
     Inlinks,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum EntityTemplateAttributeSourceTab {
+    Existing,
+    New,
+}
+
 #[derive(Clone, PartialEq)]
 pub struct EntityTemplateModal {
     pub access_levels: Vec<AccessLevel>,
     pub active_tab: EntityTemplateTab,
+    pub attribute_source_tab: EntityTemplateAttributeSourceTab,
+    pub attribute_templates: Signal<Vec<AttributeTemplate>>,
     pub can_edit: bool,
+    pub dragging_attribute_id: Option<String>,
     pub entity_template: EntityTemplate,
     pub entity_templates: Signal<Vec<EntityTemplate>>,
+    pub error: Option<String>,
+    pub open_attribute_access_level_menu_id: Option<String>,
+    pub open_attribute_value_type_menu_id: Option<String>,
+    pub open_link_target_menu_id: Option<String>,
+    pub is_attribute_template_menu_open: bool,
+    pub is_attribute_popover_open: bool,
     pub is_delete_confirm_open: bool,
     pub is_info_open: bool,
+    pub is_listing_attribute_menu_open: bool,
     pub is_ownership_open: bool,
+    pub is_saving: bool,
+    pub mode: SecurityModalMode,
     pub owner_users: Vec<User>,
+    pub selected_attribute_template_id: Option<String>,
     pub session_key: String,
 }
 

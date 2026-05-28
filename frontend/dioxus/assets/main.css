@@ -1237,6 +1237,7 @@ textarea {
 .draggable-modal-content {
 	cursor: grab;
 	flex: 1;
+	margin-bottom: 1.25rem;
 	min-height: 0;
 	overflow-x: hidden;
 	overflow-y: auto;
@@ -1246,7 +1247,9 @@ textarea {
 }
 
 .draggable-modal-content:has(.security-user-permissions-menu),
-.draggable-modal-body:has(.security-user-permissions-menu) {
+.draggable-modal-content:has(.include-attribute-popover),
+.draggable-modal-body:has(.security-user-permissions-menu),
+.draggable-modal-body:has(.include-attribute-popover) {
 	overflow: visible;
 }
 
@@ -1647,6 +1650,12 @@ button.security-user-permissions-trigger:focus-visible {
 	resize: none;
 }
 
+.entity-template-create-form
+	.security-user-permissions-trigger[data-empty='true']
+	span {
+	color: transparent;
+}
+
 .entity-template-tabs {
 	display: grid;
 	gap: 0;
@@ -1659,6 +1668,13 @@ button.security-user-permissions-trigger:focus-visible {
 	min-height: 0;
 	overflow-y: hidden;
 	padding-right: 0.24rem;
+}
+
+.entity-template-tabs:has(.include-attribute-popover),
+.entity-template-tabs:has(.security-user-permissions-menu),
+.entity-template-tabs > [role='tabpanel']:has(.include-attribute-popover),
+.entity-template-tabs > [role='tabpanel']:has(.security-user-permissions-menu) {
+	overflow: visible;
 }
 
 .entity-template-tab-row {
@@ -1770,19 +1786,379 @@ button.entity-template-tab[aria-selected='true'] {
 	width: 30%;
 }
 
+.entity-template-edit-attributes-table th:first-child,
+.entity-template-edit-attributes-table td:first-child {
+	width: 47%;
+}
+
+.entity-template-edit-attributes-table th:nth-child(2),
+.entity-template-edit-attributes-table td:nth-child(2) {
+	width: 18%;
+}
+
+.entity-template-edit-attributes-table th:nth-child(2),
+.entity-template-edit-attributes-table td:nth-child(2) {
+	padding-right: 0.22rem;
+}
+
+.entity-template-edit-attributes-table th:nth-child(3),
+.entity-template-edit-attributes-table td:nth-child(3) {
+	padding-left: 0.22rem;
+	width: 22%;
+}
+
+.entity-template-edit-attributes-table th.entity-template-attribute-action-column,
+.entity-template-edit-attributes-table td.entity-template-attribute-action-column {
+	padding-right: 0.35rem;
+	text-align: right;
+	width: 13%;
+}
+
+.entity-template-edit-attributes-table td {
+	padding-bottom: 0.24rem;
+	padding-top: 0.24rem;
+}
+
+.entity-template-edit-attributes-table .entity-template-attribute-name {
+	padding-right: 0.55rem;
+}
+
+.entity-template-attribute-name-input {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.78rem;
+	height: 1.72rem;
+	line-height: 1.35;
+	min-height: 1.72rem;
+	padding: 0.16rem 0.36rem;
+	width: 100%;
+}
+
+.entity-template-attribute-name-input:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.entity-template-edit-attributes-table .security-user-permissions-picker {
+	width: 100%;
+}
+
+.entity-template-edit-attributes-table .security-user-permissions-trigger,
+.entity-template-edit-attributes-table button.security-user-permissions-trigger {
+	font-size: 0.78rem;
+	min-height: 1.72rem;
+	padding-left: 0.36rem;
+}
+
+.entity-template-edit-attributes-table .security-user-permissions-menu {
+	font-size: 0.78rem;
+}
+
+.entity-template-edit-form .security-user-permission-option,
+.entity-template-edit-form button.security-user-permission-option {
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--fg);
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.entity-template-edit-form .security-user-permission-option:hover,
+.entity-template-edit-form button.security-user-permission-option:hover,
+.entity-template-edit-form
+	.security-user-permission-option[aria-selected='true'],
+.entity-template-edit-form
+	button.security-user-permission-option[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.entity-template-edit-attributes-table:has(.security-user-permissions-menu),
+.entity-template-edit-attributes-table tr:has(.security-user-permissions-menu),
+.entity-template-edit-attributes-table td:has(.security-user-permissions-menu) {
+	overflow: visible;
+}
+
+.entity-template-included-attribute-actions {
+	align-items: center;
+	display: inline-flex;
+	gap: 0.26rem;
+	justify-content: flex-end;
+}
+
+.entity-template-row-action-button {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 999px;
+	color: var(--muted);
+	cursor: pointer;
+	display: inline-flex;
+	height: 1.45rem;
+	justify-content: center;
+	min-height: 1.45rem;
+	padding: 0;
+	width: 1.2rem;
+}
+
+.entity-template-row-action-button:hover {
+	background: transparent;
+	color: var(--fg);
+}
+
+.entity-template-row-action-button[data-tooltip] {
+	--tooltip-left: auto;
+	--tooltip-right: calc(100% + 0.35rem);
+	--tooltip-top: 50%;
+	--tooltip-hidden-transform: translate(0.1rem, -50%);
+	--tooltip-visible-transform: translate(0, -50%);
+	z-index: 2;
+}
+
+.entity-template-drag-handle {
+	cursor: ns-resize;
+	position: relative;
+	width: 1.2rem;
+}
+
+.entity-template-drag-handle:active {
+	cursor: ns-resize;
+}
+
+.entity-template-drag-handle[data-tooltip]::after {
+	line-height: 1.15;
+	text-align: center;
+	white-space: normal;
+	width: 7.2rem;
+}
+
+.entity-template-table-action-button {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	color: var(--fg);
+	display: inline-flex;
+	height: 1.35rem;
+	justify-content: center;
+	padding: 0;
+	width: 1.35rem;
+}
+
+.entity-template-table-action-button[data-tooltip] {
+	--tooltip-left: auto;
+	--tooltip-right: 0;
+	--tooltip-hidden-transform: translateY(-0.1rem);
+	--tooltip-visible-transform: translateY(0);
+}
+
+.entity-template-table-action-button:hover {
+	background: transparent;
+	color: var(--fg);
+}
+
+.entity-template-add-attribute-action {
+	display: inline-flex;
+	position: relative;
+}
+
+.entity-template-attribute-popover {
+	gap: 0.65rem;
+	min-width: 15.6rem;
+	padding: 0.62rem;
+	right: 0;
+	top: calc(100% + 0.45rem);
+}
+
+.entity-template-attribute-popover-header {
+	align-items: center;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 0.45rem;
+}
+
+.entity-template-attribute-source-tabs {
+	align-items: center;
+	display: flex;
+	gap: 0.3rem;
+	justify-content: center;
+}
+
+.entity-template-attribute-source-tab,
+button.entity-template-attribute-source-tab {
+	background: transparent;
+	border-radius: 6px;
+	color: var(--muted);
+	font-size: 0.78rem;
+	min-height: 1.55rem;
+	padding: 0.24rem 0.48rem;
+}
+
+.entity-template-attribute-source-tab:hover,
+button.entity-template-attribute-source-tab:hover,
+.entity-template-attribute-source-tab[aria-selected='true'],
+button.entity-template-attribute-source-tab[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+}
+
+.entity-template-attribute-popover-close {
+	background: transparent;
+	border-radius: 999px;
+	color: var(--muted);
+	height: 1.3rem;
+	min-height: 1.3rem;
+	padding: 0;
+	width: 1.3rem;
+}
+
+.entity-template-attribute-popover-close:hover {
+	background: transparent;
+	color: var(--fg);
+}
+
+.entity-template-attribute-template-field {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.78rem;
+	gap: 0.3rem;
+}
+
+.entity-template-attribute-template-field > span:first-child {
+	padding-left: 0.32rem;
+}
+
+.entity-template-attribute-popover .security-user-permission-option,
+.entity-template-attribute-popover button.security-user-permission-option {
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--fg);
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.entity-template-attribute-popover .security-user-permission-option:hover,
+.entity-template-attribute-popover button.security-user-permission-option:hover,
+.entity-template-attribute-popover
+	.security-user-permission-option[aria-selected='true'],
+.entity-template-attribute-popover
+	button.security-user-permission-option[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.entity-template-attribute-popover-actions {
+	display: flex;
+	justify-content: center;
+}
+
+.entity-template-attribute-add-button {
+	background: transparent;
+	border-radius: 999px;
+	color: var(--muted);
+	height: 1.55rem;
+	min-height: 1.55rem;
+	padding: 0;
+	width: 1.55rem;
+}
+
+.entity-template-attribute-add-button:hover:not(:disabled) {
+	background: transparent;
+	color: var(--fg);
+}
+
+.entity-template-attribute-add-button:disabled {
+	background: transparent;
+	color: color-mix(in srgb, var(--fg) 32%, transparent);
+	cursor: default;
+}
+
+.entity-template-new-attribute-placeholder {
+	color: var(--muted);
+	font-size: 0.76rem;
+	font-style: italic;
+	line-height: 1.3;
+	padding: 0.45rem 0.3rem 0.65rem;
+	text-align: center;
+}
+
 .entity-template-links-table th:first-child,
 .entity-template-links-table td:first-child {
-	width: 30%;
+	width: 25%;
 }
 
 .entity-template-links-table th:nth-child(2),
 .entity-template-links-table td:nth-child(2) {
-	width: 40%;
+	width: 36%;
 }
 
 .entity-template-links-table th:nth-child(3),
 .entity-template-links-table td:nth-child(3) {
 	width: 30%;
+}
+
+.entity-template-links-table th.entity-template-link-action-column,
+.entity-template-links-table td.entity-template-link-action-column {
+	padding-right: 0.35rem;
+	text-align: right;
+	width: 8%;
+}
+
+.entity-template-links-table td {
+	padding-bottom: 0.24rem;
+	padding-top: 0.24rem;
+}
+
+.entity-template-links-table th:nth-child(1),
+.entity-template-links-table td:nth-child(1),
+.entity-template-links-table th:nth-child(2),
+.entity-template-links-table td:nth-child(2),
+.entity-template-links-table th:nth-child(3),
+.entity-template-links-table td:nth-child(3) {
+	padding-right: 0.42rem;
+}
+
+.entity-template-link-input {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.78rem;
+	height: 1.72rem;
+	line-height: 1.35;
+	min-height: 1.72rem;
+	padding: 0.16rem 0.36rem;
+	width: 100%;
+}
+
+.entity-template-link-input:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.entity-template-links-table .security-user-permissions-picker {
+	width: 100%;
+}
+
+.entity-template-links-table .security-user-permissions-trigger,
+.entity-template-links-table button.security-user-permissions-trigger {
+	font-size: 0.78rem;
+	min-height: 1.72rem;
+	padding-left: 0.36rem;
+}
+
+.entity-template-link-add-button[data-tooltip] {
+	--tooltip-left: auto;
+	--tooltip-right: 0;
+	--tooltip-hidden-transform: translateY(-0.1rem);
+	--tooltip-visible-transform: translateY(0);
 }
 
 .entity-reference-button,

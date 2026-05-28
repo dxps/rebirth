@@ -8,7 +8,7 @@ use lucide_dioxus::{Info, Pencil, Trash2, X};
 
 pub use access_level::open_access_level_modal;
 pub use attribute_template::open_attribute_template_modal;
-pub use entity_template::open_entity_template_modal;
+pub use entity_template::{open_create_entity_template_modal, open_entity_template_modal};
 pub use user::open_user_modal;
 
 use crate::types::{
