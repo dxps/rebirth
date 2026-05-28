@@ -194,10 +194,32 @@ pub struct AttributeTemplateModal {
     pub value_type: String,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum EntityTemplateTab {
+    Attributes,
+    Links,
+    Inlinks,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct EntityTemplateModal {
+    pub access_levels: Vec<AccessLevel>,
+    pub active_tab: EntityTemplateTab,
+    pub can_edit: bool,
+    pub entity_template: EntityTemplate,
+    pub entity_templates: Signal<Vec<EntityTemplate>>,
+    pub is_delete_confirm_open: bool,
+    pub is_info_open: bool,
+    pub is_ownership_open: bool,
+    pub owner_users: Vec<User>,
+    pub session_key: String,
+}
+
 #[derive(Clone, PartialEq)]
 pub enum ModalContent {
     AccessLevel(AccessLevelModal),
     AttributeTemplate(AttributeTemplateModal),
+    EntityTemplate(EntityTemplateModal),
     Generic,
     User(UserModal),
 }
@@ -291,6 +313,47 @@ pub struct AttributeTemplatesResponse {
 #[derive(Deserialize)]
 pub struct AttributeTemplateResponse {
     pub data: AttributeTemplate,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityTemplateAttribute {
+    pub access_level_id: u32,
+    pub description: String,
+    pub id: String,
+    pub is_required: bool,
+    pub listing_index: i32,
+    pub name: String,
+    pub value_type: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityTemplateLink {
+    pub description: Option<String>,
+    pub entity_template_id: String,
+    pub id: String,
+    pub listing_index: i32,
+    pub name: String,
+    pub target_entity_template_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityTemplate {
+    pub attributes: Vec<EntityTemplateAttribute>,
+    pub description: String,
+    pub id: String,
+    pub links: Vec<EntityTemplateLink>,
+    pub listing_attribute_id: String,
+    pub name: String,
+    pub owner_user_id: String,
+    pub owner_username: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct EntityTemplatesResponse {
+    pub data: Vec<EntityTemplate>,
 }
 
 #[derive(Deserialize)]
