@@ -135,25 +135,13 @@ fn ModalTitlebarActions(
 ) -> Element {
     match modal.content.clone() {
         ModalContent::AccessLevel(_) => rsx! {
-            access_level::AccessLevelTitlebarActions {
-                modal,
-                modals,
-                modal_interaction,
-            }
+            access_level::AccessLevelTitlebarActions { modal, modals, modal_interaction }
         },
         ModalContent::AttributeTemplate(_) => rsx! {
-            attribute_template::AttributeTemplateTitlebarActions {
-                modal,
-                modals,
-                modal_interaction,
-            }
+            attribute_template::AttributeTemplateTitlebarActions { modal, modals, modal_interaction }
         },
         ModalContent::User(_) => rsx! {
-            user::UserTitlebarActions {
-                modal,
-                modals,
-                modal_interaction,
-            }
+            user::UserTitlebarActions { modal, modals, modal_interaction }
         },
         ModalContent::Generic => rsx! {
             button {
@@ -348,11 +336,16 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     open_modal.z_index = next_z_index;
                                 }
                                 close_modal_popovers(modals, modal.id);
-                                modal_interaction.set(Some(ModalInteraction::Drag(ModalDrag {
-                                    modal_id: modal.id,
-                                    offset_x: point.x - modal.position.x,
-                                    offset_y: point.y - modal.position.y,
-                                })));
+                                modal_interaction
+                                    .set(
+                                        Some(
+                                            ModalInteraction::Drag(ModalDrag {
+                                                modal_id: modal.id,
+                                                offset_x: point.x - modal.position.x,
+                                                offset_y: point.y - modal.position.y,
+                                            }),
+                                        ),
+                                    );
                             },
                             div { class: "draggable-modal-header",
                                 h2 { "{modal.title}" }
@@ -398,13 +391,18 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     open_modal.z_index = next_z_index;
                                 }
 
-                                modal_interaction.set(Some(ModalInteraction::Resize(ModalResize {
-                                    modal_id: modal.id,
-                                    start_height: modal.size.height,
-                                    start_width: modal.size.width,
-                                    start_x: point.x,
-                                    start_y: point.y,
-                                })));
+                                modal_interaction
+                                    .set(
+                                        Some(
+                                            ModalInteraction::Resize(ModalResize {
+                                                modal_id: modal.id,
+                                                start_height: modal.size.height,
+                                                start_width: modal.size.width,
+                                                start_x: point.x,
+                                                start_y: point.y,
+                                            }),
+                                        ),
+                                    );
                             },
                             for _ in 0..6 {
                                 span {}

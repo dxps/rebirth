@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use gloo_net::http::Request;
 use lucide_dioxus::{ArrowLeft, Info, Pencil, Save, Trash2, User};
 
+use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AttributeTemplate, AttributeTemplateModal, AttributeTemplateResponse,
     ModalContent, ModalInteraction, ModalSize, OpenModal, SecurityModalMode, User, API_BASE_URL,
@@ -77,11 +78,13 @@ pub fn open_attribute_template_modal(
             description: template.description,
             error: None,
             id: Some(template.id),
+            is_access_level_menu_open: false,
             is_delete_confirm_open: false,
             is_info_open: false,
             is_ownership_open: false,
             is_required: template.is_required,
             is_saving: false,
+            is_value_type_menu_open: false,
             mode: SecurityModalMode::Details,
             name: template.name,
             owner_user_id: Some(template.owner_user_id),
@@ -100,11 +103,13 @@ pub fn open_attribute_template_modal(
             description: String::new(),
             error: None,
             id: None,
+            is_access_level_menu_open: false,
             is_delete_confirm_open: false,
             is_info_open: false,
             is_ownership_open: false,
             is_required: false,
             is_saving: false,
+            is_value_type_menu_open: false,
             mode: SecurityModalMode::Create,
             name: String::new(),
             owner_user_id: None,
@@ -155,6 +160,8 @@ fn set_attribute_template_mode(
             attribute_template.is_delete_confirm_open = false;
             attribute_template.is_info_open = false;
             attribute_template.is_ownership_open = false;
+            attribute_template.is_access_level_menu_open = false;
+            attribute_template.is_value_type_menu_open = false;
             open_modal.title = attribute_template_modal_title(mode).to_string();
         }
     }
@@ -184,6 +191,8 @@ pub(super) fn close_popovers(attribute_template: &mut AttributeTemplateModal) {
     attribute_template.is_delete_confirm_open = false;
     attribute_template.is_info_open = false;
     attribute_template.is_ownership_open = false;
+    attribute_template.is_access_level_menu_open = false;
+    attribute_template.is_value_type_menu_open = false;
 }
 
 fn save_attribute_template_modal(mut modals: Signal<Vec<OpenModal>>, modal: OpenModal) {
@@ -635,6 +644,20 @@ fn OwnershipPopover(
     is_saving: bool,
     on_owner_change: EventHandler<String>,
 ) -> Element {
+    let owner_options = owner_users
+        .iter()
+        .map(|owner| SingleSelectOption {
+            label: owner.username.clone(),
+            value: owner.id.clone(),
+        })
+        .collect::<Vec<_>>();
+    let owner_summary = owner_users
+        .iter()
+        .find(|owner| owner.id == owner_user_id)
+        .map(|owner| owner.username.clone())
+        .unwrap_or(owner_label.clone());
+    let mut is_owner_menu_open = use_signal(|| false);
+
     rsx! {
         div {
             class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
@@ -643,18 +666,18 @@ fn OwnershipPopover(
             if can_assign_owner {
                 label {
                     span { "Owner:" }
-                    span { class: "attribute-template-select-wrap",
-                        select {
-                            disabled: is_saving,
-                            value: "{owner_user_id}",
-                            onchange: move |event| on_owner_change.call(event.value()),
-                            for owner in owner_users {
-                                option {
-                                    value: "{owner.id}",
-                                    "{owner.username}"
-                                }
-                            }
-                        }
+                    SingleSelectPicker {
+                        disabled: is_saving,
+                        empty_text: "Select owner",
+                        is_open: is_owner_menu_open(),
+                        options: owner_options,
+                        selected_value: owner_user_id,
+                        summary: owner_summary,
+                        on_toggle_open: move |_| is_owner_menu_open.toggle(),
+                        on_select_item: move |owner_user_id: String| {
+                            is_owner_menu_open.set(false);
+                            on_owner_change.call(owner_user_id);
+                        },
                     }
                 }
             } else {
@@ -690,6 +713,25 @@ pub(super) fn AttributeTemplateContentView(
         &attribute_template.access_levels,
         attribute_template.access_level_id,
     );
+    let value_type_options = VALUE_TYPES
+        .iter()
+        .map(|value_type| SingleSelectOption {
+            label: value_type.to_string(),
+            value: value_type.to_string(),
+        })
+        .collect::<Vec<_>>();
+    let access_level_picker_options = access_level_options
+        .iter()
+        .map(|access_level| SingleSelectOption {
+            label: access_level.name.clone(),
+            value: access_level.id.to_string(),
+        })
+        .collect::<Vec<_>>();
+    let access_level_summary = access_level_options
+        .iter()
+        .find(|access_level| access_level.id == attribute_template.access_level_id)
+        .map(|access_level| access_level.name.clone())
+        .unwrap_or_else(|| attribute_template.access_level_id.to_string());
 
     use_effect(move || {
         if !is_readonly {
@@ -741,46 +783,60 @@ pub(super) fn AttributeTemplateContentView(
             div { class: if is_readonly { "attribute-template-detail-pair-row" } else { "attribute-template-select-row" },
                 label { onpointerdown: move |event| event.stop_propagation(),
                     span { "value type" }
-                    span { class: "attribute-template-select-wrap",
-                        select {
-                            disabled: is_readonly || attribute_template.is_saving,
-                            value: "{attribute_template.value_type}",
-                            onchange: move |event| update_attribute_template_modal(
-                                modals,
-                                modal.id,
-                                |attribute_template| attribute_template.value_type = event.value(),
-                            ),
-                            for value_type in VALUE_TYPES {
-                                option {
-                                    value: "{value_type}",
-                                    "{value_type}"
-                                }
-                            }
-                        }
+                    SingleSelectPicker {
+                        disabled: is_readonly || attribute_template.is_saving,
+                        empty_text: "Select value type",
+                        is_open: attribute_template.is_value_type_menu_open,
+                        options: value_type_options,
+                        selected_value: attribute_template.value_type.clone(),
+                        summary: attribute_template.value_type.clone(),
+                        on_toggle_open: move |_| update_attribute_template_modal(
+                            modals,
+                            modal.id,
+                            |attribute_template| {
+                                attribute_template.is_value_type_menu_open =
+                                    !attribute_template.is_value_type_menu_open;
+                                attribute_template.is_access_level_menu_open = false;
+                            },
+                        ),
+                        on_select_item: move |value_type: String| update_attribute_template_modal(
+                            modals,
+                            modal.id,
+                            |attribute_template| {
+                                attribute_template.value_type = value_type;
+                                attribute_template.is_value_type_menu_open = false;
+                            },
+                        ),
                     }
                 }
                 label { onpointerdown: move |event| event.stop_propagation(),
                     span { "access level" }
-                    span { class: "attribute-template-select-wrap",
-                        select {
-                            disabled: is_readonly || attribute_template.is_saving,
-                            value: "{attribute_template.access_level_id}",
-                            onchange: move |event| {
-                                if let Ok(access_level_id) = event.value().parse::<u32>() {
-                                    update_attribute_template_modal(
-                                        modals,
-                                        modal.id,
-                                        |attribute_template| attribute_template.access_level_id = access_level_id,
-                                    );
+                    SingleSelectPicker {
+                        disabled: is_readonly || attribute_template.is_saving,
+                        empty_text: "Select access level",
+                        is_open: attribute_template.is_access_level_menu_open,
+                        options: access_level_picker_options,
+                        selected_value: attribute_template.access_level_id.to_string(),
+                        summary: access_level_summary,
+                        on_toggle_open: move |_| update_attribute_template_modal(
+                            modals,
+                            modal.id,
+                            |attribute_template| {
+                                attribute_template.is_access_level_menu_open =
+                                    !attribute_template.is_access_level_menu_open;
+                                attribute_template.is_value_type_menu_open = false;
+                            },
+                        ),
+                        on_select_item: move |access_level_id: String| update_attribute_template_modal(
+                            modals,
+                            modal.id,
+                            |attribute_template| {
+                                if let Ok(access_level_id) = access_level_id.parse::<u32>() {
+                                    attribute_template.access_level_id = access_level_id;
+                                    attribute_template.is_access_level_menu_open = false;
                                 }
                             },
-                            for access_level in access_level_options {
-                                option {
-                                    value: "{access_level.id}",
-                                    "{access_level.name}"
-                                }
-                            }
-                        }
+                        ),
                     }
                 }
             }

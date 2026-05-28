@@ -1115,6 +1115,10 @@ textarea {
 	z-index: 1000;
 }
 
+.include-attribute-popover:has(.security-user-permissions-menu) {
+	overflow: visible;
+}
+
 .entity-ownership-popover {
 	min-width: 12rem;
 }
@@ -1155,6 +1159,37 @@ textarea {
 	line-height: 1.2;
 	margin: 0;
 	white-space: nowrap;
+}
+
+.entity-ownership-popover .security-user-permission-option,
+.entity-ownership-popover button.security-user-permission-option {
+	align-items: center;
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--fg);
+	cursor: pointer;
+	display: flex;
+	font-size: 0.82rem;
+	gap: 0.42rem;
+	justify-content: flex-start;
+	line-height: 1.2;
+	min-height: 1.65rem;
+	padding: 0.26rem 0.34rem;
+	position: relative;
+	text-align: left;
+	width: 100%;
+}
+
+.entity-ownership-popover .security-user-permission-option:hover,
+.entity-ownership-popover button.security-user-permission-option:hover,
+.entity-ownership-popover
+	.security-user-permission-option[aria-selected='true'],
+.entity-ownership-popover
+	button.security-user-permission-option[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 
 .delete-confirm-popover p {
@@ -1208,6 +1243,11 @@ textarea {
 	overscroll-behavior: contain;
 	padding: 0.55rem 0.9rem 1rem;
 	user-select: none;
+}
+
+.draggable-modal-content:has(.security-user-permissions-menu),
+.draggable-modal-body:has(.security-user-permissions-menu) {
+	overflow: visible;
 }
 
 .draggable-modal :where(button, input, label, textarea) {
@@ -1508,7 +1548,7 @@ button.security-user-permissions-trigger:focus-visible {
 	padding: 0.28rem;
 	position: absolute;
 	top: calc(100% + 0.28rem);
-	z-index: 5;
+	z-index: 1000;
 }
 
 .access-level-edit-form .security-user-permission-option {
@@ -1526,6 +1566,21 @@ button.security-user-permissions-trigger:focus-visible {
 
 .access-level-edit-form .security-user-permission-option:hover {
 	background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.access-level-edit-form .security-user-permission-option.single-select-option {
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.access-level-edit-form .security-user-permission-option.single-select-option:hover,
+.access-level-edit-form
+	.security-user-permission-option.single-select-option[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 
 .access-level-edit-form .security-user-permission-option input {

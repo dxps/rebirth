@@ -1,21 +1,20 @@
-#[derive(Clone, PartialEq)]
-pub struct MultiSelectOption {
-    pub id: u32,
-    pub label: String,
-    pub tooltip: Option<String>,
-}
-
 use dioxus::prelude::*;
 
+#[derive(Clone, PartialEq)]
+pub struct SingleSelectOption {
+    pub label: String,
+    pub value: String,
+}
+
 #[component]
-pub fn MultiSelectPicker(
+pub fn SingleSelectPicker(
     disabled: bool,
     empty_text: &'static str,
     is_open: bool,
-    on_toggle_item: EventHandler<u32>,
+    on_select_item: EventHandler<String>,
     on_toggle_open: EventHandler<MouseEvent>,
-    options: Vec<MultiSelectOption>,
-    selected_ids: Vec<u32>,
+    options: Vec<SingleSelectOption>,
+    selected_value: String,
     summary: String,
 ) -> Element {
     rsx! {
@@ -45,23 +44,20 @@ pub fn MultiSelectPicker(
                 div {
                     class: "security-user-permissions-menu",
                     role: "listbox",
-                    aria_multiselectable: "true",
+                    aria_multiselectable: "false",
                     onclick: move |event| event.stop_propagation(),
                     onpointerdown: move |event| event.stop_propagation(),
                     for option in options {
-                        label {
-                            key: "{option.id}",
-                            class: "security-user-permission-option",
-                            "data-tooltip": option.tooltip.as_deref().unwrap_or(""),
-                            input {
-                                r#type: "checkbox",
-                                checked: selected_ids.contains(&option.id),
-                                disabled,
-                                onchange: move |event| {
-                                    event.stop_propagation();
-                                    on_toggle_item.call(option.id);
-                                },
-                            }
+                        button {
+                            key: "{option.value}",
+                            class: "security-user-permission-option single-select-option",
+                            "aria-selected": "{option.value == selected_value}",
+                            r#type: "button",
+                            disabled,
+                            onclick: move |event| {
+                                event.stop_propagation();
+                                on_select_item.call(option.value.clone());
+                            },
                             span { "{option.label}" }
                         }
                     }
