@@ -334,7 +334,11 @@ pub fn App() -> Element {
                         DataExplorerView { modals, next_modal_id }
                     },
                     Route::Templates => rsx! {
-                        TemplatesView { modals, next_modal_id }
+                        TemplatesView {
+                            auth_session: auth_session(),
+                            modals,
+                            next_modal_id,
+                        }
                     },
                     Route::Security => rsx! {
                         SecurityView {

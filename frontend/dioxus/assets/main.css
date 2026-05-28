@@ -756,6 +756,142 @@ textarea {
 	background: color-mix(in srgb, var(--fg) 10%, transparent);
 }
 
+.templates-table-wrap .data-table {
+	table-layout: fixed;
+}
+
+.templates-table-wrap .data-table th,
+.templates-table-wrap .data-table td {
+	background: transparent;
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	padding: 0.34rem 0.7rem;
+}
+
+.templates-table-wrap .data-table th {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	font-size: 0.78rem;
+	padding-bottom: 0.3rem;
+	text-transform: none;
+}
+
+.templates-table-wrap .data-table td:first-child {
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.templates-table-wrap .data-table td:first-child,
+.templates-table-wrap .data-table td:last-child {
+	border-radius: 0;
+}
+
+.templates-table-wrap .data-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.templates-table-wrap .data-table-row {
+	cursor: pointer;
+}
+
+.templates-table-wrap .data-table-row:hover td {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.entity-templates-table th:first-child,
+.entity-templates-table td:first-child,
+.attribute-templates-table th:first-child,
+.attribute-templates-table td:first-child {
+	width: 30%;
+}
+
+.attribute-templates-table th:nth-child(2),
+.attribute-templates-table td:nth-child(2) {
+	min-width: 0;
+	width: auto;
+}
+
+.attribute-templates-table th:nth-child(3),
+.attribute-templates-table td:nth-child(3) {
+	color: var(--muted);
+	white-space: nowrap;
+	width: 6.6rem;
+}
+
+.entity-templates-table th.data-table-action-heading,
+.entity-templates-table td:last-child,
+.attribute-templates-table th.data-table-action-heading,
+.attribute-templates-table td:last-child {
+	width: 1.45rem;
+}
+
+.entity-templates-table th.data-table-action-heading,
+.attribute-templates-table th.data-table-action-heading {
+	padding-left: 0.15rem;
+	padding-right: 0;
+	text-align: right;
+}
+
+.attribute-template-description-value {
+	position: relative;
+}
+
+.attribute-template-description-value span {
+	display: block;
+	overflow: hidden;
+	padding-right: 1.25rem;
+	position: relative;
+	text-overflow: clip;
+	white-space: nowrap;
+}
+
+.attribute-template-description-value[data-tooltip] span::after {
+	background: var(--bg);
+	bottom: 0;
+	content: ' ...';
+	padding-left: 0.1rem;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+.data-table-row:hover
+	.attribute-template-description-value[data-tooltip]
+	span::after,
+.data-table-row:focus-visible
+	.attribute-template-description-value[data-tooltip]
+	span::after {
+	background: color-mix(in srgb, var(--fg) 10%, var(--bg));
+}
+
+.attribute-template-description-value[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	left: 50%;
+	line-height: 1.2;
+	max-width: 260px;
+	opacity: 0;
+	overflow-wrap: anywhere;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.2rem);
+	transform: translate(-50%, -0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+	white-space: normal;
+	width: max-content;
+	z-index: 30;
+}
+
+.attribute-template-description-value[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
 .entity-link-summary {
 	background: color-mix(in srgb, var(--blue) 18%, transparent);
 	border-radius: 999px;
@@ -855,6 +991,7 @@ textarea {
 	align-items: center;
 	display: flex;
 	gap: 0.25rem;
+	position: relative;
 }
 
 .draggable-modal-info-action {
@@ -958,6 +1095,68 @@ textarea {
 	z-index: 3;
 }
 
+.include-attribute-popover {
+	background: var(--menu-bg);
+	border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+	border-radius: 6px;
+	box-shadow: 0 0 0.9rem color-mix(in srgb, #000 18%, transparent);
+	color: var(--fg);
+	display: grid;
+	gap: 0.55rem;
+	max-height: calc(100vh - 2rem);
+	min-width: 15rem;
+	overflow-x: visible;
+	overflow-y: auto;
+	padding: 0.6rem;
+	position: absolute;
+	right: 0;
+	text-align: left;
+	top: calc(100% + 0.45rem);
+	z-index: 1000;
+}
+
+.entity-ownership-popover {
+	min-width: 12rem;
+}
+
+.entity-ownership-popover label {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.72rem;
+	gap: 0.25rem;
+}
+
+.entity-ownership-popover label > span:first-child {
+	padding-left: 0.32rem;
+}
+
+.entity-ownership-popover select {
+	appearance: none;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.82rem;
+	line-height: 1.35;
+	min-height: 1.8rem;
+	padding: 0.18rem 1.65rem 0.18rem 0.45rem;
+	width: 100%;
+}
+
+.entity-ownership-popover select:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.entity-ownership-read-title {
+	color: var(--fg);
+	font-size: 0.78rem;
+	line-height: 1.2;
+	margin: 0;
+	white-space: nowrap;
+}
+
 .delete-confirm-popover p {
 	color: var(--fg);
 	font-size: 0.82rem;
@@ -1039,6 +1238,7 @@ textarea {
 }
 
 .access-level-edit-form input,
+.access-level-edit-form select,
 .access-level-edit-form textarea {
 	background: color-mix(in srgb, var(--fg) 7%, transparent);
 	border: 0;
@@ -1050,7 +1250,15 @@ textarea {
 	padding: 0.16rem 0.36rem;
 }
 
-.access-level-edit-form input {
+.access-level-edit-form select {
+	appearance: none;
+	padding-left: 0.36rem;
+	padding-right: 2rem;
+	width: 100%;
+}
+
+.access-level-edit-form input,
+.access-level-edit-form select {
 	height: 1.72rem;
 	min-height: 1.72rem;
 }
@@ -1082,9 +1290,104 @@ textarea {
 }
 
 .access-level-edit-form input:focus,
+.access-level-edit-form select:focus,
 .access-level-edit-form textarea:focus {
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
 	outline: 0;
+}
+
+.attribute-template-select-wrap {
+	position: relative;
+}
+
+.attribute-template-select-wrap::after {
+	border-bottom: 1.5px solid var(--select-chevron-color, var(--fg));
+	border-right: 1.5px solid var(--select-chevron-color, var(--fg));
+	content: '';
+	height: 0.48rem;
+	pointer-events: none;
+	position: absolute;
+	right: 0.62rem;
+	top: 50%;
+	transform: translateY(-65%) rotate(45deg);
+	width: 0.48rem;
+}
+
+.attribute-template-select-wrap:has(select:disabled)::after {
+	--select-chevron-color: var(--muted);
+}
+
+.attribute-template-select-row,
+.attribute-template-detail-pair-row {
+	display: grid;
+	gap: 0.65rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.access-level-edit-form:not(.attribute-template-view-form)
+	.attribute-template-description-input {
+	height: calc((14px * 1.35) + 0.32rem + 2px);
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
+	resize: vertical;
+}
+
+.attribute-template-view-form .attribute-template-description-input {
+	height: auto;
+	max-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35) + 0.32rem + 2px);
+	overflow-y: auto;
+	resize: none;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label {
+	align-items: center;
+	cursor: pointer;
+	display: flex;
+	flex-direction: row;
+	gap: 0.45rem;
+	justify-self: start;
+	width: fit-content;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label input {
+	appearance: none;
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	cursor: pointer;
+	height: 1rem;
+	min-height: 1rem;
+	padding: 0;
+	position: relative;
+	width: 1rem;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label input:checked {
+	background: var(--focus-ring);
+}
+
+.access-level-edit-form .attribute-template-checkbox-label input:checked::after {
+	border-bottom: 2px solid var(--bg);
+	border-right: 2px solid var(--bg);
+	content: '';
+	height: 0.48rem;
+	left: 50%;
+	position: absolute;
+	top: 46%;
+	transform: translate(-50%, -50%) rotate(45deg);
+	width: 0.28rem;
+}
+
+.access-level-edit-form .attribute-template-checkbox-label span {
+	cursor: pointer;
+	padding-left: 0;
+}
+
+.access-level-details .attribute-template-checkbox-label,
+.access-level-details .attribute-template-readonly-checkbox,
+.access-level-details .attribute-template-readonly-checkbox input {
+	cursor: default;
 }
 
 .security-user-edit-form {

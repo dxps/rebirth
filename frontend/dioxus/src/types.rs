@@ -168,8 +168,34 @@ pub struct UserModal {
 }
 
 #[derive(Clone, PartialEq)]
+pub struct AttributeTemplateModal {
+    pub access_level_id: u32,
+    pub access_levels: Vec<AccessLevel>,
+    pub attribute_templates: Signal<Vec<AttributeTemplate>>,
+    pub can_assign_owner: bool,
+    pub can_edit: bool,
+    pub default_value: String,
+    pub description: String,
+    pub error: Option<String>,
+    pub id: Option<String>,
+    pub is_delete_confirm_open: bool,
+    pub is_info_open: bool,
+    pub is_ownership_open: bool,
+    pub is_required: bool,
+    pub is_saving: bool,
+    pub mode: SecurityModalMode,
+    pub name: String,
+    pub owner_user_id: Option<String>,
+    pub owner_username: Option<String>,
+    pub owner_users: Vec<User>,
+    pub session_key: String,
+    pub value_type: String,
+}
+
+#[derive(Clone, PartialEq)]
 pub enum ModalContent {
     AccessLevel(AccessLevelModal),
+    AttributeTemplate(AttributeTemplateModal),
     Generic,
     User(UserModal),
 }
@@ -239,6 +265,30 @@ pub struct AccessLevelsResponse {
 #[derive(Deserialize)]
 pub struct AccessLevelResponse {
     pub data: AccessLevel,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttributeTemplate {
+    pub access_level_id: u32,
+    pub default_value: Option<String>,
+    pub description: String,
+    pub id: String,
+    pub is_required: bool,
+    pub name: String,
+    pub owner_user_id: String,
+    pub owner_username: Option<String>,
+    pub value_type: String,
+}
+
+#[derive(Deserialize)]
+pub struct AttributeTemplatesResponse {
+    pub data: Vec<AttributeTemplate>,
+}
+
+#[derive(Deserialize)]
+pub struct AttributeTemplateResponse {
+    pub data: AttributeTemplate,
 }
 
 #[derive(Deserialize)]

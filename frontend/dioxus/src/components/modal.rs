@@ -1,10 +1,12 @@
 mod access_level;
+mod attribute_template;
 mod user;
 
 use dioxus::prelude::*;
 use lucide_dioxus::{Info, Pencil, Trash2, X};
 
 pub use access_level::open_access_level_modal;
+pub use attribute_template::open_attribute_template_modal;
 pub use user::open_user_modal;
 
 use crate::types::{
@@ -50,6 +52,9 @@ fn close_modal_popovers(mut modals: Signal<Vec<OpenModal>>, modal_id: u32) {
     {
         match &mut open_modal.content {
             ModalContent::AccessLevel(access_level) => access_level::close_popovers(access_level),
+            ModalContent::AttributeTemplate(attribute_template) => {
+                attribute_template::close_popovers(attribute_template)
+            }
             ModalContent::User(user) => user::close_popovers(user),
             ModalContent::Generic => {}
         }
@@ -136,6 +141,13 @@ fn ModalTitlebarActions(
                 modal_interaction,
             }
         },
+        ModalContent::AttributeTemplate(_) => rsx! {
+            attribute_template::AttributeTemplateTitlebarActions {
+                modal,
+                modals,
+                modal_interaction,
+            }
+        },
         ModalContent::User(_) => rsx! {
             user::UserTitlebarActions {
                 modal,
@@ -202,6 +214,9 @@ fn ModalContentView(modal: OpenModal, modals: Signal<Vec<OpenModal>>) -> Element
     match modal.content.clone() {
         ModalContent::AccessLevel(_) => rsx! {
             access_level::AccessLevelContentView { modal, modals }
+        },
+        ModalContent::AttributeTemplate(_) => rsx! {
+            attribute_template::AttributeTemplateContentView { modal, modals }
         },
         ModalContent::User(_) => rsx! {
             user::UserContentView { modal, modals }
