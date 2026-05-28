@@ -3,6 +3,7 @@ use gloo_net::http::Request;
 use lucide_dioxus::{
     ArrowLeft, ExternalLink, GripVertical, Info, Pencil, Plus, Save, Trash2, User, X,
 };
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
@@ -15,6 +16,7 @@ use crate::types::{
 use super::{json_string, next_modal_z_index, read_response_error, DeleteConfirmPopover};
 
 const VALUE_TYPES: [&str; 5] = ["text", "number", "boolean", "date", "datetime"];
+static ATTRIBUTE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 pub fn open_entity_template_modal(
     mut modals: Signal<Vec<OpenModal>>,
@@ -80,9 +82,14 @@ pub fn open_entity_template_modal(
             is_delete_confirm_open: false,
             is_info_open: false,
             is_listing_attribute_menu_open: false,
+            is_new_attribute_value_type_menu_open: false,
             is_ownership_open: false,
             is_saving: false,
             mode: SecurityModalMode::Details,
+            new_attribute_description: String::new(),
+            new_attribute_name: String::new(),
+            new_attribute_save_as_template: false,
+            new_attribute_value_type: "text".to_string(),
             owner_users,
             selected_attribute_template_id: None,
             session_key,
@@ -144,9 +151,14 @@ pub fn open_create_entity_template_modal(
             is_delete_confirm_open: false,
             is_info_open: false,
             is_listing_attribute_menu_open: false,
+            is_new_attribute_value_type_menu_open: false,
             is_ownership_open: false,
             is_saving: false,
             mode: SecurityModalMode::Create,
+            new_attribute_description: String::new(),
+            new_attribute_name: String::new(),
+            new_attribute_save_as_template: false,
+            new_attribute_value_type: "text".to_string(),
             owner_users,
             selected_attribute_template_id: None,
             session_key,
@@ -171,6 +183,7 @@ pub(super) fn close_popovers(entity_template: &mut EntityTemplateModal) {
     entity_template.is_delete_confirm_open = false;
     entity_template.is_info_open = false;
     entity_template.is_listing_attribute_menu_open = false;
+    entity_template.is_new_attribute_value_type_menu_open = false;
     entity_template.is_ownership_open = false;
     entity_template.open_attribute_access_level_menu_id = None;
     entity_template.open_attribute_value_type_menu_id = None;
@@ -782,8 +795,13 @@ pub(super) fn EntityTemplateContentView(
                                 is_readonly,
                                 is_attribute_template_menu_open: entity_template.is_attribute_template_menu_open,
                                 is_attribute_popover_open: entity_template.is_attribute_popover_open,
+                                is_new_attribute_value_type_menu_open: entity_template.is_new_attribute_value_type_menu_open,
                                 modal_id: modal.id,
                                 modals,
+                                new_attribute_description: entity_template.new_attribute_description.clone(),
+                                new_attribute_name: entity_template.new_attribute_name.clone(),
+                                new_attribute_save_as_template: entity_template.new_attribute_save_as_template,
+                                new_attribute_value_type: entity_template.new_attribute_value_type.clone(),
                                 open_access_level_menu_id: entity_template.open_attribute_access_level_menu_id.clone(),
                                 open_value_type_menu_id: entity_template.open_attribute_value_type_menu_id.clone(),
                                 selected_attribute_template_id: entity_template.selected_attribute_template_id.clone(),
@@ -841,8 +859,13 @@ fn AttributesTable(
     is_readonly: bool,
     is_attribute_template_menu_open: bool,
     is_attribute_popover_open: bool,
+    is_new_attribute_value_type_menu_open: bool,
     modal_id: u32,
     modals: Signal<Vec<OpenModal>>,
+    new_attribute_description: String,
+    new_attribute_name: String,
+    new_attribute_save_as_template: bool,
+    new_attribute_value_type: String,
     open_access_level_menu_id: Option<String>,
     open_value_type_menu_id: Option<String>,
     selected_attribute_template_id: Option<String>,
@@ -899,8 +922,13 @@ fn AttributesTable(
                                         attribute_source_tab,
                                         attribute_templates: attribute_templates.clone(),
                                         is_attribute_template_menu_open,
+                                        is_new_attribute_value_type_menu_open,
                                         modal_id,
                                         modals,
+                                        new_attribute_description: new_attribute_description.clone(),
+                                        new_attribute_name: new_attribute_name.clone(),
+                                        new_attribute_save_as_template,
+                                        new_attribute_value_type: new_attribute_value_type.clone(),
                                         selected_attribute_template_id: selected_attribute_template_id.clone(),
                                     }
                                 }
@@ -1182,8 +1210,13 @@ fn AttributeTemplatePopover(
     attribute_source_tab: EntityTemplateAttributeSourceTab,
     attribute_templates: Vec<AttributeTemplate>,
     is_attribute_template_menu_open: bool,
+    is_new_attribute_value_type_menu_open: bool,
     modal_id: u32,
     modals: Signal<Vec<OpenModal>>,
+    new_attribute_description: String,
+    new_attribute_name: String,
+    new_attribute_save_as_template: bool,
+    new_attribute_value_type: String,
     selected_attribute_template_id: Option<String>,
 ) -> Element {
     let selected_attribute_template_id = selected_attribute_template_id.or_else(|| {
@@ -1207,6 +1240,14 @@ fn AttributeTemplatePopover(
             value: attribute_template.id.clone(),
         })
         .collect::<Vec<_>>();
+    let value_type_options = VALUE_TYPES
+        .iter()
+        .map(|value_type| SingleSelectOption {
+            label: value_type.to_string(),
+            value: value_type.to_string(),
+        })
+        .collect::<Vec<_>>();
+    let can_add_new_attribute = !new_attribute_name.trim().is_empty();
 
     rsx! {
         div {
@@ -1229,6 +1270,7 @@ fn AttributeTemplatePopover(
                             |entity_template| {
                                 entity_template.attribute_source_tab = EntityTemplateAttributeSourceTab::Existing;
                                 entity_template.is_attribute_template_menu_open = false;
+                                entity_template.is_new_attribute_value_type_menu_open = false;
                             },
                         ),
                         "Existing"
@@ -1244,6 +1286,7 @@ fn AttributeTemplatePopover(
                             |entity_template| {
                                 entity_template.attribute_source_tab = EntityTemplateAttributeSourceTab::New;
                                 entity_template.is_attribute_template_menu_open = false;
+                                entity_template.is_new_attribute_value_type_menu_open = false;
                             },
                         ),
                         "New"
@@ -1259,6 +1302,7 @@ fn AttributeTemplatePopover(
                         |entity_template| {
                             entity_template.is_attribute_popover_open = false;
                             entity_template.is_attribute_template_menu_open = false;
+                            entity_template.is_new_attribute_value_type_menu_open = false;
                         },
                     ),
                     X { class: "app-icon", size: 15 }
@@ -1308,8 +1352,90 @@ fn AttributeTemplatePopover(
                     }
                 }
             } else {
-                div { class: "entity-template-new-attribute-placeholder",
-                    "New attribute creation will use this same panel."
+                label { class: "entity-template-new-attribute-field",
+                    span { "name" }
+                    input {
+                        class: "entity-template-attribute-name-input",
+                        r#type: "text",
+                        value: "{new_attribute_name}",
+                        oninput: move |event| update_entity_template_modal(
+                            modals,
+                            modal_id,
+                            |entity_template| {
+                                entity_template.new_attribute_name = event.value();
+                            },
+                        ),
+                    }
+                }
+                label { class: "entity-template-new-attribute-field",
+                    span { "description" }
+                    textarea {
+                        rows: "2",
+                        value: "{new_attribute_description}",
+                        oninput: move |event| update_entity_template_modal(
+                            modals,
+                            modal_id,
+                            |entity_template| {
+                                entity_template.new_attribute_description = event.value();
+                            },
+                        ),
+                    }
+                }
+                label { class: "entity-template-new-attribute-field",
+                    span { "value type" }
+                    SingleSelectPicker {
+                        disabled: false,
+                        empty_text: "Select value type".to_string(),
+                        is_open: is_new_attribute_value_type_menu_open,
+                        options: value_type_options,
+                        selected_value: new_attribute_value_type.clone(),
+                        summary: new_attribute_value_type.clone(),
+                        on_toggle_open: move |_| update_entity_template_modal(
+                            modals,
+                            modal_id,
+                            |entity_template| {
+                                entity_template.is_new_attribute_value_type_menu_open =
+                                    !entity_template.is_new_attribute_value_type_menu_open;
+                                entity_template.is_attribute_template_menu_open = false;
+                            },
+                        ),
+                        on_select_item: move |value_type: String| update_entity_template_modal(
+                            modals,
+                            modal_id,
+                            |entity_template| {
+                                entity_template.new_attribute_value_type = value_type;
+                                entity_template.is_new_attribute_value_type_menu_open = false;
+                            },
+                        ),
+                    }
+                }
+                label { class: "entity-template-new-attribute-checkbox",
+                    input {
+                        checked: new_attribute_save_as_template,
+                        r#type: "checkbox",
+                        onchange: move |event| update_entity_template_modal(
+                            modals,
+                            modal_id,
+                            |entity_template| {
+                                entity_template.new_attribute_save_as_template = event.checked();
+                            },
+                        ),
+                    }
+                    span { "save it as attribute template" }
+                }
+                div { class: "entity-template-attribute-popover-actions",
+                    button {
+                        class: "entity-template-attribute-add-button",
+                        aria_label: "Add new attribute",
+                        disabled: !can_add_new_attribute,
+                        r#type: "button",
+                        onclick: move |_| {
+                            if can_add_new_attribute {
+                                include_new_attribute(modals, modal_id);
+                            }
+                        },
+                        Plus { class: "app-icon", size: 16 }
+                    }
                 }
             }
         }
@@ -1764,6 +1890,228 @@ fn add_selected_attribute_template(entity_template: &mut EntityTemplateModal) {
 
     entity_template.is_attribute_popover_open = false;
     entity_template.is_attribute_template_menu_open = false;
+}
+
+fn include_new_attribute(modals: Signal<Vec<OpenModal>>, modal_id: u32) {
+    let Some(mut entity_template) = modals
+        .read()
+        .iter()
+        .find(|open_modal| open_modal.id == modal_id)
+        .and_then(|open_modal| match &open_modal.content {
+            ModalContent::EntityTemplate(entity_template) => Some(entity_template.clone()),
+            _ => None,
+        })
+    else {
+        return;
+    };
+
+    let name = entity_template.new_attribute_name.trim().to_string();
+    let description = entity_template.new_attribute_description.trim().to_string();
+    let value_type = if entity_template.new_attribute_value_type.is_empty() {
+        "text".to_string()
+    } else {
+        entity_template.new_attribute_value_type.clone()
+    };
+    let access_level_id = default_attribute_access_level_id(&entity_template.access_levels);
+
+    if name.is_empty() {
+        update_entity_template_modal(modals, modal_id, |entity_template| {
+            entity_template.error = Some("Attribute name is required".to_string());
+        });
+        return;
+    }
+
+    update_entity_template_modal(modals, modal_id, |entity_template| {
+        entity_template.error = None;
+        entity_template.is_saving = entity_template.new_attribute_save_as_template;
+    });
+
+    if entity_template.new_attribute_save_as_template {
+        spawn(async move {
+            match create_attribute_template_for_new_attribute(
+                &entity_template.session_key,
+                &name,
+                &description,
+                &value_type,
+                access_level_id,
+            )
+            .await
+            {
+                Ok(saved_attribute_template) => {
+                    {
+                        let mut attribute_templates = entity_template.attribute_templates.write();
+                        attribute_templates.push(saved_attribute_template.clone());
+                        attribute_templates.sort_by(|left, right| {
+                            left.name
+                                .to_ascii_lowercase()
+                                .cmp(&right.name.to_ascii_lowercase())
+                        });
+                    }
+
+                    update_entity_template_modal(modals, modal_id, |entity_template| {
+                        add_new_attribute_from_values(
+                            entity_template,
+                            saved_attribute_template.name,
+                            saved_attribute_template.description,
+                            saved_attribute_template.value_type,
+                            saved_attribute_template.access_level_id,
+                            saved_attribute_template.is_required,
+                        );
+                        entity_template.is_saving = false;
+                    });
+                }
+                Err(message) => update_entity_template_modal(modals, modal_id, |entity_template| {
+                    entity_template.is_saving = false;
+                    entity_template.error = Some(message);
+                }),
+            }
+        });
+    } else {
+        update_entity_template_modal(modals, modal_id, |entity_template| {
+            add_new_attribute_from_values(
+                entity_template,
+                name,
+                description,
+                value_type,
+                access_level_id,
+                false,
+            );
+        });
+    }
+}
+
+async fn create_attribute_template_for_new_attribute(
+    session_key: &str,
+    name: &str,
+    description: &str,
+    value_type: &str,
+    access_level_id: u32,
+) -> Result<AttributeTemplate, String> {
+    let response = Request::post(&format!("{API_BASE_URL}/attribute-templates"))
+        .header("Authorization", &format!("Bearer {session_key}"))
+        .header("Content-Type", "application/json")
+        .body(format!(
+            "{{\"accessLevelId\":{},\"defaultValue\":null,\"description\":{},\"isRequired\":false,\"name\":{},\"valueType\":{}}}",
+            access_level_id,
+            json_string(description),
+            json_string(name),
+            json_string(value_type),
+        ))
+        .map_err(|_| "Unable to create attribute template".to_string())?
+        .send()
+        .await
+        .map_err(|_| "Unable to create attribute template".to_string())?;
+
+    if response.ok() {
+        response
+            .json::<crate::types::AttributeTemplateResponse>()
+            .await
+            .map(|payload| payload.data)
+            .map_err(|_| "Unable to create attribute template".to_string())
+    } else {
+        Err(read_response_error(response, "Unable to create attribute template").await)
+    }
+}
+
+fn add_new_attribute_from_values(
+    entity_template: &mut EntityTemplateModal,
+    name: String,
+    description: String,
+    value_type: String,
+    access_level_id: u32,
+    is_required: bool,
+) {
+    let listing_index = entity_template
+        .entity_template
+        .attributes
+        .iter()
+        .map(|attribute| attribute.listing_index)
+        .max()
+        .unwrap_or(-1)
+        + 1;
+    let attribute_id = new_entity_template_attribute_id();
+
+    entity_template
+        .entity_template
+        .attributes
+        .push(EntityTemplateAttribute {
+            access_level_id,
+            description,
+            id: attribute_id.clone(),
+            is_required,
+            listing_index,
+            name,
+            value_type,
+        });
+
+    if entity_template
+        .entity_template
+        .listing_attribute_id
+        .is_empty()
+    {
+        entity_template.entity_template.listing_attribute_id = attribute_id;
+    }
+
+    entity_template.is_attribute_popover_open = false;
+    entity_template.is_attribute_template_menu_open = false;
+    entity_template.is_new_attribute_value_type_menu_open = false;
+    entity_template.new_attribute_description = String::new();
+    entity_template.new_attribute_name = String::new();
+    entity_template.new_attribute_save_as_template = false;
+    entity_template.new_attribute_value_type = "text".to_string();
+}
+
+fn default_attribute_access_level_id(access_levels: &[AccessLevel]) -> u32 {
+    access_levels
+        .first()
+        .map(|access_level| access_level.id)
+        .unwrap_or(4)
+}
+
+fn new_entity_template_attribute_id() -> String {
+    let mut bytes = [0_u8; 16];
+
+    if !fill_random_bytes(&mut bytes) {
+        let counter = ATTRIBUTE_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+        bytes[0..8].copy_from_slice(&counter.to_be_bytes());
+        bytes[8..16].copy_from_slice(&counter.wrapping_mul(0x9e37_79b9_7f4a_7c15).to_be_bytes());
+    }
+
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    format!(
+        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+        bytes[0],
+        bytes[1],
+        bytes[2],
+        bytes[3],
+        bytes[4],
+        bytes[5],
+        bytes[6],
+        bytes[7],
+        bytes[8],
+        bytes[9],
+        bytes[10],
+        bytes[11],
+        bytes[12],
+        bytes[13],
+        bytes[14],
+        bytes[15],
+    )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn fill_random_bytes(bytes: &mut [u8]) -> bool {
+    web_sys::window()
+        .and_then(|window| window.crypto().ok())
+        .and_then(|crypto| crypto.get_random_values_with_u8_array(bytes).ok())
+        .is_some()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn fill_random_bytes(_bytes: &mut [u8]) -> bool {
+    false
 }
 
 fn exclude_attribute(entity_template: &mut EntityTemplateModal, attribute_id: &str) {
