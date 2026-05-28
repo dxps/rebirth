@@ -1447,6 +1447,13 @@ textarea {
 	position: relative;
 }
 
+.access-level-edit-form label > .security-user-permissions-picker {
+	color: inherit;
+	font-size: inherit;
+	line-height: normal;
+	padding-left: 0;
+}
+
 .security-user-password-wrap input {
 	padding-right: 2.1rem;
 	width: 100%;
