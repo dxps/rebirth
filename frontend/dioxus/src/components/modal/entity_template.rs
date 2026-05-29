@@ -224,6 +224,7 @@ pub(super) fn EntityTemplateTitlebarActions(
     let can_edit = entity_template.can_edit;
     let owner_label = owner_label(&entity_template);
     let is_create = entity_template.mode == SecurityModalMode::Create;
+    let is_edit = entity_template.mode == SecurityModalMode::Edit;
     let save_modal = modal.clone();
     let can_save_create =
         is_create
@@ -241,6 +242,148 @@ pub(super) fn EntityTemplateTitlebarActions(
             && entity_template.entity_template.links.iter().all(|link| {
                 !link.name.trim().is_empty() && link.target_entity_template_id.is_some()
             });
+
+    let can_save_edit =
+        is_edit
+            && !entity_template.entity_template.name.trim().is_empty()
+            && !entity_template.entity_template.attributes.is_empty()
+            && !entity_template
+                .entity_template
+                .listing_attribute_id
+                .is_empty()
+            && entity_template
+                .entity_template
+                .attributes
+                .iter()
+                .all(|attribute| !attribute.name.trim().is_empty())
+            && entity_template.entity_template.links.iter().all(|link| {
+                !link.name.trim().is_empty() && link.target_entity_template_id.is_some()
+            });
+
+    if is_edit {
+        let save_modal_edit = modal.clone();
+        let edit_entity_template_id = entity_template.entity_template.id.clone();
+        let edit_entity_template_id_for_delete = edit_entity_template_id.clone();
+        let edit_entity_templates = entity_template.entity_templates;
+        let edit_session_key = entity_template.session_key.clone();
+        return rsx! {
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": "Cancel",
+                aria_label: "Cancel edit",
+                onclick: move |_| {
+                    let original = edit_entity_templates
+                        .read()
+                        .iter()
+                        .find(|t| t.id == edit_entity_template_id)
+                        .cloned();
+                    if let Some(open_modal) = modals
+                        .write()
+                        .iter_mut()
+                        .find(|open_modal| open_modal.id == modal_id)
+                    {
+                        open_modal.title = "Entity Template".to_string();
+                        if let ModalContent::EntityTemplate(et) = &mut open_modal.content {
+                            if let Some(original) = original {
+                                et.entity_template = original;
+                            }
+                            et.mode = SecurityModalMode::Details;
+                            et.error = None;
+                        }
+                    }
+                },
+                ArrowLeft { class: "app-icon", size: 15 }
+            }
+            div { class: "draggable-modal-delete-action",
+                button {
+                    class: "draggable-modal-titlebar-button draggable-modal-delete-button",
+                    "data-tooltip": if is_delete_confirm_open { "" } else { "Delete" },
+                    aria_label: "Delete entity template",
+                    aria_expanded: "{is_delete_confirm_open}",
+                    onclick: move |_| update_entity_template_modal(
+                        modals,
+                        modal_id,
+                        |entity_template| {
+                            entity_template.is_delete_confirm_open = true;
+                            entity_template.is_attribute_popover_open = false;
+                            entity_template.is_attribute_template_menu_open = false;
+                            entity_template.is_info_open = false;
+                            entity_template.is_ownership_open = false;
+                        },
+                    ),
+                    Trash2 { class: "app-icon", size: 15 }
+                }
+                if is_delete_confirm_open {
+                    DeleteConfirmPopover {
+                        on_cancel: move |_| update_entity_template_modal(
+                            modals,
+                            modal_id,
+                            |entity_template| entity_template.is_delete_confirm_open = false,
+                        ),
+                        on_confirm: move |_| {
+                            let session_key = edit_session_key.clone();
+                            let entity_template_id = edit_entity_template_id_for_delete.clone();
+                            let mut entity_templates = edit_entity_templates;
+                            spawn(async move {
+                                let response = Request::delete(&format!(
+                                    "{API_BASE_URL}/entity-templates/{entity_template_id}"
+                                ))
+                                .header("Authorization", &format!("Bearer {session_key}"))
+                                .send()
+                                .await;
+                                if response.map(|r| r.ok()).unwrap_or(false) {
+                                    entity_templates
+                                        .write()
+                                        .retain(|item| item.id != entity_template_id);
+                                    modals
+                                        .write()
+                                        .retain(|open_modal| open_modal.id != modal_id);
+                                }
+                            });
+                        },
+                    }
+                }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": if can_save_edit { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
+                aria_label: "Save entity template",
+                disabled: !can_save_edit || entity_template.is_saving,
+                onclick: move |_| {
+                    if can_save_edit {
+                        save_entity_template_modal(modals, save_modal_edit.clone());
+                    }
+                },
+                Save { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": "Owner",
+                aria_label: "Ownership",
+                aria_expanded: "{is_ownership_open}",
+                onclick: move |_| update_entity_template_modal(
+                    modals,
+                    modal_id,
+                    |entity_template| {
+                        entity_template.is_ownership_open = !entity_template.is_ownership_open;
+                        entity_template.is_attribute_popover_open = false;
+                        entity_template.is_attribute_template_menu_open = false;
+                        entity_template.is_info_open = false;
+                        entity_template.is_delete_confirm_open = false;
+                    },
+                ),
+                User { class: "app-icon", size: 15 }
+            }
+            if is_ownership_open {
+                div {
+                    class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
+                    onclick: move |event| event.stop_propagation(),
+                    onpointerdown: move |event| event.stop_propagation(),
+                    p { class: "entity-ownership-read-title", "Owner: {owner_label}" }
+                }
+            }
+        };
+    }
 
     if is_create {
         return rsx! {
@@ -352,11 +495,27 @@ pub(super) fn EntityTemplateTitlebarActions(
                         modal_id,
                         |entity_template| entity_template.is_delete_confirm_open = false,
                     ),
-                    on_confirm: move |_| update_entity_template_modal(
-                        modals,
-                        modal_id,
-                        |entity_template| entity_template.is_delete_confirm_open = false,
-                    ),
+                    on_confirm: move |_| {
+                        let session_key = entity_template.session_key.clone();
+                        let entity_template_id = entity_template.entity_template.id.clone();
+                        let mut entity_templates = entity_template.entity_templates;
+                        spawn(async move {
+                            let response = Request::delete(&format!(
+                                "{API_BASE_URL}/entity-templates/{entity_template_id}"
+                            ))
+                            .header("Authorization", &format!("Bearer {session_key}"))
+                            .send()
+                            .await;
+                            if response.map(|r| r.ok()).unwrap_or(false) {
+                                entity_templates
+                                    .write()
+                                    .retain(|item| item.id != entity_template_id);
+                                modals
+                                    .write()
+                                    .retain(|open_modal| open_modal.id != modal_id);
+                            }
+                        });
+                    },
                 }
             }
         }
@@ -513,16 +672,35 @@ async fn save_entity_template_request(
     session_key: &str,
     entity_template: &EntityTemplate,
 ) -> Result<EntityTemplate, String> {
-    let response = Request::post(&format!("{API_BASE_URL}/entity-templates"))
-        .header("Authorization", &format!("Bearer {session_key}"))
-        .header("Content-Type", "application/json")
-        .body(entity_template_create_body(entity_template))
-        .map_err(|_| "Unable to create entity template".to_string())?
+    let (request, fallback) = if entity_template.id.is_empty() {
+        (
+            Request::post(&format!("{API_BASE_URL}/entity-templates"))
+                .header("Authorization", &format!("Bearer {session_key}"))
+                .header("Content-Type", "application/json")
+                .body(entity_template_create_body(entity_template))
+                .map_err(|_| "Unable to create entity template".to_string())?,
+            "Unable to create entity template",
+        )
+    } else {
+        (
+            Request::patch(&format!(
+                "{API_BASE_URL}/entity-templates/{}",
+                entity_template.id
+            ))
+            .header("Authorization", &format!("Bearer {session_key}"))
+            .header("Content-Type", "application/json")
+            .body(entity_template_create_body(entity_template))
+            .map_err(|_| "Unable to save entity template".to_string())?,
+            "Unable to save entity template",
+        )
+    };
+
+    let response = request
         .send()
         .await
-        .map_err(|_| "Unable to create entity template".to_string())?;
+        .map_err(|_| fallback.to_string())?;
 
-    parse_entity_template_response(response, "Unable to create entity template").await
+    parse_entity_template_response(response, fallback).await
 }
 
 async fn parse_entity_template_response(
