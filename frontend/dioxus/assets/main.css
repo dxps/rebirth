@@ -1819,6 +1819,10 @@ button.entity-template-tab[aria-selected='true'] {
 	padding-top: 0.24rem;
 }
 
+.entity-template-edit-attributes-table td:first-child {
+	padding-left: 2px;
+}
+
 .entity-template-edit-attributes-table .entity-template-attribute-name {
 	padding-right: 0.55rem;
 }
@@ -2194,6 +2198,10 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 .entity-template-links-table td {
 	padding-bottom: 0.24rem;
 	padding-top: 0.24rem;
+}
+
+.entity-template-links-table td:nth-child(1) {
+	padding-left: 2px;
 }
 
 .entity-template-links-table th:nth-child(1),

@@ -223,6 +223,8 @@ pub(super) fn EntityTemplateTitlebarActions(
     let is_delete_confirm_open = entity_template.is_delete_confirm_open;
     let can_edit = entity_template.can_edit;
     let owner_label = owner_label(&entity_template);
+    let owner_users = entity_template.owner_users.clone();
+    let owner_user_id = entity_template.entity_template.owner_user_id.clone();
     let is_create = entity_template.mode == SecurityModalMode::Create;
     let is_edit = entity_template.mode == SecurityModalMode::Edit;
     let save_modal = modal.clone();
@@ -266,6 +268,9 @@ pub(super) fn EntityTemplateTitlebarActions(
         let edit_entity_template_id_for_delete = edit_entity_template_id.clone();
         let edit_entity_templates = entity_template.entity_templates;
         let edit_session_key = entity_template.session_key.clone();
+        let edit_owner_users = owner_users.clone();
+        let edit_owner_user_id = owner_user_id.clone();
+        let edit_owner_label = owner_label.clone();
         return rsx! {
             button {
                 class: "draggable-modal-titlebar-button",
@@ -375,11 +380,24 @@ pub(super) fn EntityTemplateTitlebarActions(
                 User { class: "app-icon", size: 15 }
             }
             if is_ownership_open {
-                div {
-                    class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
-                    onclick: move |event| event.stop_propagation(),
-                    onpointerdown: move |event| event.stop_propagation(),
-                    p { class: "entity-ownership-read-title", "Owner: {owner_label}" }
+                OwnershipPopover {
+                    can_assign_owner: true,
+                    is_saving: entity_template.is_saving,
+                    owner_label: edit_owner_label.clone(),
+                    owner_user_id: edit_owner_user_id.clone(),
+                    owner_users: edit_owner_users.clone(),
+                    on_owner_change: move |new_owner_id: String| update_entity_template_modal(
+                        modals,
+                        modal_id,
+                        |et| {
+                            et.entity_template.owner_username = et
+                                .owner_users
+                                .iter()
+                                .find(|u| u.id == new_owner_id)
+                                .map(|u| u.username.clone());
+                            et.entity_template.owner_user_id = new_owner_id;
+                        },
+                    ),
                 }
             }
         };
@@ -393,6 +411,18 @@ pub(super) fn EntityTemplateTitlebarActions(
                 aria_label: "Back",
                 onclick: move |_| modals.write().retain(|open_modal| open_modal.id != modal_id),
                 ArrowLeft { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": if can_save_create { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
+                aria_label: "Save entity template",
+                disabled: !can_save_create || entity_template.is_saving,
+                onclick: move |_| {
+                    if can_save_create {
+                        save_entity_template_modal(modals, save_modal.clone());
+                    }
+                },
+                Save { class: "app-icon", size: 15 }
             }
             button {
                 class: "draggable-modal-titlebar-button",
@@ -412,24 +442,25 @@ pub(super) fn EntityTemplateTitlebarActions(
                 ),
                 User { class: "app-icon", size: 15 }
             }
-            button {
-                class: "draggable-modal-titlebar-button",
-                "data-tooltip": if can_save_create { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
-                aria_label: "Save entity template",
-                disabled: !can_save_create || entity_template.is_saving,
-                onclick: move |_| {
-                    if can_save_create {
-                        save_entity_template_modal(modals, save_modal.clone());
-                    }
-                },
-                Save { class: "app-icon", size: 15 }
-            }
             if is_ownership_open {
-                div {
-                    class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
-                    onclick: move |event| event.stop_propagation(),
-                    onpointerdown: move |event| event.stop_propagation(),
-                    p { class: "entity-ownership-read-title", "Owner: {owner_label}" }
+                OwnershipPopover {
+                    can_assign_owner: true,
+                    is_saving: entity_template.is_saving,
+                    owner_label: owner_label.clone(),
+                    owner_user_id: owner_user_id.clone(),
+                    owner_users: owner_users.clone(),
+                    on_owner_change: move |new_owner_id: String| update_entity_template_modal(
+                        modals,
+                        modal_id,
+                        |et| {
+                            et.entity_template.owner_username = et
+                                .owner_users
+                                .iter()
+                                .find(|u| u.id == new_owner_id)
+                                .map(|u| u.username.clone());
+                            et.entity_template.owner_user_id = new_owner_id;
+                        },
+                    ),
                 }
             }
         };
@@ -562,10 +593,64 @@ pub(super) fn EntityTemplateTitlebarActions(
             User { class: "app-icon", size: 15 }
         }
         if is_ownership_open {
-            div {
-                class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
-                onclick: move |event| event.stop_propagation(),
-                onpointerdown: move |event| event.stop_propagation(),
+            OwnershipPopover {
+                can_assign_owner: false,
+                is_saving: false,
+                owner_label: owner_label.clone(),
+                owner_user_id: owner_user_id.clone(),
+                owner_users: owner_users.clone(),
+                on_owner_change: move |_| {},
+            }
+        }
+    }
+}
+
+#[component]
+fn OwnershipPopover(
+    can_assign_owner: bool,
+    is_saving: bool,
+    owner_label: String,
+    owner_user_id: String,
+    owner_users: Vec<crate::types::User>,
+    on_owner_change: EventHandler<String>,
+) -> Element {
+    let owner_options = owner_users
+        .iter()
+        .map(|u| SingleSelectOption {
+            label: u.username.clone(),
+            value: u.id.clone(),
+        })
+        .collect::<Vec<_>>();
+    let owner_summary = owner_users
+        .iter()
+        .find(|u| u.id == owner_user_id)
+        .map(|u| u.username.clone())
+        .unwrap_or_else(|| owner_label.clone());
+    let mut is_owner_menu_open = use_signal(|| false);
+
+    rsx! {
+        div {
+            class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
+            onclick: move |event| event.stop_propagation(),
+            onpointerdown: move |event| event.stop_propagation(),
+            if can_assign_owner {
+                label {
+                    span { "Owner:" }
+                    SingleSelectPicker {
+                        disabled: is_saving,
+                        empty_text: "Select owner",
+                        is_open: is_owner_menu_open(),
+                        options: owner_options,
+                        selected_value: owner_user_id,
+                        summary: owner_summary,
+                        on_toggle_open: move |_| is_owner_menu_open.toggle(),
+                        on_select_item: move |new_owner_id: String| {
+                            is_owner_menu_open.set(false);
+                            on_owner_change.call(new_owner_id);
+                        },
+                    }
+                }
+            } else {
                 p { class: "entity-ownership-read-title", "Owner: {owner_label}" }
             }
         }
