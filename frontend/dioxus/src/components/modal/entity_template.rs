@@ -68,10 +68,12 @@ pub fn open_entity_template_modal(
             access_levels,
             active_tab: EntityTemplateTab::Attributes,
             attribute_source_tab: EntityTemplateAttributeSourceTab::Existing,
+            attribute_templates_snapshot: attribute_templates.peek().clone(),
             attribute_templates,
             can_edit,
             dragging_attribute_id: None,
             entity_template,
+            entity_templates_snapshot: entity_templates.peek().clone(),
             entity_templates,
             error: None,
             open_attribute_access_level_menu_id: None,
@@ -128,6 +130,7 @@ pub fn open_create_entity_template_modal(
             access_levels,
             active_tab: EntityTemplateTab::Attributes,
             attribute_source_tab: EntityTemplateAttributeSourceTab::Existing,
+            attribute_templates_snapshot: attribute_templates.peek().clone(),
             attribute_templates,
             can_edit: true,
             dragging_attribute_id: None,
@@ -141,6 +144,7 @@ pub fn open_create_entity_template_modal(
                 owner_user_id: owner_user_id.unwrap_or_default(),
                 owner_username: None,
             },
+            entity_templates_snapshot: entity_templates.peek().clone(),
             entity_templates,
             error: None,
             open_attribute_access_level_menu_id: None,
@@ -774,10 +778,7 @@ async fn save_entity_template_request(
         )
     };
 
-    let response = request
-        .send()
-        .await
-        .map_err(|_| fallback.to_string())?;
+    let response = request.send().await.map_err(|_| fallback.to_string())?;
 
     parse_entity_template_response(response, fallback).await
 }
@@ -887,8 +888,10 @@ pub(super) fn EntityTemplateContentView(
     let ordered_links = ordered_links(&entity_template.entity_template);
     let incoming_links = incoming_links(
         &entity_template.entity_template,
-        &entity_template.entity_templates.read(),
+        &entity_template.entity_templates_snapshot,
     );
+    let attribute_templates_data = entity_template.attribute_templates_snapshot.clone();
+    let entity_templates_data = entity_template.entity_templates_snapshot.clone();
     let listing_attribute_label = ordered_attributes
         .iter()
         .find(|attribute| attribute.id == entity_template.entity_template.listing_attribute_id)
@@ -1010,7 +1013,7 @@ pub(super) fn EntityTemplateContentView(
                         }
                         button {
                             class: "entity-template-tab",
-                            "data-tooltip": "Outbound Links",
+                            "data-tooltip": "Outgoing Links",
                             aria_selected: "{entity_template.active_tab == EntityTemplateTab::Links}",
                             role: "tab",
                             r#type: "button",
@@ -1048,7 +1051,7 @@ pub(super) fn EntityTemplateContentView(
                                 access_levels: entity_template.access_levels.clone(),
                                 attributes: ordered_attributes.clone(),
                                 attribute_source_tab: entity_template.attribute_source_tab,
-                                attribute_templates: entity_template.attribute_templates.read().clone(),
+                                attribute_templates: attribute_templates_data.clone(),
                                 is_readonly,
                                 is_attribute_template_menu_open: entity_template.is_attribute_template_menu_open,
                                 is_attribute_popover_open: entity_template.is_attribute_popover_open,
@@ -1071,7 +1074,7 @@ pub(super) fn EntityTemplateContentView(
                                 attribute_templates: entity_template.attribute_templates,
                                 can_edit: !is_readonly,
                                 current_entity_template_id: entity_template.entity_template.id.clone(),
-                                entity_templates: entity_template.entity_templates.read().clone(),
+                                entity_templates: entity_templates_data.clone(),
                                 links: ordered_links.clone(),
                                 modals,
                                 next_modal_id: modal.id,
@@ -2217,6 +2220,8 @@ fn include_new_attribute(modals: Signal<Vec<OpenModal>>, modal_id: u32) {
                     }
 
                     update_entity_template_modal(modals, modal_id, |entity_template| {
+                        entity_template.attribute_templates_snapshot =
+                            entity_template.attribute_templates.peek().clone();
                         add_new_attribute_from_values(
                             entity_template,
                             saved_attribute_template.name,
