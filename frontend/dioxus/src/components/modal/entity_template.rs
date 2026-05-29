@@ -330,36 +330,20 @@ pub(super) fn EntityTemplateTitlebarActions(
                             let entity_template_id = edit_entity_template_id_for_delete.clone();
                             let mut entity_templates = edit_entity_templates;
                             spawn(async move {
-                                let response = Request::delete(&format!(
-                                    "{API_BASE_URL}/entity-templates/{entity_template_id}"
-                                ))
-                                .header("Authorization", &format!("Bearer {session_key}"))
-                                .send()
-                                .await;
+                                let response = Request::delete(
+                                        &format!("{API_BASE_URL}/entity-templates/{entity_template_id}"),
+                                    )
+                                    .header("Authorization", &format!("Bearer {session_key}"))
+                                    .send()
+                                    .await;
                                 if response.map(|r| r.ok()).unwrap_or(false) {
-                                    entity_templates
-                                        .write()
-                                        .retain(|item| item.id != entity_template_id);
-                                    modals
-                                        .write()
-                                        .retain(|open_modal| open_modal.id != modal_id);
+                                    entity_templates.write().retain(|item| item.id != entity_template_id);
+                                    modals.write().retain(|open_modal| open_modal.id != modal_id);
                                 }
                             });
                         },
                     }
                 }
-            }
-            button {
-                class: "draggable-modal-titlebar-button",
-                "data-tooltip": if can_save_edit { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
-                aria_label: "Save entity template",
-                disabled: !can_save_edit || entity_template.is_saving,
-                onclick: move |_| {
-                    if can_save_edit {
-                        save_entity_template_modal(modals, save_modal_edit.clone());
-                    }
-                },
-                Save { class: "app-icon", size: 15 }
             }
             button {
                 class: "draggable-modal-titlebar-button",
@@ -378,6 +362,18 @@ pub(super) fn EntityTemplateTitlebarActions(
                     },
                 ),
                 User { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": if can_save_edit { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
+                aria_label: "Save entity template",
+                disabled: !can_save_edit || entity_template.is_saving,
+                onclick: move |_| {
+                    if can_save_edit {
+                        save_entity_template_modal(modals, save_modal_edit.clone());
+                    }
+                },
+                Save { class: "app-icon", size: 15 }
             }
             if is_ownership_open {
                 OwnershipPopover {
@@ -414,18 +410,6 @@ pub(super) fn EntityTemplateTitlebarActions(
             }
             button {
                 class: "draggable-modal-titlebar-button",
-                "data-tooltip": if can_save_create { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
-                aria_label: "Save entity template",
-                disabled: !can_save_create || entity_template.is_saving,
-                onclick: move |_| {
-                    if can_save_create {
-                        save_entity_template_modal(modals, save_modal.clone());
-                    }
-                },
-                Save { class: "app-icon", size: 15 }
-            }
-            button {
-                class: "draggable-modal-titlebar-button",
                 "data-tooltip": "Owner",
                 aria_label: "Ownership",
                 aria_expanded: "{is_ownership_open}",
@@ -441,6 +425,18 @@ pub(super) fn EntityTemplateTitlebarActions(
                     },
                 ),
                 User { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": if can_save_create { "Save" } else { "An entity template must have a name, listing attribute, and valid attributes/links" },
+                aria_label: "Save entity template",
+                disabled: !can_save_create || entity_template.is_saving,
+                onclick: move |_| {
+                    if can_save_create {
+                        save_entity_template_modal(modals, save_modal.clone());
+                    }
+                },
+                Save { class: "app-icon", size: 15 }
             }
             if is_ownership_open {
                 OwnershipPopover {
@@ -531,48 +527,20 @@ pub(super) fn EntityTemplateTitlebarActions(
                         let entity_template_id = entity_template.entity_template.id.clone();
                         let mut entity_templates = entity_template.entity_templates;
                         spawn(async move {
-                            let response = Request::delete(&format!(
-                                "{API_BASE_URL}/entity-templates/{entity_template_id}"
-                            ))
-                            .header("Authorization", &format!("Bearer {session_key}"))
-                            .send()
-                            .await;
+                            let response = Request::delete(
+                                    &format!("{API_BASE_URL}/entity-templates/{entity_template_id}"),
+                                )
+                                .header("Authorization", &format!("Bearer {session_key}"))
+                                .send()
+                                .await;
                             if response.map(|r| r.ok()).unwrap_or(false) {
-                                entity_templates
-                                    .write()
-                                    .retain(|item| item.id != entity_template_id);
-                                modals
-                                    .write()
-                                    .retain(|open_modal| open_modal.id != modal_id);
+                                entity_templates.write().retain(|item| item.id != entity_template_id);
+                                modals.write().retain(|open_modal| open_modal.id != modal_id);
                             }
                         });
                     },
                 }
             }
-        }
-        button {
-            class: "draggable-modal-titlebar-button",
-            "data-tooltip": if can_edit { "Edit" } else { "You cannot edit this entity template" },
-            aria_label: "Edit entity template",
-            disabled: !can_edit,
-            onclick: move |_| {
-                if let Some(open_modal) = modals
-                    .write()
-                    .iter_mut()
-                    .find(|open_modal| open_modal.id == modal_id)
-                {
-                    open_modal.title = "Entity Template :: Edit".to_string();
-                    if let ModalContent::EntityTemplate(entity_template) = &mut open_modal.content {
-                        entity_template.mode = SecurityModalMode::Edit;
-                        entity_template.is_attribute_popover_open = false;
-                        entity_template.is_attribute_template_menu_open = false;
-                        entity_template.is_info_open = false;
-                        entity_template.is_delete_confirm_open = false;
-                        entity_template.is_ownership_open = false;
-                    }
-                }
-            },
-            Pencil { class: "app-icon", size: 15 }
         }
         button {
             class: "draggable-modal-titlebar-button",
@@ -591,6 +559,32 @@ pub(super) fn EntityTemplateTitlebarActions(
                 },
             ),
             User { class: "app-icon", size: 15 }
+        }
+        button {
+            class: "draggable-modal-titlebar-button",
+            "data-tooltip": if can_edit { "Edit" } else { "You cannot edit this entity template" },
+            aria_label: "Edit entity template",
+            disabled: !can_edit,
+            onclick: move |_| {
+                if let Some(open_modal) = modals
+                    .write()
+                    .iter_mut()
+                    .find(|open_modal| open_modal.id == modal_id)
+                {
+                    open_modal.title = "Entity Template :: Edit".to_string();
+                    if let ModalContent::EntityTemplate(entity_template) = &mut open_modal
+                        .content
+                    {
+                        entity_template.mode = SecurityModalMode::Edit;
+                        entity_template.is_attribute_popover_open = false;
+                        entity_template.is_attribute_template_menu_open = false;
+                        entity_template.is_info_open = false;
+                        entity_template.is_delete_confirm_open = false;
+                        entity_template.is_ownership_open = false;
+                    }
+                }
+            },
+            Pencil { class: "app-icon", size: 15 }
         }
         if is_ownership_open {
             OwnershipPopover {
@@ -1162,7 +1156,8 @@ fn AttributesTable(
                                             modals,
                                             modal_id,
                                             |entity_template| {
-                                                entity_template.is_attribute_popover_open = !entity_template.is_attribute_popover_open;
+                                                entity_template.is_attribute_popover_open = !entity_template
+                                                    .is_attribute_popover_open;
                                                 entity_template.is_attribute_template_menu_open = false;
                                                 entity_template.is_listing_attribute_menu_open = false;
                                                 entity_template.is_info_open = false;
@@ -1203,7 +1198,9 @@ fn AttributesTable(
             tbody {
                 if attributes.is_empty() {
                     tr {
-                        td { class: "data-table-empty-cell", colspan: "{empty_colspan}",
+                        td {
+                            class: "data-table-empty-cell",
+                            colspan: "{empty_colspan}",
                             span { "There are no entries" }
                         }
                     }
@@ -1265,7 +1262,10 @@ fn IncludedAttributeRow(
                     update_entity_template_modal(
                         modals,
                         modal_id,
-                        |entity_template| reorder_dragged_attribute(entity_template, &attribute_id),
+                        |entity_template| reorder_dragged_attribute(
+                            entity_template,
+                            &attribute_id,
+                        ),
                     );
                 }
             },
@@ -1304,8 +1304,7 @@ fn IncludedAttributeRow(
                     }
                 }
             }
-            td {
-                class: "entity-template-value-type-cell",
+            td { class: "entity-template-value-type-cell",
                 if is_readonly {
                     span { "data-tooltip": "Value type", "{attribute.value_type}" }
                 } else {
@@ -1325,11 +1324,11 @@ fn IncludedAttributeRow(
                                     entity_template.open_attribute_value_type_menu_id =
                                         if entity_template.open_attribute_value_type_menu_id.as_deref()
                                             == Some(attribute_id.as_str())
-                                        {
-                                            None
-                                        } else {
-                                            Some(attribute_id.clone())
-                                        };
+                                    {
+                                        None
+                                    } else {
+                                        Some(attribute_id.clone())
+                                    };
                                     entity_template.open_attribute_access_level_menu_id = None;
                                     entity_template.is_listing_attribute_menu_open = false;
                                     entity_template.is_attribute_popover_open = false;
@@ -1378,11 +1377,11 @@ fn IncludedAttributeRow(
                                     entity_template.open_attribute_access_level_menu_id =
                                         if entity_template.open_attribute_access_level_menu_id.as_deref()
                                             == Some(attribute_id.as_str())
-                                        {
-                                            None
-                                        } else {
-                                            Some(attribute_id.clone())
-                                        };
+                                    {
+                                        None
+                                    } else {
+                                        Some(attribute_id.clone())
+                                    };
                                     entity_template.open_attribute_value_type_menu_id = None;
                                     entity_template.is_listing_attribute_menu_open = false;
                                     entity_template.is_attribute_popover_open = false;
@@ -1441,8 +1440,8 @@ fn IncludedAttributeRow(
                                 move |event| {
                                     event.stop_propagation();
                                     update_entity_template_modal(
-                                    modals,
-                                    modal_id,
+                                        modals,
+                                        modal_id,
                                         |entity_template| {
                                             entity_template.dragging_attribute_id = Some(attribute_id.clone());
                                             entity_template.open_attribute_access_level_menu_id = None;
@@ -1585,7 +1584,8 @@ fn AttributeTemplatePopover(
                             modals,
                             modal_id,
                             |entity_template| {
-                                entity_template.is_attribute_template_menu_open = !entity_template.is_attribute_template_menu_open;
+                                entity_template.is_attribute_template_menu_open = !entity_template
+                                    .is_attribute_template_menu_open;
                             },
                         ),
                         on_select_item: move |attribute_template_id| update_entity_template_modal(
@@ -1757,7 +1757,9 @@ fn LinksTable(
             tbody {
                 if links.is_empty() {
                     tr {
-                        td { class: "data-table-empty-cell", colspan: "{empty_colspan}",
+                        td {
+                            class: "data-table-empty-cell",
+                            colspan: "{empty_colspan}",
                             span { "There are no entries" }
                         }
                     }
@@ -1898,11 +1900,11 @@ fn LinkRow(
                                     entity_template.open_link_target_menu_id =
                                         if entity_template.open_link_target_menu_id.as_deref()
                                             == Some(link_id.as_str())
-                                        {
-                                            None
-                                        } else {
-                                            Some(link_id.clone())
-                                        };
+                                    {
+                                        None
+                                    } else {
+                                        Some(link_id.clone())
+                                    };
                                     entity_template.open_attribute_access_level_menu_id = None;
                                     entity_template.open_attribute_value_type_menu_id = None;
                                     entity_template.is_attribute_popover_open = false;
@@ -1930,7 +1932,11 @@ fn LinkRow(
                             )
                         },
                     }
-                } else if let Some(target) = linked_entity_template(&entity_templates, link.target_entity_template_id.as_deref()) {
+                } else if let Some(target) = linked_entity_template(
+                    &entity_templates,
+                    link.target_entity_template_id.as_deref(),
+                )
+                {
                     EntityReferenceButton {
                         access_levels,
                         attribute_templates,
@@ -1998,9 +2004,8 @@ fn InlinksTable(
                 }
             }
             tbody {
-                for (link, source_template) in incoming_links {
-                    tr {
-                        key: "{source_template.id}:{link.id}",
+                for (link , source_template) in incoming_links {
+                    tr { key: "{source_template.id}:{link.id}",
                         td {
                             EntityReferenceButton {
                                 access_levels: access_levels.clone(),

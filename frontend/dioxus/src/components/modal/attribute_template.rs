@@ -489,14 +489,6 @@ pub(super) fn AttributeTemplateTitlebarActions(
             }
             button {
                 class: "draggable-modal-titlebar-button",
-                "data-tooltip": if can_edit { "Edit" } else { "You cannot edit this attribute template" },
-                aria_label: "Edit attribute template",
-                disabled: !can_edit || is_saving,
-                onclick: move |_| set_attribute_template_mode(modals, modal_id, SecurityModalMode::Edit),
-                Pencil { class: "app-icon", size: 15 }
-            }
-            button {
-                class: "draggable-modal-titlebar-button",
                 "data-tooltip": "Owner",
                 aria_label: "Ownership",
                 aria_expanded: "{is_ownership_open}",
@@ -510,6 +502,14 @@ pub(super) fn AttributeTemplateTitlebarActions(
                     },
                 ),
                 User { class: "app-icon", size: 15 }
+            }
+            button {
+                class: "draggable-modal-titlebar-button",
+                "data-tooltip": if can_edit { "Edit" } else { "You cannot edit this attribute template" },
+                aria_label: "Edit attribute template",
+                disabled: !can_edit || is_saving,
+                onclick: move |_| set_attribute_template_mode(modals, modal_id, SecurityModalMode::Edit),
+                Pencil { class: "app-icon", size: 15 }
             }
             if is_ownership_open {
                 OwnershipPopover {
