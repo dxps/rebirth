@@ -1,5 +1,6 @@
 mod access_level;
 mod attribute_template;
+pub mod entity;
 mod entity_template;
 mod user;
 

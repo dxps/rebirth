@@ -430,3 +430,79 @@ pub struct UpdatePasswordInput {
     #[serde(rename = "newPassword")]
     pub new_password: String,
 }
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityAttribute {
+    pub access_level_id: u32,
+    pub description: String,
+    pub id: String,
+    pub is_required: bool,
+    pub listing_index: i32,
+    pub name: String,
+    pub value: String,
+    pub value_type: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityLink {
+    pub id: String,
+    pub entity_id: String,
+    pub target_entity_id: Option<String>,
+    pub target_entity_label: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub listing_index: i32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityIncomingLink {
+    pub id: String,
+    pub description: Option<String>,
+    pub listing_index: i32,
+    pub name: String,
+    pub source_entity_id: String,
+    pub source_entity_label: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Entity {
+    pub id: String,
+    pub owner_user_id: String,
+    pub attributes: Vec<EntityAttribute>,
+    pub listing_attribute_id: String,
+    pub links: Vec<EntityLink>,
+    pub incoming_links: Option<Vec<EntityIncomingLink>>,
+    pub incoming_links_count: Option<u32>,
+    pub outgoing_links_count: Option<u32>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Pagination {
+    pub page: u32,
+    pub page_size: u32,
+    pub total: u32,
+}
+
+#[derive(Deserialize)]
+pub struct EntitiesResponse {
+    pub data: Vec<Entity>,
+    pub pagination: Pagination,
+}
+
+#[derive(Deserialize)]
+pub struct EntityResponse {
+    pub data: Entity,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SavedView {
+    pub description: String,
+    pub id: String,
+    pub name: String,
+    pub search_text: String,
+}
