@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use gloo_net::http::Request;
 use lucide_dioxus::{Info, Pencil, Plus, Save, Trash2, User, X};
 
+use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AccessLevelsResponse, Entity, EntityAttribute, EntityIncomingLink, EntityLink,
     EntityResponse, EntityTemplate, EntityTemplatesResponse, EntitiesResponse, SavedView,
@@ -9,6 +10,8 @@ use crate::types::{
 };
 
 use super::{json_string, read_response_error, DeleteConfirmPopover};
+
+const VALUE_TYPES: [&str; 5] = ["text", "number", "boolean", "date", "datetime"];
 
 // ---------------------------------------------------------------------------
 // Local types
@@ -1013,9 +1016,13 @@ pub struct CreateEntityState {
     pub source: CreateEntitySource,
     pub entity_template_id: String,
     pub attributes: Vec<EntityAttribute>,
+    pub listing_attribute_id: String,
     pub error: Option<String>,
     pub is_saving: bool,
     pub active_tab: EntityTab,
+    pub open_access_level_menu_id: Option<String>,
+    pub open_value_type_menu_id: Option<String>,
+    pub is_listing_attribute_menu_open: bool,
 }
 
 #[derive(Clone, PartialEq)]
@@ -1041,8 +1048,34 @@ pub fn CreateEntityModal(
     let active_tab = state.active_tab.clone();
     let source = state.source.clone();
     let error = state.error.clone();
+    let listing_attribute_id = state.listing_attribute_id.clone();
+    let selected_listing_value = state
+        .attributes
+        .iter()
+        .find(|attribute| attribute.id == listing_attribute_id)
+        .map(|attribute| attribute.value.clone())
+        .unwrap_or_default();
+    let listing_attribute_options = state
+        .attributes
+        .iter()
+        .map(|attribute| SingleSelectOption {
+            label: attribute.name.clone(),
+            value: attribute.id.clone(),
+        })
+        .collect::<Vec<_>>();
+    let listing_attribute_summary = state
+        .attributes
+        .iter()
+        .find(|attribute| attribute.id == listing_attribute_id)
+        .map(|attribute| attribute.name.clone())
+        .unwrap_or_default();
+    let default_access_level_id = access_levels
+        .first()
+        .map(|access_level| access_level.id)
+        .unwrap_or(4);
 
     let can_save = !state.attributes.is_empty()
+        && !state.listing_attribute_id.is_empty()
         && state
             .attributes
             .iter()
@@ -1088,75 +1121,152 @@ pub fn CreateEntityModal(
                         if let Some(err) = error {
                             p { class: "draggable-modal-error", "{err}" }
                         }
+                        div { class: "entity-view-summary entity-create-summary",
+                            table { class: "data-table entity-create-summary-table",
+                                thead {
+                                    tr {
+                                        th { "listing attribute name" }
+                                        th { "value" }
+                                    }
+                                }
+                                tbody {
+                                    tr {
+                                        td {
+                                            span {
+                                                class: "attribute-template-select-wrap entity-create-summary-select-wrap",
+                                                onpointerdown: move |event| event.stop_propagation(),
+                                                SingleSelectPicker {
+                                                    disabled: state.attributes.is_empty() || is_saving,
+                                                    empty_text: "Select attribute",
+                                                    is_open: state.is_listing_attribute_menu_open,
+                                                    options: listing_attribute_options,
+                                                    selected_value: listing_attribute_id.clone(),
+                                                    summary: listing_attribute_summary,
+                                                    on_toggle_open: move |_| {
+                                                        if let Some(s) = create_state.write().as_mut() {
+                                                            s.is_listing_attribute_menu_open =
+                                                                !s.is_listing_attribute_menu_open;
+                                                            s.open_access_level_menu_id = None;
+                                                            s.open_value_type_menu_id = None;
+                                                        }
+                                                    },
+                                                    on_select_item: move |attribute_id: String| {
+                                                        if let Some(s) = create_state.write().as_mut() {
+                                                            s.listing_attribute_id = attribute_id;
+                                                            s.is_listing_attribute_menu_open = false;
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                        }
+                                        td {
+                                            span { class: "entity-create-summary-value", "{selected_listing_value}" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         div { class: "entity-template-tabs",
                             div { class: "entity-template-tab-row",
                                 div {
                                     class: "entity-template-tab-list",
                                     role: "tablist",
                                     button {
-                                        class: if active_tab == EntityTab::Attributes { "entity-template-tab is-active" } else { "entity-template-tab" },
+                                        class: "entity-template-tab",
+                                        aria_selected: "{active_tab == EntityTab::Attributes}",
                                         onpointerdown: move |event| event.stop_propagation(),
                                         onclick: move |_| {
                                             if let Some(s) = create_state.write().as_mut() {
                                                 s.active_tab = EntityTab::Attributes;
                                             }
                                         },
-                                        "Attributes"
+                                        span { "Attributes" }
                                         span { class: "entity-template-tab-badge", "{state.attributes.len()}" }
                                     }
-                                }
-                                // Add attribute button
-                                if active_tab == EntityTab::Attributes && source == CreateEntitySource::Scratch {
                                     button {
-                                        class: "section-action-button",
-                                        "data-tooltip": "Add attribute",
-                                        aria_label: "Add attribute",
+                                        class: "entity-template-tab",
+                                        aria_selected: "{active_tab == EntityTab::Links}",
+                                        "data-tooltip": "Outbound Links",
                                         onpointerdown: move |event| event.stop_propagation(),
                                         onclick: move |_| {
                                             if let Some(s) = create_state.write().as_mut() {
-                                                let idx = s.attributes.len() as i32;
-                                                s.attributes.push(EntityAttribute {
-                                                    access_level_id: 0,
-                                                    description: String::new(),
-                                                    id: format!("new-{}", idx),
-                                                    is_required: false,
-                                                    listing_index: idx,
-                                                    name: String::new(),
-                                                    value: String::new(),
-                                                    value_type: "text".to_string(),
-                                                });
+                                                s.active_tab = EntityTab::Links;
                                             }
                                         },
-                                        Plus { class: "app-icon", size: 16 }
+                                        span { "Outlinks" }
+                                        span { class: "entity-template-tab-badge", "0" }
                                     }
                                 }
                             }
                             div { class: "entity-template-tab-content",
-                                table { class: "data-table",
-                                    thead {
-                                        tr {
-                                            th { "name" }
-                                            th { "value" }
-                                            th { "access level" }
+                                if active_tab == EntityTab::Attributes {
+                                    table { class: "data-table entity-template-modal-table entity-template-attributes-table entity-attributes-table",
+                                        colgroup {
+                                            col { class: "entity-attribute-name-column" }
+                                            col { class: "entity-attribute-value-column" }
+                                            col { class: "entity-attribute-value-type-column" }
+                                            col { class: "entity-attribute-access-level-column" }
+                                            col { class: "entity-attribute-action-column" }
                                         }
-                                    }
-                                    tbody {
-                                        if state.attributes.is_empty() {
+                                        thead {
                                             tr {
-                                                td { class: "data-table-empty-cell", colspan: "3",
-                                                    span { "No attributes" }
+                                                th { "name" }
+                                                th { "value" }
+                                                th { "value type" }
+                                                th { "access level" }
+                                                th { class: "data-table-action-heading",
+                                                    span { class: "include-attribute-action entity-attribute-header-action",
+                                                        if source == CreateEntitySource::Scratch {
+                                                            button {
+                                                                class: "section-action-button",
+                                                                "data-tooltip": "Include an attribute",
+                                                                aria_label: "Add attribute",
+                                                                onpointerdown: move |event| event.stop_propagation(),
+                                                                onclick: move |_| add_create_entity_attribute(create_state, default_access_level_id),
+                                                                Plus { class: "app-icon", size: 16 }
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
-                                        } else {
-                                            for (index, attr) in state.attributes.iter().enumerate() {
-                                                CreateEntityAttributeRow {
-                                                    key: "{attr.id}",
-                                                    attr: attr.clone(),
-                                                    index,
-                                                    access_levels: access_levels.clone(),
-                                                    is_saving,
-                                                    create_state,
-                                                    is_scratch: source == CreateEntitySource::Scratch,
+                                        }
+                                        tbody {
+                                            if state.attributes.is_empty() {
+                                                tr {
+                                                    td { class: "data-table-empty-cell", colspan: "5",
+                                                        span { "No attributes" }
+                                                    }
+                                                }
+                                            } else {
+                                                for (index, attr) in state.attributes.iter().enumerate() {
+                                                    CreateEntityAttributeRow {
+                                                        key: "{attr.id}",
+                                                        attr: attr.clone(),
+                                                        index,
+                                                        access_levels: access_levels.clone(),
+                                                        is_saving,
+                                                        create_state,
+                                                        is_scratch: source == CreateEntitySource::Scratch,
+                                                        open_access_level_menu_id: state.open_access_level_menu_id.clone(),
+                                                        open_value_type_menu_id: state.open_value_type_menu_id.clone(),
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    table { class: "data-table entity-template-modal-table entity-template-links-table entity-entity-links-table",
+                                        thead {
+                                            tr {
+                                                th { "name" }
+                                                th { "target" }
+                                                th { class: "data-table-action-heading", "" }
+                                            }
+                                        }
+                                        tbody {
+                                            tr {
+                                                td { class: "data-table-empty-cell", colspan: "3",
+                                                    span { "No links" }
                                                 }
                                             }
                                         }
@@ -1183,14 +1293,34 @@ fn CreateEntityAttributeRow(
     is_saving: bool,
     create_state: Signal<Option<CreateEntityState>>,
     is_scratch: bool,
+    open_access_level_menu_id: Option<String>,
+    open_value_type_menu_id: Option<String>,
 ) -> Element {
-    let access_level_name = access_levels
+    let access_level_options = access_levels
+        .iter()
+        .map(|access_level| SingleSelectOption {
+            label: access_level.name.clone(),
+            value: access_level.id.to_string(),
+        })
+        .collect::<Vec<_>>();
+    let access_level_summary = access_levels
         .iter()
         .find(|al| al.id == attr.access_level_id)
         .map(|al| al.name.clone())
         .unwrap_or_default();
+    let value_type_options = VALUE_TYPES
+        .iter()
+        .map(|value_type| SingleSelectOption {
+            label: value_type.to_string(),
+            value: value_type.to_string(),
+        })
+        .collect::<Vec<_>>();
     let attr_id = attr.id.clone();
     let attr_id2 = attr.id.clone();
+    let attr_id3 = attr.id.clone();
+    let attr_id4 = attr.id.clone();
+    let attr_id5 = attr.id.clone();
+    let attr_id6 = attr.id.clone();
 
     rsx! {
         tr { key: "{attr.id}",
@@ -1220,7 +1350,7 @@ fn CreateEntityAttributeRow(
             }
             td {
                 input {
-                    r#type: "text",
+                    r#type: if attr.value_type == "number" { "number" } else { "text" },
                     value: "{attr.value}",
                     disabled: is_saving,
                     onpointerdown: move |event| event.stop_propagation(),
@@ -1237,8 +1367,155 @@ fn CreateEntityAttributeRow(
                     },
                 }
             }
-            td { class: "data-table-muted-cell", "{access_level_name}" }
+            td {
+                span {
+                    class: "entity-template-value-type-wrap",
+                    onpointerdown: move |event| event.stop_propagation(),
+                    SingleSelectPicker {
+                        disabled: is_saving,
+                        empty_text: "type",
+                        is_open: open_value_type_menu_id.as_deref() == Some(&attr.id),
+                        options: value_type_options,
+                        selected_value: attr.value_type.clone(),
+                        summary: attr.value_type.clone(),
+                        on_toggle_open: {
+                            let aid = attr_id3.clone();
+                            move |_| {
+                                if let Some(s) = create_state.write().as_mut() {
+                                    s.open_value_type_menu_id =
+                                        if s.open_value_type_menu_id.as_deref() == Some(&aid) {
+                                            None
+                                        } else {
+                                            Some(aid.clone())
+                                        };
+                                    s.open_access_level_menu_id = None;
+                                    s.is_listing_attribute_menu_open = false;
+                                }
+                            }
+                        },
+                        on_select_item: {
+                            let aid = attr_id4.clone();
+                            move |value_type: String| {
+                                if let Some(s) = create_state.write().as_mut() {
+                                    if let Some(a) = s.attributes.iter_mut().find(|a| a.id == aid) {
+                                        a.value_type = value_type;
+                                        a.value.clear();
+                                    }
+                                    s.open_value_type_menu_id = None;
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+            td {
+                span {
+                    class: "entity-template-access-level-wrap",
+                    onpointerdown: move |event| event.stop_propagation(),
+                    SingleSelectPicker {
+                        disabled: is_saving,
+                        empty_text: "access",
+                        is_open: open_access_level_menu_id.as_deref() == Some(&attr.id),
+                        options: access_level_options,
+                        selected_value: attr.access_level_id.to_string(),
+                        summary: access_level_summary,
+                        on_toggle_open: {
+                            let aid = attr_id5.clone();
+                            move |_| {
+                                if let Some(s) = create_state.write().as_mut() {
+                                    s.open_access_level_menu_id =
+                                        if s.open_access_level_menu_id.as_deref() == Some(&aid) {
+                                            None
+                                        } else {
+                                            Some(aid.clone())
+                                        };
+                                    s.open_value_type_menu_id = None;
+                                    s.is_listing_attribute_menu_open = false;
+                                }
+                            }
+                        },
+                        on_select_item: {
+                            let aid = attr_id6.clone();
+                            move |access_level_id: String| {
+                                if let Ok(access_level_id) = access_level_id.parse::<u32>() {
+                                    if let Some(s) = create_state.write().as_mut() {
+                                        if let Some(a) = s.attributes.iter_mut().find(|a| a.id == aid) {
+                                            a.access_level_id = access_level_id;
+                                        }
+                                        s.open_access_level_menu_id = None;
+                                    }
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+            td { class: "entity-template-attribute-actions",
+                if is_scratch {
+                    button {
+                        class: "icon-only-button entity-attribute-value-action",
+                        "data-tooltip": "Remove",
+                        aria_label: "Remove attribute",
+                        disabled: is_saving,
+                        onpointerdown: move |event| event.stop_propagation(),
+                        onclick: {
+                            let aid = attr.id.clone();
+                            move |_| remove_create_entity_attribute(create_state, aid.clone())
+                        },
+                        Trash2 { class: "app-icon", size: 13 }
+                    }
+                }
+            }
         }
+    }
+}
+
+fn add_create_entity_attribute(
+    mut create_state: Signal<Option<CreateEntityState>>,
+    default_access_level_id: u32,
+) {
+    if let Some(s) = create_state.write().as_mut() {
+        let idx = s.attributes.len() as i32;
+        let id = format!("new-{idx}");
+        s.attributes.push(EntityAttribute {
+            access_level_id: default_access_level_id,
+            description: String::new(),
+            id: id.clone(),
+            is_required: false,
+            listing_index: idx,
+            name: String::new(),
+            value: String::new(),
+            value_type: "text".to_string(),
+        });
+        if s.listing_attribute_id.is_empty() {
+            s.listing_attribute_id = id;
+        }
+        s.active_tab = EntityTab::Attributes;
+        s.open_access_level_menu_id = None;
+        s.open_value_type_menu_id = None;
+        s.is_listing_attribute_menu_open = false;
+    }
+}
+
+fn remove_create_entity_attribute(
+    mut create_state: Signal<Option<CreateEntityState>>,
+    attribute_id: String,
+) {
+    if let Some(s) = create_state.write().as_mut() {
+        s.attributes.retain(|attribute| attribute.id != attribute_id);
+        for (index, attribute) in s.attributes.iter_mut().enumerate() {
+            attribute.listing_index = index as i32;
+        }
+        if s.listing_attribute_id == attribute_id {
+            s.listing_attribute_id = s
+                .attributes
+                .first()
+                .map(|attribute| attribute.id.clone())
+                .unwrap_or_default();
+        }
+        s.open_access_level_menu_id = None;
+        s.open_value_type_menu_id = None;
+        s.is_listing_attribute_menu_open = false;
     }
 }
 
@@ -1264,9 +1541,19 @@ fn save_new_entity(
         .as_ref()
         .map(|s| s.entity_template_id.clone())
         .unwrap_or_default();
+    let listing_attribute_id = create_state
+        .read()
+        .as_ref()
+        .map(|s| s.listing_attribute_id.clone())
+        .unwrap_or_default();
 
     spawn(async move {
-        let body = build_entity_create_body(&attributes, &owner_user_id, &entity_template_id);
+        let body = build_entity_create_body(
+            &attributes,
+            &owner_user_id,
+            &entity_template_id,
+            &listing_attribute_id,
+        );
         let result = Request::post(&format!("{API_BASE_URL}/entities"))
             .header("Authorization", &format!("Bearer {session_key}"))
             .header("Content-Type", "application/json")
@@ -1311,6 +1598,7 @@ fn build_entity_create_body(
     attributes: &[EntityAttribute],
     owner_user_id: &str,
     entity_template_id: &str,
+    listing_attribute_id: &str,
 ) -> String {
     let attrs_json = attributes
         .iter()
@@ -1342,5 +1630,14 @@ fn build_entity_create_body(
         format!(",\"ownerUserId\":{}", json_string(owner_user_id))
     };
 
-    format!("{{\"attributes\":[{attrs_json}]{template_part}{owner_part}}}")
+    let listing_part = if listing_attribute_id.is_empty() {
+        String::new()
+    } else {
+        format!(
+            ",\"listingAttributeId\":{}",
+            json_string(listing_attribute_id)
+        )
+    };
+
+    format!("{{\"attributes\":[{attrs_json}]{template_part}{owner_part}{listing_part}}}")
 }

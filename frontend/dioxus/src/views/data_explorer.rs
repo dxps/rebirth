@@ -316,6 +316,7 @@ pub fn DataExplorerView(
                                                 create_choice_source()
                                             };
                                             let tmpl_id = create_choice_template_id();
+                                            let mut listing_attribute_id = String::new();
                                             let attrs = match &source {
                                                 CreateEntitySource::Template => {
                                                     entity_templates
@@ -323,22 +324,35 @@ pub fn DataExplorerView(
                                                         .iter()
                                                         .find(|t| t.id == tmpl_id)
                                                         .map(|t| {
+                                                            let template_listing_attribute_id =
+                                                                t.listing_attribute_id.clone();
                                                             let mut sorted = t.attributes.clone();
                                                             sorted.sort_by_key(|a| a.listing_index);
-                                                            sorted
+                                                            let attrs = sorted
                                                                 .into_iter()
                                                                 .enumerate()
-                                                                .map(|(i, ta)| EntityAttribute {
-                                                                    access_level_id: ta.access_level_id,
-                                                                    description: ta.description.clone(),
-                                                                    id: format!("new-{i}"),
-                                                                    is_required: ta.is_required,
-                                                                    listing_index: ta.listing_index,
-                                                                    name: ta.name.clone(),
-                                                                    value: String::new(),
-                                                                    value_type: ta.value_type.clone(),
+                                                                .map(|(i, ta)| {
+                                                                    let id = format!("new-{i}");
+                                                                    if ta.id == template_listing_attribute_id {
+                                                                        listing_attribute_id = id.clone();
+                                                                    }
+                                                                    EntityAttribute {
+                                                                        access_level_id: ta.access_level_id,
+                                                                        description: ta.description.clone(),
+                                                                        id,
+                                                                        is_required: ta.is_required,
+                                                                        listing_index: ta.listing_index,
+                                                                        name: ta.name.clone(),
+                                                                        value: String::new(),
+                                                                        value_type: ta.value_type.clone(),
+                                                                    }
                                                                 })
-                                                                .collect::<Vec<_>>()
+                                                                .collect::<Vec<_>>();
+                                                            if listing_attribute_id.is_empty() {
+                                                                listing_attribute_id =
+                                                                    attrs.first().map(|a| a.id.clone()).unwrap_or_default();
+                                                            }
+                                                            attrs
                                                         })
                                                         .unwrap_or_default()
                                                 }
@@ -348,9 +362,13 @@ pub fn DataExplorerView(
                                                 source,
                                                 entity_template_id: tmpl_id,
                                                 attributes: attrs,
+                                                listing_attribute_id,
                                                 error: None,
                                                 is_saving: false,
                                                 active_tab: EntityTab::Attributes,
+                                                open_access_level_menu_id: None,
+                                                open_value_type_menu_id: None,
+                                                is_listing_attribute_menu_open: false,
                                             }));
                                             is_create_choice_open.set(false);
                                         },
