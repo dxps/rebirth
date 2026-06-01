@@ -484,29 +484,42 @@ fn EntityTableRow(entity: Entity, on_open: EventHandler<String>) -> Element {
 
     let entity_id = entity.id.clone();
 
+    let outgoing_tooltip = format!(
+        "{outgoing} outgoing {}",
+        if outgoing == 1 { "link" } else { "links" }
+    );
+    let incoming_tooltip = format!(
+        "{incoming} incoming {}",
+        if incoming == 1 { "link" } else { "links" }
+    );
+
     rsx! {
         tr {
             class: "data-table-row",
             tabindex: "0",
+            role: "button",
+            aria_label: "Open entity {listing_value}",
             onclick: move |_| on_open.call(entity_id.clone()),
-            td { class: "entity-listing-name-cell", "{listing_name}" }
+            td { class: "entity-listing-name-cell",
+                span { "{listing_name}" }
+            }
             td { class: "entity-listing-value-cell",
                 div { class: "entity-listing-value-content",
                     strong { "{listing_value}" }
                     span {
                         class: "entity-link-summary",
-                        aria_label: "Link counts",
+                        aria_label: "{outgoing} outgoing links, {incoming} incoming links",
                         span {
                             class: "entity-link-summary-item",
-                            "data-tooltip": "{outgoing} outgoing links",
-                            ArrowUpRight { class: "app-icon", size: 13 }
-                            "{outgoing}"
+                            "data-tooltip": "{outgoing_tooltip}",
+                            ArrowUpRight { size: 13 }
+                            span { "{outgoing}" }
                         }
                         span {
                             class: "entity-link-summary-item",
-                            "data-tooltip": "{incoming} incoming links",
-                            ArrowDownLeft { class: "app-icon", size: 13 }
-                            "{incoming}"
+                            "data-tooltip": "{incoming_tooltip}",
+                            ArrowDownLeft { size: 13 }
+                            span { "{incoming}" }
                         }
                     }
                 }
