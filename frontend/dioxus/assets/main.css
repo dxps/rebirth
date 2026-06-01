@@ -1318,8 +1318,13 @@ button.entity-views-manage-button:hover {
 	display: grid;
 	gap: 0.35rem;
 	min-height: 0;
+	overflow-x: hidden;
 	overflow-y: auto;
 	padding-right: 0.8rem;
+}
+
+.data-explorer-views-list > * {
+	min-width: 0;
 }
 
 .data-explorer-views-list > .section-action-button[data-tooltip] {

@@ -157,12 +157,16 @@ pub fn DataExplorerView(
     let template_rows = entity_templates.read().clone();
     let has_template_rows = !template_rows.is_empty();
     let saved_view_rows = saved_views.read().clone();
-    let saved_view_options = saved_view_rows
+    let saved_view_options = std::iter::once(SingleSelectOption {
+        label: "Views".to_string(),
+        value: String::new(),
+    })
+    .chain(saved_view_rows
         .iter()
         .map(|view| SingleSelectOption {
             label: view.name.clone(),
             value: view.id.clone(),
-        })
+        }))
         .collect::<Vec<_>>();
     let selected_view_summary = saved_view_rows
         .iter()
@@ -212,6 +216,22 @@ pub fn DataExplorerView(
                                 summary: selected_view_summary,
                                 on_toggle_open: move |_| is_saved_views_menu_open.toggle(),
                                 on_select_item: move |val: String| {
+                                    if val.is_empty() {
+                                        is_saved_views_menu_open.set(false);
+                                        selected_view_id.set(String::new());
+                                        search_term.set(String::new());
+                                        page.set(1);
+                                        load_entities_page(
+                                            sk_search.clone(),
+                                            String::new(),
+                                            1,
+                                            entities,
+                                            total,
+                                            is_loading,
+                                            error,
+                                        );
+                                        return;
+                                    }
                                     let views = saved_views.read();
                                     if let Some(view) = views.iter().find(|v| v.id == val) {
                                         let new_search = view.search_text.clone();
@@ -738,9 +758,17 @@ fn ViewsManagementModal(
             onpointercancel: move |_| drag_offset.set(None),
             div {
             class: if is_dragging { "draggable-modal is-dragging" } else { "draggable-modal" },
-            style: "left: {modal_position.x}px; top: {modal_position.y}px; width: 560px; height: 400px; min-width: 400px; min-height: 200px; z-index: 60;",
+            style: "left: {modal_position.x}px; top: {modal_position.y}px; width: 560px; height: 340px; min-width: 400px; min-height: 300px; z-index: 60;",
             div {
                 class: "draggable-modal-body",
+                onpointerdown: move |event| {
+                    event.stop_propagation();
+                    let point = event.data().client_coordinates();
+                    drag_offset.set(Some((
+                        point.x - position().x,
+                        point.y - position().y,
+                    )));
+                },
                 div { class: "draggable-modal-header",
                     onpointerdown: move |event| {
                         event.stop_propagation();
@@ -764,10 +792,13 @@ fn ViewsManagementModal(
                         }
                     }
                 }
-                div { class: "draggable-modal-content data-explorer-views-modal-content",
+                div {
+                    class: "draggable-modal-content data-explorer-views-modal-content",
                     div { class: "entity-template-edit-form data-explorer-views-form",
                         div { class: "data-explorer-views-grid",
-                        div { class: "data-explorer-views-list", role: "list",
+                        div {
+                            class: "data-explorer-views-list",
+                            role: "list",
                             if views.is_empty() {
                                 p { class: "data-explorer-views-empty", "No saved views yet" }
                             } else {
@@ -780,6 +811,7 @@ fn ViewsManagementModal(
                                             "data-explorer-view-item"
                                         },
                                         role: "listitem",
+                                        onpointerdown: move |event| event.stop_propagation(),
                                         button {
                                             class: "data-explorer-view-copy",
                                             onclick: {
@@ -829,6 +861,7 @@ fn ViewsManagementModal(
                                 class: "section-action-button",
                                 "data-tooltip": "New saved view",
                                 aria_label: "Add saved view",
+                                onpointerdown: move |event| event.stop_propagation(),
                                 onclick: move |_| {
                                     selected_id.set(None);
                                     name_input.set(String::new());
@@ -840,7 +873,7 @@ fn ViewsManagementModal(
                             }
                         }
                         div { class: "data-explorer-view-editor",
-                            label {
+                            label { onpointerdown: move |event| event.stop_propagation(),
                                 span { "Name" }
                                 input {
                                     r#type: "text",
@@ -851,7 +884,7 @@ fn ViewsManagementModal(
                                     },
                                 }
                             }
-                            label {
+                            label { onpointerdown: move |event| event.stop_propagation(),
                                 span { "Description" }
                                 textarea {
                                     value: "{desc_input}",
@@ -861,7 +894,7 @@ fn ViewsManagementModal(
                                     },
                                 }
                             }
-                            label {
+                            label { onpointerdown: move |event| event.stop_propagation(),
                                 span { "Search text" }
                                 input {
                                     r#type: "text",
@@ -879,6 +912,7 @@ fn ViewsManagementModal(
                                 if sel_id.is_some() {
                                     button {
                                         class: "delete-confirm-danger",
+                                        onpointerdown: move |event| event.stop_propagation(),
                                         onclick: {
                                             let uid2 = uid.clone();
                                             move |_| {
@@ -898,6 +932,7 @@ fn ViewsManagementModal(
                                 }
                                 button {
                                     disabled: name_input().trim().is_empty(),
+                                    onpointerdown: move |event| event.stop_propagation(),
                                     onclick: {
                                         let uid3 = uid.clone();
                                         move |_| {
