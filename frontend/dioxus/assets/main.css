@@ -581,19 +581,160 @@ textarea {
 .entity-search-controls {
 	align-items: center;
 	display: flex;
-	gap: 0.5rem;
-	width: min(100%, 28rem);
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	justify-content: flex-end;
+	min-width: 0;
 }
 
 .entity-search-field {
-	min-height: 2rem;
+	display: block;
+	position: relative;
+	width: min(100%, 22rem);
 }
 
-.entity-views-manage-button {
+.entity-views-manage-button,
+button.entity-views-manage-button {
 	background: transparent;
+	background-color: transparent;
+	border-radius: 999px;
+	color: color-mix(in srgb, var(--fg) 62%, transparent);
+	height: 1.8rem;
+	justify-content: center;
+	min-height: 1.8rem;
+	padding: 0;
+	position: relative;
+	width: 1.8rem;
+}
+
+.entity-views-manage-button:hover,
+button.entity-views-manage-button:hover {
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
+}
+
+.entity-views-manage-button svg {
+	height: 0.88rem;
+	width: 0.88rem;
+}
+
+.entity-view-select-wrap {
+	display: block;
+	position: relative;
+	width: 8.7rem;
+}
+
+.entity-view-select-wrap .security-user-permissions-trigger,
+.entity-view-select-wrap button.security-user-permissions-trigger {
+	font-size: 0.82rem;
+	height: 1.9rem;
+	min-height: 1.9rem;
+	padding-bottom: 0.2rem;
+	padding-left: 0.55rem;
+	padding-top: 0.2rem;
+}
+
+.entity-view-select-wrap .security-user-permission-option.single-select-option,
+.entity-view-select-wrap button.security-user-permission-option.single-select-option {
+	align-items: center;
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 5px;
 	color: var(--fg);
-	min-height: 2rem;
+	cursor: pointer;
+	display: flex;
+	font-size: 0.82rem;
+	justify-content: flex-start;
+	line-height: 1.2;
+	padding: 0.26rem 0.32rem;
+	text-align: left;
+	width: 100%;
+}
+
+.entity-view-select-wrap .security-user-permission-option.single-select-option:hover,
+.entity-view-select-wrap
+	.security-user-permission-option.single-select-option[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.entity-search-field input {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.82rem;
+	height: 1.9rem;
+	padding: 0.2rem 0.55rem;
+	width: 100%;
+}
+
+.entity-search-field input:focus {
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus-ring) 38%, transparent);
+	outline: 0;
+}
+
+.entity-search-field input::-webkit-search-cancel-button {
+	appearance: none;
+	background: var(--muted);
+	border-radius: 999px;
+	cursor: pointer;
+	height: 0.72rem;
+	mask:
+		linear-gradient(45deg, transparent 44%, #000 44% 56%, transparent 56%),
+		linear-gradient(-45deg, transparent 44%, #000 44% 56%, transparent 56%);
+	opacity: 0.4;
+	width: 0.72rem;
+}
+
+.entity-search-field input::-webkit-search-cancel-button:hover {
+	background: var(--fg);
+	opacity: 1;
+}
+
+.entity-search-field[data-tooltip]::after,
+.entity-views-manage-button[data-tooltip]::after {
+	background: var(--tooltip-bg);
+	border-radius: 6px;
+	color: var(--tooltip-fg);
+	content: attr(data-tooltip);
+	font-size: 0.72rem;
+	font-weight: 400;
+	line-height: 1;
+	opacity: 0;
+	padding: 0.32rem 0.45rem;
+	pointer-events: none;
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	transform: translateY(-0.1rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
 	white-space: nowrap;
+	z-index: 2;
+}
+
+.entity-search-field[data-tooltip]::after {
+	left: 0;
+}
+
+.entity-views-manage-button[data-tooltip]::after {
+	left: 50%;
+	transform: translate(-50%, -0.1rem);
+}
+
+.entity-search-field[data-tooltip]:hover::after {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.entity-views-manage-button[data-tooltip]:hover::after,
+.entity-views-manage-button[data-tooltip]:focus-visible::after {
+	opacity: 1;
+	transform: translate(-50%, 0);
 }
 
 .section-action-button,
@@ -796,6 +937,57 @@ textarea {
 	background: color-mix(in srgb, var(--fg) 10%, transparent);
 }
 
+.entities-table col.entity-listing-name-column,
+.entities-table col.entity-listing-value-column {
+	width: 50%;
+}
+
+.entities-table th.data-table-action-heading {
+	padding-left: 0;
+	padding-right: 0;
+	text-align: right;
+}
+
+.entities-table td {
+	padding-left: 0.7rem;
+	padding-right: 0.7rem;
+	width: 50%;
+}
+
+.entities-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.entities-empty-state {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
+	justify-content: center;
+}
+
+.entities-pagination {
+	align-items: center;
+	color: var(--muted);
+	display: flex;
+	font-size: 0.82rem;
+	gap: 0.75rem;
+	justify-content: center;
+	padding-top: 0.8rem;
+}
+
+.entities-pagination button {
+	border-radius: 6px;
+	font-size: 0.82rem;
+	min-height: 1.8rem;
+	padding: 0.18rem 0.65rem;
+}
+
+.entities-pagination button:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
+
 .entity-templates-table th:first-child,
 .entity-templates-table td:first-child,
 .attribute-templates-table th:first-child,
@@ -967,6 +1159,282 @@ textarea {
 .entity-link-summary-item[data-tooltip]:hover::after {
 	opacity: 1;
 	transform: translateY(0);
+}
+
+.entity-create-action {
+	align-items: center;
+	display: inline-flex;
+	position: relative;
+}
+
+.entity-create-popover {
+	position: fixed;
+	right: auto;
+	top: auto;
+	min-width: 11rem;
+	padding-top: 0.75rem;
+	text-align: left;
+	width: 11rem;
+	z-index: 40;
+}
+
+.entity-create-popover .include-attribute-close-button,
+.entity-create-popover button.include-attribute-close-button {
+	border-radius: 999px;
+	height: 1.45rem;
+	min-height: 1.45rem;
+	width: 1.45rem;
+}
+
+.entity-create-popover-title {
+	color: var(--muted);
+	font-size: 0.78rem;
+	line-height: 1.25;
+	margin: 0;
+	padding-right: 1.6rem;
+}
+
+.entity-create-radio-group {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.entity-template-edit-form .entity-create-radio-group label,
+.entity-create-radio-group label {
+	align-items: center;
+	border-radius: 6px;
+	color: var(--fg);
+	cursor: pointer;
+	display: flex;
+	flex-direction: row;
+	font-size: 0.78rem;
+	gap: 0.42rem;
+	grid-template-columns: none;
+	line-height: 1.2;
+	padding: 0.26rem 0.32rem;
+	white-space: nowrap;
+}
+
+.entity-template-edit-form .entity-create-radio-group label:hover,
+.entity-create-radio-group label:hover {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.entity-create-radio-group label:has(input:disabled) {
+	color: var(--muted);
+	cursor: default;
+	opacity: 0.58;
+}
+
+.entity-create-radio-group label:has(input:disabled):hover {
+	background: transparent;
+}
+
+.entity-template-edit-form .entity-create-radio-group input,
+.entity-create-radio-group input {
+	border-radius: 999px;
+	flex: 0 0 auto;
+	height: 1.05rem;
+	width: 1.05rem;
+}
+
+.entity-template-edit-form .entity-create-radio-group label > span:first-child {
+	padding-left: 0;
+}
+
+.entity-create-popover-fields {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.entity-create-popover-fields label {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.72rem;
+	gap: 0.2rem;
+}
+
+.entity-create-popover-fields label > span:first-child {
+	padding-left: 0.32rem;
+}
+
+.entity-create-popover-fields .security-user-permissions-trigger,
+.entity-create-popover-fields button.security-user-permissions-trigger {
+	font-size: 0.78rem;
+	min-height: 1.38rem;
+	padding-bottom: 0.13rem;
+	padding-top: 0.13rem;
+}
+
+.entity-create-popover-fields .security-user-permission-option.single-select-option,
+.entity-create-popover-fields button.security-user-permission-option.single-select-option {
+	align-items: center;
+	background: transparent;
+	background-color: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--fg);
+	cursor: pointer;
+	display: flex;
+	font-size: 0.78rem;
+	justify-content: flex-start;
+	line-height: 1.2;
+	padding: 0.26rem 0.32rem;
+	text-align: left;
+	width: 100%;
+}
+
+.entity-create-popover-fields .security-user-permission-option.single-select-option:hover,
+.entity-create-popover-fields
+	.security-user-permission-option.single-select-option[aria-selected='true'] {
+	background: color-mix(in srgb, var(--fg) 8%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.entity-create-popover-fields .include-attribute-submit-button,
+.entity-create-popover-continue {
+	justify-self: center;
+}
+
+.data-explorer-views-modal-content {
+	display: block;
+}
+
+.data-explorer-views-form {
+	grid-template-rows: minmax(0, 1fr);
+	height: 100%;
+}
+
+.data-explorer-views-grid {
+	display: grid;
+	gap: 0.8rem;
+	grid-template-columns: minmax(0, 1fr) minmax(13.5rem, 0.78fr);
+	height: 100%;
+	min-height: 0;
+}
+
+.data-explorer-views-list {
+	border-right: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+	display: grid;
+	gap: 0.35rem;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: 0.8rem;
+}
+
+.data-explorer-views-list > .section-action-button[data-tooltip] {
+	--tooltip-left: 0;
+	--tooltip-right: auto;
+	--tooltip-hidden-transform: translateY(-0.1rem);
+	--tooltip-visible-transform: translateY(0);
+}
+
+.data-explorer-views-empty {
+	align-self: center;
+	color: var(--muted);
+	font-size: 0.82rem;
+	font-style: italic;
+	justify-self: center;
+	margin: 0;
+}
+
+.data-explorer-view-item {
+	align-items: center;
+	border-radius: 7px;
+	display: grid;
+	gap: 0.25rem;
+	grid-template-columns: minmax(0, 1fr) auto;
+	padding: 0.28rem;
+}
+
+.data-explorer-view-item:hover,
+.data-explorer-view-item.is-selected {
+	background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+
+.data-explorer-view-copy,
+button.data-explorer-view-copy {
+	align-items: start;
+	background: transparent;
+	background-color: transparent;
+	color: var(--fg);
+	display: grid;
+	font: inherit;
+	gap: 0.16rem;
+	min-width: 0;
+	padding: 0.14rem 0.22rem;
+	text-align: left;
+}
+
+.data-explorer-view-copy:hover,
+button.data-explorer-view-copy:hover {
+	background: transparent;
+	background-color: transparent;
+	color: var(--fg);
+}
+
+.data-explorer-view-copy strong,
+.data-explorer-view-copy span,
+.data-explorer-view-copy code {
+	display: block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.data-explorer-view-copy strong {
+	font-size: 0.86rem;
+	font-weight: 500;
+}
+
+.data-explorer-view-copy span {
+	color: var(--muted);
+	font-size: 0.76rem;
+}
+
+.data-explorer-view-copy code {
+	color: color-mix(in srgb, var(--fg) 76%, transparent);
+	font-size: 0.75rem;
+}
+
+.data-explorer-view-actions {
+	align-items: center;
+	display: flex;
+	gap: 0.12rem;
+}
+
+.data-explorer-view-editor {
+	align-content: start;
+	display: grid;
+	gap: 0.75rem;
+	min-height: 0;
+}
+
+.data-explorer-view-editor textarea {
+	height: calc((14px * 1.35 * 3) + 0.32rem + 2px);
+	min-height: calc((14px * 1.35 * 2) + 0.32rem + 2px);
+	resize: vertical;
+}
+
+.data-explorer-view-editor-actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	justify-content: flex-end;
+}
+
+.data-explorer-view-editor-actions button {
+	border-radius: 6px;
+	font-size: 0.82rem;
+	min-height: 1.8rem;
+	padding: 0.24rem 0.55rem;
+}
+
+.data-explorer-view-editor-actions svg {
+	height: 0.82rem;
+	width: 0.82rem;
 }
 
 .icon-only-button,
@@ -1185,6 +1653,43 @@ textarea {
 
 .include-attribute-popover:has(.security-user-permissions-menu) {
 	overflow: visible;
+}
+
+.include-attribute-close-button,
+button.include-attribute-close-button {
+	position: absolute;
+	right: 0.35rem;
+	top: 0.35rem;
+}
+
+.include-attribute-submit-button,
+button.include-attribute-submit-button {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+	background-color: color-mix(in srgb, var(--fg) 10%, transparent);
+	color: var(--fg);
+	justify-self: end;
+}
+
+.include-attribute-submit-button:hover,
+button.include-attribute-submit-button:hover {
+	background: var(--button-hover-bg);
+	background-color: var(--button-hover-bg);
+	color: var(--button-fg);
+}
+
+.include-attribute-submit-button.icon-only-button[data-tooltip]::after,
+button.include-attribute-submit-button.icon-only-button[data-tooltip]::after {
+	left: auto;
+	right: calc(100% + 0.35rem);
+	top: 50%;
+	transform: translate(0.1rem, -50%);
+}
+
+.include-attribute-submit-button.icon-only-button[data-tooltip]:hover::after,
+.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visible::after,
+button.include-attribute-submit-button.icon-only-button[data-tooltip]:hover::after,
+button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visible::after {
+	transform: translate(0, -50%);
 }
 
 .entity-ownership-popover {

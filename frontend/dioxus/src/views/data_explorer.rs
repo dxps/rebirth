@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
-use lucide_dioxus::{ArrowDownLeft, ArrowUpRight, ListFilter, Plus};
+use lucide_dioxus::{ArrowDownLeft, ArrowUpRight, ListFilter, Plus, RefreshCw, Trash2};
 
+use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::components::modal::entity::{
-    load_saved_views, store_saved_views, CreateEntityModal, CreateEntitySource, CreateEntityState,
-    EntityDetailsModal, EntityDetailsWindow, EntityTab,
     fetch_access_levels_list, fetch_entities, fetch_entity, fetch_entity_owners,
-    fetch_entity_templates_list,
+    fetch_entity_templates_list, load_saved_views, store_saved_views, CreateEntityModal,
+    CreateEntitySource, CreateEntityState, EntityDetailsModal, EntityDetailsWindow, EntityTab,
 };
 use crate::types::{
     AccessLevel, AuthSession, Entity, EntityAttribute, EntityTemplate, ModalPosition, ModalSize,
@@ -55,14 +55,13 @@ pub fn DataExplorerView(
     let mut owner_users = use_signal(Vec::<User>::new);
 
     // Saved views — loaded from localStorage
-    let initial_saved_views = user_id
-        .as_deref()
-        .map(load_saved_views)
-        .unwrap_or_default();
+    let initial_saved_views = user_id.as_deref().map(load_saved_views).unwrap_or_default();
     let mut saved_views = use_signal(move || initial_saved_views);
 
     // UI state
     let mut search_term = use_signal(String::new);
+    let mut selected_view_id = use_signal(String::new);
+    let mut is_saved_views_menu_open = use_signal(|| false);
     let mut page = use_signal(|| 1_u32);
     let mut total = use_signal(|| 0_u32);
     let mut is_loading = use_signal(|| is_authorized);
@@ -86,6 +85,7 @@ pub fn DataExplorerView(
     let mut views_modal_name = use_signal(String::new);
     let mut views_modal_desc = use_signal(String::new);
     let mut views_modal_search = use_signal(String::new);
+    let mut views_modal_error = use_signal(|| None::<String>);
 
     // --- Initial load ---
     let mut has_loaded = use_signal(|| false);
@@ -118,15 +118,7 @@ pub fn DataExplorerView(
                 }
             });
 
-            load_entities_page(
-                sk,
-                String::new(),
-                1,
-                entities,
-                total,
-                is_loading,
-                error,
-            );
+            load_entities_page(sk, String::new(), 1, entities, total, is_loading, error);
         }
     });
 
@@ -163,7 +155,31 @@ pub fn DataExplorerView(
     let entity_rows = entities.read().clone();
     let access_level_rows = access_levels.read().clone();
     let template_rows = entity_templates.read().clone();
+    let has_template_rows = !template_rows.is_empty();
     let saved_view_rows = saved_views.read().clone();
+    let saved_view_options = saved_view_rows
+        .iter()
+        .map(|view| SingleSelectOption {
+            label: view.name.clone(),
+            value: view.id.clone(),
+        })
+        .collect::<Vec<_>>();
+    let selected_view_summary = saved_view_rows
+        .iter()
+        .find(|view| view.id == selected_view_id())
+        .map(|view| view.name.clone())
+        .unwrap_or_default();
+    let selected_view_tooltip = saved_view_rows
+        .iter()
+        .find(|view| view.id == selected_view_id())
+        .map(|view| {
+            if view.description.is_empty() {
+                format!("View filter: {}", view.search_text)
+            } else {
+                view.description.clone()
+            }
+        })
+        .unwrap_or_else(|| "Search through entities' attributes names and values".to_string());
     let total_pages = if total() == 0 { 1 } else { (total() + 9) / 10 };
     let uid = user_id.clone().unwrap_or_default();
 
@@ -178,49 +194,61 @@ pub fn DataExplorerView(
                         div { class: "entity-views-manage-action",
                             button {
                                 class: "entity-views-manage-button",
-                                "data-tooltip": "Manage saved views",
-                                aria_label: "Manage saved views",
+                                "data-tooltip": "Manage views",
+                                aria_label: "Manage data explorer views",
                                 onclick: move |_| is_views_modal_open.set(!is_views_modal_open()),
                                 ListFilter { class: "app-icon", size: 16 }
                             }
                         }
 
                         // Saved views selector
-                        select {
-                            class: "entity-saved-views-select",
-                            onchange: move |event| {
-                                let val = event.value();
-                                let views = saved_views.read();
-                                if let Some(view) = views.iter().find(|v| v.id == val) {
-                                    let new_search = view.search_text.clone();
-                                    drop(views);
-                                    search_term.set(new_search.clone());
-                                    page.set(1);
-                                    load_entities_page(
-                                        sk_search.clone(),
-                                        new_search,
-                                        1,
-                                        entities,
-                                        total,
-                                        is_loading,
-                                        error,
-                                    );
-                                }
-                            },
-                            option { value: "", "— views —" }
-                            for view in saved_view_rows.iter() {
-                                option { key: "{view.id}", value: "{view.id}", "{view.name}" }
+                        span { class: "entity-view-select-wrap",
+                            SingleSelectPicker {
+                                disabled: false,
+                                empty_text: "Views",
+                                is_open: is_saved_views_menu_open(),
+                                options: saved_view_options,
+                                selected_value: selected_view_id(),
+                                summary: selected_view_summary,
+                                on_toggle_open: move |_| is_saved_views_menu_open.toggle(),
+                                on_select_item: move |val: String| {
+                                    let views = saved_views.read();
+                                    if let Some(view) = views.iter().find(|v| v.id == val) {
+                                        let new_search = view.search_text.clone();
+                                        drop(views);
+                                        is_saved_views_menu_open.set(false);
+                                        selected_view_id.set(val);
+                                        search_term.set(new_search.clone());
+                                        page.set(1);
+                                        load_entities_page(
+                                            sk_search.clone(),
+                                            new_search,
+                                            1,
+                                            entities,
+                                            total,
+                                            is_loading,
+                                            error,
+                                        );
+                                    } else {
+                                        is_saved_views_menu_open.set(false);
+                                        selected_view_id.set(String::new());
+                                    }
+                                },
                             }
                         }
 
                         // Search input
-                        label { class: "entity-search-field",
+                        label {
+                            class: "entity-search-field",
+                            "data-tooltip": "{selected_view_tooltip}",
                             input {
                                 r#type: "search",
-                                placeholder: "Search entities (min 3 chars)",
+                                aria_label: "Search entities",
+                                placeholder: "Search",
                                 value: "{search_term}",
                                 oninput: move |event| {
                                     let val = event.value();
+                                    selected_view_id.set(String::new());
                                     search_term.set(val.clone());
                                     page.set(1);
                                     let effective = if val.len() >= 3 { val } else { String::new() };
@@ -245,7 +273,12 @@ pub fn DataExplorerView(
                                     "data-tooltip": "Create entity",
                                     aria_label: "Create entity",
                                     aria_expanded: "{is_create_choice_open()}",
-                                    onclick: move |_| is_create_choice_open.set(!is_create_choice_open()),
+                                    onclick: move |_| {
+                                        if !has_template_rows {
+                                            create_choice_source.set(CreateEntitySource::Scratch);
+                                        }
+                                        is_create_choice_open.set(!is_create_choice_open());
+                                    },
                                     Plus { class: "app-icon", size: 16 }
                                 }
                                 if is_create_choice_open() {
@@ -257,7 +290,11 @@ pub fn DataExplorerView(
                                         on_source_change: move |source| create_choice_source.set(source),
                                         on_template_change: move |id| create_choice_template_id.set(id),
                                         on_open_create: move |_| {
-                                            let source = create_choice_source();
+                                            let source = if entity_templates.read().is_empty() {
+                                                CreateEntitySource::Scratch
+                                            } else {
+                                                create_choice_source()
+                                            };
                                             let tmpl_id = create_choice_template_id();
                                             let attrs = match &source {
                                                 CreateEntitySource::Template => {
@@ -311,11 +348,13 @@ pub fn DataExplorerView(
                         p { "{err_msg}" }
                         button {
                             class: "access-level-refresh-button",
+                            "data-tooltip": "Try again",
+                            aria_label: "Refresh entities",
                             onclick: move |_| {
                                 let search = if current_search2.len() >= 3 { current_search2.clone() } else { String::new() };
                                 load_entities_page(sk_retry.clone(), search, current_page, entities, total, is_loading, error);
                             },
-                            "Retry"
+                            RefreshCw { class: "app-icon", size: 16 }
                         }
                     }
                 } else {
@@ -342,7 +381,19 @@ pub fn DataExplorerView(
                                 } else if entity_rows.is_empty() {
                                     tr {
                                         td { class: "data-table-empty-cell", colspan: "2",
-                                            span { "There are no entries" }
+                                            div { class: "entities-empty-state",
+                                                span { "There are no entries" }
+                                                button {
+                                                    class: "access-level-refresh-button",
+                                                    "data-tooltip": "Try again",
+                                                    aria_label: "Refresh entities",
+                                                    onclick: move |_| {
+                                                        let search = if current_search2.len() >= 3 { current_search2.clone() } else { String::new() };
+                                                        load_entities_page(sk_retry.clone(), search, current_page, entities, total, is_loading, error);
+                                                    },
+                                                    RefreshCw { class: "app-icon", size: 16 }
+                                                }
+                                            }
                                         }
                                     }
                                 } else {
@@ -449,6 +500,7 @@ pub fn DataExplorerView(
                     name_input: views_modal_name,
                     desc_input: views_modal_desc,
                     search_input: views_modal_search,
+                    form_error: views_modal_error,
                     current_search: current_search.clone(),
                 }
             }
@@ -478,9 +530,13 @@ fn EntityTableRow(entity: Entity, on_open: EventHandler<String>) -> Element {
     let outgoing = entity
         .outgoing_links_count
         .unwrap_or_else(|| entity.links.len() as u32);
-    let incoming = entity
-        .incoming_links_count
-        .unwrap_or_else(|| entity.incoming_links.as_ref().map(|l| l.len() as u32).unwrap_or(0));
+    let incoming = entity.incoming_links_count.unwrap_or_else(|| {
+        entity
+            .incoming_links
+            .as_ref()
+            .map(|l| l.len() as u32)
+            .unwrap_or(0)
+    });
 
     let entity_id = entity.id.clone();
 
@@ -543,65 +599,93 @@ fn CreateChoicePopover(
     on_open_create: EventHandler<MouseEvent>,
     session_key: String,
 ) -> Element {
-    let is_template_source = selected_source == CreateEntitySource::Template;
-    let can_open = match &selected_source {
-        CreateEntitySource::Template => !selected_template_id.is_empty(),
+    let has_templates = !entity_templates.is_empty();
+    let template_options = entity_templates
+        .iter()
+        .map(|template| SingleSelectOption {
+            label: template.name.clone(),
+            value: template.id.clone(),
+        })
+        .collect::<Vec<_>>();
+    let template_summary = entity_templates
+        .iter()
+        .find(|template| template.id == selected_template_id)
+        .map(|template| template.name.clone())
+        .unwrap_or_default();
+    let mut is_template_menu_open = use_signal(|| false);
+    let effective_source = if has_templates {
+        selected_source.clone()
+    } else {
+        CreateEntitySource::Scratch
+    };
+    let is_template_source = effective_source == CreateEntitySource::Template;
+    let can_open = match &effective_source {
+        CreateEntitySource::Template => has_templates && !selected_template_id.is_empty(),
         CreateEntitySource::Scratch => true,
     };
 
     rsx! {
         div {
-            class: "entity-create-choice-popover",
+            class: "include-attribute-popover entity-create-popover",
             role: "dialog",
             aria_label: "Create entity",
             onclick: move |event| event.stop_propagation(),
             onpointerdown: move |event| event.stop_propagation(),
-            div { class: "entity-create-choice-header",
-                p { "Create an entity from:" }
-                button {
-                    class: "draggable-modal-titlebar-button",
-                    aria_label: "Close",
-                    onclick: move |event| on_close.call(event),
-                    lucide_dioxus::X { class: "app-icon", size: 14 }
-                }
+            button {
+                class: "icon-only-button include-attribute-close-button",
+                aria_label: "Close create entity popup",
+                onclick: move |event| on_close.call(event),
+                lucide_dioxus::X { class: "app-icon", size: 14 }
             }
-            div { class: "entity-create-choice-options",
+            p { class: "entity-create-popover-title", "Create an entity from:" }
+            div { class: "entity-create-radio-group",
                 label {
+                    "data-tooltip": if has_templates { "" } else { "There is not entity template to select" },
                     input {
                         r#type: "radio",
-                        name: "create-source",
+                        name: "entity-create-source",
                         value: "template",
                         checked: is_template_source,
+                        disabled: !has_templates,
                         onchange: move |_| on_source_change.call(CreateEntitySource::Template),
                     }
-                    "Template"
+                    span { "Template" }
                 }
                 label {
                     input {
                         r#type: "radio",
-                        name: "create-source",
+                        name: "entity-create-source",
                         value: "scratch",
                         checked: !is_template_source,
                         onchange: move |_| on_source_change.call(CreateEntitySource::Scratch),
                     }
-                    "Scratch"
+                    span { "Scratch" }
                 }
             }
             if is_template_source {
-                select {
-                    class: "entity-template-select",
-                    value: "{selected_template_id}",
-                    onchange: move |event| on_template_change.call(event.value()),
-                    option { value: "", "— select template —" }
-                    for tmpl in entity_templates.iter() {
-                        option { key: "{tmpl.id}", value: "{tmpl.id}", "{tmpl.name}" }
+                div { class: "entity-create-popover-fields",
+                    label {
+                        span { "entity template" }
+                        SingleSelectPicker {
+                            disabled: !has_templates,
+                            empty_text: "Select template",
+                            is_open: is_template_menu_open(),
+                            options: template_options,
+                            selected_value: selected_template_id,
+                            summary: template_summary,
+                            on_toggle_open: move |_| is_template_menu_open.toggle(),
+                            on_select_item: move |template_id: String| {
+                                is_template_menu_open.set(false);
+                                on_template_change.call(template_id);
+                            },
+                        }
                     }
                 }
             }
             button {
-                class: "section-action-button",
-                "data-tooltip": "Open create form",
-                aria_label: "Create entity",
+                class: "icon-only-button include-attribute-submit-button entity-create-popover-continue",
+                "data-tooltip": "Continue",
+                aria_label: "Continue",
                 disabled: !can_open,
                 onclick: move |event| on_open_create.call(event),
                 Plus { class: "app-icon", size: 16 }
@@ -623,22 +707,54 @@ fn ViewsManagementModal(
     name_input: Signal<String>,
     desc_input: Signal<String>,
     search_input: Signal<String>,
+    form_error: Signal<Option<String>>,
     current_search: String,
 ) -> Element {
+    let mut position = use_signal(|| ModalPosition { x: 160.0, y: 80.0 });
+    let mut drag_offset = use_signal(|| None::<(f64, f64)>);
     let views = saved_views.read().clone();
     let sel_id = selected_id();
     let uid = user_id.clone();
+    let modal_position = position();
+    let is_dragging = drag_offset().is_some();
 
     rsx! {
         div {
-            class: "draggable-modal",
-            style: "left: 160px; top: 80px; width: 560px; height: 400px; min-width: 400px; min-height: 200px; z-index: 60;",
+            class: if is_dragging {
+                "draggable-modal-layer data-explorer-views-layer is-dragging"
+            } else {
+                "draggable-modal-layer data-explorer-views-layer"
+            },
+            onpointermove: move |event| {
+                if let Some((offset_x, offset_y)) = drag_offset() {
+                    let point = event.data().client_coordinates();
+                    position.set(ModalPosition {
+                        x: (point.x - offset_x).max(16.0),
+                        y: (point.y - offset_y).max(64.0),
+                    });
+                }
+            },
+            onpointerup: move |_| drag_offset.set(None),
+            onpointercancel: move |_| drag_offset.set(None),
+            div {
+            class: if is_dragging { "draggable-modal is-dragging" } else { "draggable-modal" },
+            style: "left: {modal_position.x}px; top: {modal_position.y}px; width: 560px; height: 400px; min-width: 400px; min-height: 200px; z-index: 60;",
             div {
                 class: "draggable-modal-body",
                 div { class: "draggable-modal-header",
-                    h2 { "Saved Views" }
+                    onpointerdown: move |event| {
+                        event.stop_propagation();
+                        let point = event.data().client_coordinates();
+                        drag_offset.set(Some((
+                            point.x - position().x,
+                            point.y - position().y,
+                        )));
+                    },
+                    h2 { "Views :: Manage" }
                     div {
                         class: "draggable-modal-titlebar-actions",
+                        onclick: move |event| event.stop_propagation(),
+                        onpointerdown: move |event| event.stop_propagation(),
                         button {
                             class: "draggable-modal-titlebar-button draggable-modal-close",
                             "data-tooltip": "Close",
@@ -648,33 +764,64 @@ fn ViewsManagementModal(
                         }
                     }
                 }
-                div { class: "draggable-modal-content",
-                    div { class: "entity-views-modal-layout",
-                        div { class: "entity-views-modal-list",
+                div { class: "draggable-modal-content data-explorer-views-modal-content",
+                    div { class: "entity-template-edit-form data-explorer-views-form",
+                        div { class: "data-explorer-views-grid",
+                        div { class: "data-explorer-views-list", role: "list",
                             if views.is_empty() {
-                                p { class: "data-table-muted-cell", "No saved views" }
+                                p { class: "data-explorer-views-empty", "No saved views yet" }
                             } else {
                                 for view in views.iter().cloned() {
-                                    button {
+                                    div {
                                         key: "{view.id}",
                                         class: if sel_id.as_deref() == Some(&view.id) {
-                                            "entity-views-modal-item is-selected"
+                                            "data-explorer-view-item is-selected"
                                         } else {
-                                            "entity-views-modal-item"
+                                            "data-explorer-view-item"
                                         },
-                                        onclick: {
-                                            let vid = view.id.clone();
-                                            let vn = view.name.clone();
-                                            let vd = view.description.clone();
-                                            let vs = view.search_text.clone();
-                                            move |_| {
-                                                selected_id.set(Some(vid.clone()));
-                                                name_input.set(vn.clone());
-                                                desc_input.set(vd.clone());
-                                                search_input.set(vs.clone());
+                                        role: "listitem",
+                                        button {
+                                            class: "data-explorer-view-copy",
+                                            onclick: {
+                                                let vid = view.id.clone();
+                                                let vn = view.name.clone();
+                                                let vd = view.description.clone();
+                                                let vs = view.search_text.clone();
+                                                move |_| {
+                                                    selected_id.set(Some(vid.clone()));
+                                                    name_input.set(vn.clone());
+                                                    desc_input.set(vd.clone());
+                                                    search_input.set(vs.clone());
+                                                    form_error.set(None);
+                                                }
+                                            },
+                                            strong { "{view.name}" }
+                                            if !view.description.is_empty() {
+                                                span { "{view.description}" }
                                             }
-                                        },
-                                        "{view.name}"
+                                            code { "{view.search_text}" }
+                                        }
+                                        div { class: "data-explorer-view-actions",
+                                            button {
+                                                class: "draggable-modal-titlebar-button",
+                                                "data-tooltip": "Delete view",
+                                                aria_label: "Delete saved view",
+                                                onclick: {
+                                                    let uid2 = uid.clone();
+                                                    let vid = view.id.clone();
+                                                    move |_| {
+                                                        saved_views.write().retain(|v| v.id != vid);
+                                                        store_saved_views(&uid2, &saved_views.read());
+                                                        selected_id.set(None);
+                                                        name_input.set(String::new());
+                                                        desc_input.set(String::new());
+                                                        search_input.set(String::new());
+                                                        form_error.set(None);
+                                                    }
+                                                },
+                                                Trash2 { class: "app-icon", size: 14 }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -687,25 +834,31 @@ fn ViewsManagementModal(
                                     name_input.set(String::new());
                                     desc_input.set(String::new());
                                     search_input.set(current_search.clone());
+                                    form_error.set(None);
                                 },
                                 Plus { class: "app-icon", size: 16 }
                             }
                         }
-                        div { class: "entity-views-modal-form",
+                        div { class: "data-explorer-view-editor",
                             label {
                                 span { "Name" }
                                 input {
                                     r#type: "text",
                                     value: "{name_input}",
-                                    oninput: move |event| name_input.set(event.value()),
+                                    oninput: move |event| {
+                                        name_input.set(event.value());
+                                        form_error.set(None);
+                                    },
                                 }
                             }
                             label {
                                 span { "Description" }
-                                input {
-                                    r#type: "text",
+                                textarea {
                                     value: "{desc_input}",
-                                    oninput: move |event| desc_input.set(event.value()),
+                                    oninput: move |event| {
+                                        desc_input.set(event.value());
+                                        form_error.set(None);
+                                    },
                                 }
                             }
                             label {
@@ -713,10 +866,16 @@ fn ViewsManagementModal(
                                 input {
                                     r#type: "text",
                                     value: "{search_input}",
-                                    oninput: move |event| search_input.set(event.value()),
+                                    oninput: move |event| {
+                                        search_input.set(event.value());
+                                        form_error.set(None);
+                                    },
                                 }
                             }
-                            div { class: "entity-views-modal-actions",
+                            if let Some(message) = form_error() {
+                                p { class: "form-error", "{message}" }
+                            }
+                            div { class: "data-explorer-view-editor-actions",
                                 if sel_id.is_some() {
                                     button {
                                         class: "delete-confirm-danger",
@@ -730,6 +889,7 @@ fn ViewsManagementModal(
                                                     name_input.set(String::new());
                                                     desc_input.set(String::new());
                                                     search_input.set(String::new());
+                                                    form_error.set(None);
                                                 }
                                             }
                                         },
@@ -737,15 +897,21 @@ fn ViewsManagementModal(
                                     }
                                 }
                                 button {
-                                    class: "section-action-button",
                                     disabled: name_input().trim().is_empty(),
                                     onclick: {
                                         let uid3 = uid.clone();
                                         move |_| {
                                             let name = name_input().trim().to_string();
-                                            if name.is_empty() { return; }
-                                            let desc = desc_input();
-                                            let search = search_input();
+                                            if name.is_empty() {
+                                                form_error.set(Some("Name is required".to_string()));
+                                                return;
+                                            }
+                                            let desc = desc_input().trim().to_string();
+                                            let search = search_input().trim().to_string();
+                                            if search.is_empty() {
+                                                form_error.set(Some("Search filter is required".to_string()));
+                                                return;
+                                            }
                                             if let Some(id) = selected_id() {
                                                 if let Some(v) = saved_views.write().iter_mut().find(|v| v.id == id) {
                                                     v.name = name;
@@ -763,14 +929,17 @@ fn ViewsManagementModal(
                                                 selected_id.set(Some(new_id));
                                             }
                                             store_saved_views(&uid3, &saved_views.read());
+                                            form_error.set(None);
                                         }
                                     },
                                     "Save"
                                 }
                             }
                         }
+                        }
                     }
                 }
+            }
             }
         }
     }
@@ -816,7 +985,9 @@ fn open_entity_details_window(
     // If already open, just raise it.
     let existing = {
         let wins = windows.read();
-        wins.iter().find(|w| w.entity_id == entity_id).map(|w| w.id.clone())
+        wins.iter()
+            .find(|w| w.entity_id == entity_id)
+            .map(|w| w.id.clone())
     };
     if let Some(win_id) = existing {
         let next_z = windows.read().iter().map(|w| w.z_index).max().unwrap_or(20) + 1;
