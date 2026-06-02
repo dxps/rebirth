@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
 use lucide_dioxus::{ArrowDownLeft, ArrowUpRight, ListFilter, Plus, RefreshCw, Trash2};
 
-use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::components::modal::entity::{
     fetch_access_levels_list, fetch_entities, fetch_entity, fetch_entity_owners,
     fetch_entity_templates_list, load_saved_views, store_saved_views, CreateEntityModal,
     CreateEntitySource, CreateEntityState, EntityDetailsModal, EntityDetailsWindow, EntityTab,
 };
+use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AuthSession, Entity, EntityAttribute, EntityTemplate, ModalPosition, ModalSize,
     OpenModal, SavedView, User,
@@ -161,13 +161,11 @@ pub fn DataExplorerView(
         label: "Views".to_string(),
         value: String::new(),
     })
-    .chain(saved_view_rows
-        .iter()
-        .map(|view| SingleSelectOption {
-            label: view.name.clone(),
-            value: view.id.clone(),
-        }))
-        .collect::<Vec<_>>();
+    .chain(saved_view_rows.iter().map(|view| SingleSelectOption {
+        label: view.name.clone(),
+        value: view.id.clone(),
+    }))
+    .collect::<Vec<_>>();
     let selected_view_summary = saved_view_rows
         .iter()
         .find(|view| view.id == selected_view_id())
@@ -1081,6 +1079,7 @@ fn open_entity_details_window(
             width: 600.0,
         },
         edit_attributes: Vec::new(),
+        edit_links: Vec::new(),
         edit_error: None,
         is_saving: false,
         revealed_attribute_ids: Vec::new(),
@@ -1097,7 +1096,9 @@ fn open_entity_details_window(
         edit_is_attribute_template_menu_open: false,
         edit_owner_user_id: String::new(),
         edit_is_owner_menu_open: false,
+        edit_open_link_target_menu_id: None,
         dragged_edit_attribute_id: None,
+        dragged_edit_link_id: None,
     });
 
     spawn(async move {
@@ -1105,6 +1106,7 @@ fn open_entity_details_window(
             Ok(entity) => {
                 if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_async) {
                     w.edit_attributes = entity.attributes.clone();
+                    w.edit_links = entity.links.clone();
                     w.entity = Some(entity);
                     w.is_loading = false;
                 }

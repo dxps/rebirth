@@ -18,9 +18,12 @@ pub fn SingleSelectPicker(
     summary: String,
 ) -> Element {
     rsx! {
-        span { class: "security-user-permissions-picker",
+        span {
+            class: "security-user-permissions-picker",
+            "data-tooltip": if summary.is_empty() { None } else { Some(summary.clone()) },
             onclick: move |event| event.stop_propagation(),
             onpointerdown: move |event| event.stop_propagation(),
+            onpointerup: move |event| event.stop_propagation(),
             if is_open {
                 span {
                     class: "single-select-outside-click-layer",
@@ -29,6 +32,7 @@ pub fn SingleSelectPicker(
                         on_toggle_open.call(event);
                     },
                     onpointerdown: move |event| event.stop_propagation(),
+                    onpointerup: move |event| event.stop_propagation(),
                 }
             }
             button {
@@ -57,6 +61,7 @@ pub fn SingleSelectPicker(
                     aria_multiselectable: "false",
                     onclick: move |event| event.stop_propagation(),
                     onpointerdown: move |event| event.stop_propagation(),
+                    onpointerup: move |event| event.stop_propagation(),
                     for option in options {
                         button {
                             key: "{option.value}",

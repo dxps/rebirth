@@ -1688,6 +1688,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	) {
 	display: grid;
@@ -1700,6 +1701,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	colgroup {
@@ -1710,6 +1712,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	thead,
@@ -1717,6 +1720,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	tbody {
@@ -1728,6 +1732,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	th,
@@ -1735,6 +1740,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	td {
@@ -1747,6 +1753,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	tbody {
@@ -1759,19 +1766,33 @@ button.data-explorer-view-copy {
 .entity-details-view-form.entity-edit-form
 	.entity-attributes-table:has(.security-user-permissions-menu),
 .entity-details-view-form.entity-edit-form
+	.entity-entity-links-table:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
 	.entity-attributes-table
+	tbody:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
+	.entity-entity-links-table
 	tbody:has(.security-user-permissions-menu),
 .entity-details-view-form.entity-edit-form
 	.entity-attributes-table
 	tr:has(.security-user-permissions-menu),
 .entity-details-view-form.entity-edit-form
+	.entity-entity-links-table
+	tr:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
 	.entity-attributes-table
+	td:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
+	.entity-entity-links-table
 	td:has(.security-user-permissions-menu) {
 	overflow: visible;
 }
 
 .entity-details-view-form.entity-edit-form
 	.entity-attributes-table
+	tr:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
+	.entity-entity-links-table
 	tr:has(.security-user-permissions-menu) {
 	position: relative;
 	z-index: 20;
@@ -1878,6 +1899,17 @@ button.data-explorer-view-copy {
 	width: 100%;
 }
 
+.entity-details-view-form.entity-edit-form
+	.entity-links-tabpanel
+	.entity-entity-links-table
+	tr {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 24%) minmax(0, 1fr) minmax(0, 10.25rem)
+		3.25rem;
+	width: 100%;
+}
+
 .entity-details-view-form
 	.entity-inlinks-tabpanel
 	.entity-template-view-inlinks-table
@@ -1891,6 +1923,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	.data-table-empty-cell {
@@ -1901,6 +1934,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	tbody::-webkit-scrollbar {
@@ -1911,6 +1945,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	tbody::-webkit-scrollbar-thumb {
@@ -1922,6 +1957,7 @@ button.data-explorer-view-copy {
 	:is(
 		.entity-attributes-tabpanel .entity-attributes-table,
 		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-links-tabpanel .entity-entity-links-table,
 		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
 	)
 	tbody::-webkit-scrollbar-track {
@@ -2831,10 +2867,30 @@ button.security-user-permissions-trigger:focus-visible {
 	gap: 0.12rem;
 	left: 0;
 	min-width: 100%;
+	width: min(var(--single-select-menu-width, 100%), calc(100vw - 2rem));
 	padding: 0.28rem;
 	position: absolute;
 	top: calc(100% + 0.28rem);
 	z-index: 1000;
+}
+
+.security-user-permissions-picker:has(.security-user-permissions-menu)::after {
+	display: none;
+}
+
+.security-user-permission-option.single-select-option,
+button.security-user-permission-option.single-select-option {
+	min-width: 0;
+	white-space: nowrap;
+}
+
+.security-user-permission-option.single-select-option span,
+button.security-user-permission-option.single-select-option span {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .access-level-edit-form .security-user-permission-option {
@@ -3529,6 +3585,10 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 
 .entity-template-links-table .security-user-permissions-picker {
 	width: 100%;
+}
+
+.entity-template-link-target-wrap .security-user-permissions-picker {
+	--single-select-menu-width: min(calc(100% + 2.5rem), calc(100vw - 3rem));
 }
 
 .entity-template-links-table .security-user-permissions-trigger,
