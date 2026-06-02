@@ -499,6 +499,7 @@ pub fn DataExplorerView(
                     session_key: session_key.clone().unwrap_or_default(),
                     access_levels: access_level_rows.clone(),
                     entities,
+                    owner_users: owner_users.read().clone(),
                     on_open_entity: {
                         let sk = session_key.clone().unwrap_or_default();
                         move |entity_id: String| {
@@ -1094,6 +1095,8 @@ fn open_entity_details_window(
         edit_is_attribute_templates_loading: false,
         edit_selected_attribute_template_id: None,
         edit_is_attribute_template_menu_open: false,
+        edit_owner_user_id: String::new(),
+        edit_is_owner_menu_open: false,
         dragged_edit_attribute_id: None,
     });
 

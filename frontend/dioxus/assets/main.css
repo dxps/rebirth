@@ -2384,7 +2384,15 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	gap: 0.25rem;
 }
 
-.entity-ownership-popover label > span:first-child {
+.entity-ownership-field {
+	color: var(--muted);
+	display: grid;
+	font-size: 0.72rem;
+	gap: 0.25rem;
+}
+
+.entity-ownership-popover label > span:first-child,
+.entity-ownership-field > span:first-child {
 	padding-left: 0.32rem;
 }
 

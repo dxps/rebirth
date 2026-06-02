@@ -66,6 +66,8 @@ pub struct EntityDetailsWindow {
     pub edit_is_attribute_templates_loading: bool,
     pub edit_selected_attribute_template_id: Option<String>,
     pub edit_is_attribute_template_menu_open: bool,
+    pub edit_owner_user_id: String,
+    pub edit_is_owner_menu_open: bool,
     pub dragged_edit_attribute_id: Option<String>,
 }
 
@@ -353,6 +355,7 @@ pub fn EntityDetailsModal(
     session_key: String,
     access_levels: Vec<AccessLevel>,
     entities: Signal<Vec<Entity>>,
+    owner_users: Vec<RebirthUser>,
     on_open_entity: EventHandler<String>,
 ) -> Element {
     let win_id = window.id.clone();
@@ -426,6 +429,7 @@ pub fn EntityDetailsModal(
                     w.edit_is_listing_attribute_menu_open = false;
                     w.edit_is_include_attribute_open = false;
                     w.edit_is_attribute_template_menu_open = false;
+                    w.edit_is_owner_menu_open = false;
                 }
             },
             onpointercancel: move |_| {
@@ -440,6 +444,7 @@ pub fn EntityDetailsModal(
                     w.edit_is_listing_attribute_menu_open = false;
                     w.edit_is_include_attribute_open = false;
                     w.edit_is_attribute_template_menu_open = false;
+                    w.edit_is_owner_menu_open = false;
                 }
             },
             div {
@@ -466,6 +471,7 @@ pub fn EntityDetailsModal(
                         w.edit_is_listing_attribute_menu_open = false;
                         w.edit_is_include_attribute_open = false;
                         w.edit_is_attribute_template_menu_open = false;
+                        w.edit_is_owner_menu_open = false;
                         w.dragged_edit_attribute_id = None;
                     }
                 },
@@ -497,8 +503,10 @@ pub fn EntityDetailsModal(
                         EntityDetailsTitlebarActions {
                             window: window.clone(),
                             windows,
+                            auth_session: auth_session.clone(),
                             session_key: session_key.clone(),
                             entities,
+                            owner_users: owner_users.clone(),
                         }
                         button {
                             class: "draggable-modal-titlebar-button draggable-modal-close",
@@ -560,32 +568,92 @@ pub fn EntityDetailsModal(
 fn EntityDetailsTitlebarActions(
     window: EntityDetailsWindow,
     windows: Signal<Vec<EntityDetailsWindow>>,
+    auth_session: Option<AuthSession>,
     session_key: String,
     entities: Signal<Vec<Entity>>,
+    owner_users: Vec<RebirthUser>,
 ) -> Element {
     let win_id = window.id.clone();
     let win_id_confirm_cancel = win_id.clone();
     let win_id_confirm_delete = win_id.clone();
+    let win_id_info = win_id.clone();
     let win_id_owner = win_id.clone();
     let entity_id = window.entity_id.clone();
     let is_info_open = window.is_info_open;
+    let is_owner_open = window.is_owner_open;
     let is_delete_confirm_open = window.is_delete_confirm_open;
     let is_edit_mode = window.is_edit_mode;
+    let can_assign_owner = has_any_permission(auth_session.as_ref(), &["Admin"]);
     let can_save = is_edit_mode
         && window
             .edit_attributes
             .iter()
             .all(|a| !a.name.trim().is_empty());
+    let entity_id_str = window
+        .entity
+        .as_ref()
+        .map(|e| e.id.clone())
+        .unwrap_or_default();
+    let entity_owner_user_id = window
+        .entity
+        .as_ref()
+        .map(|e| e.owner_user_id.clone())
+        .unwrap_or_default();
+    let selected_owner_user_id = if is_edit_mode && !window.edit_owner_user_id.is_empty() {
+        window.edit_owner_user_id.clone()
+    } else {
+        entity_owner_user_id.clone()
+    };
+    let owner_label = owner_users
+        .iter()
+        .find(|user| user.id == selected_owner_user_id)
+        .map(|user| user.username.clone())
+        .unwrap_or_else(|| selected_owner_user_id.clone());
+    let owner_options = owner_users
+        .iter()
+        .map(|user| SingleSelectOption {
+            label: user.username.clone(),
+            value: user.id.clone(),
+        })
+        .collect::<Vec<_>>();
 
     if is_edit_mode {
         let win_id_cancel = win_id.clone();
         let win_id_save = win_id.clone();
         let sk_save = session_key.clone();
         let eid_save = entity_id.clone();
-        let win_id_del = win_id.clone();
-        let eid_del = entity_id.clone();
-        let sk_del = session_key.clone();
+        let owner_for_save = if can_assign_owner {
+            Some(selected_owner_user_id.clone())
+        } else {
+            None
+        };
         return rsx! {
+            div { class: "draggable-modal-info-action",
+                button {
+                    class: "draggable-modal-titlebar-button draggable-modal-info-button",
+                    "data-tooltip": "Info",
+                    aria_label: "Show id",
+                    aria_expanded: "{is_info_open}",
+                    onclick: move |_| {
+                        if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_info) {
+                            w.is_info_open = !w.is_info_open;
+                            w.is_delete_confirm_open = false;
+                            w.is_owner_open = false;
+                        }
+                    },
+                    Info { class: "app-icon", size: 15 }
+                }
+                if is_info_open {
+                    div {
+                        class: "entity-id-popover",
+                        onclick: move |event| event.stop_propagation(),
+                        onpointerdown: move |event| event.stop_propagation(),
+                        p { class: "entity-id-popover-title", "data-selectable": "true",
+                            "id: {entity_id_str}"
+                        }
+                    }
+                }
+            }
             button {
                 class: "draggable-modal-titlebar-button",
                 "data-tooltip": "Cancel",
@@ -600,57 +668,76 @@ fn EntityDetailsTitlebarActions(
                         w.edit_is_include_attribute_open = false;
                         w.edit_include_attribute_source = None;
                         w.edit_is_attribute_template_menu_open = false;
+                        w.edit_is_owner_menu_open = false;
                         w.dragged_edit_attribute_id = None;
                         // restore edit_attributes from entity
                         if let Some(entity) = &w.entity {
                             w.edit_attributes = entity.attributes.clone();
                             w.edit_listing_attribute_id = entity.listing_attribute_id.clone();
+                            w.edit_owner_user_id = entity.owner_user_id.clone();
                         }
                     }
                 },
                 lucide_dioxus::ArrowLeft { class: "app-icon", size: 15 }
             }
-            div { class: "draggable-modal-delete-action",
+            div { class: "draggable-modal-info-action",
                 button {
-                    class: "draggable-modal-titlebar-button draggable-modal-delete-button",
-                    "data-tooltip": if is_delete_confirm_open { "" } else { "Delete" },
-                    aria_label: "Delete entity",
+                    class: "draggable-modal-titlebar-button draggable-modal-info-button",
+                    "data-tooltip": "Ownership",
+                    aria_label: "Ownership",
+                    aria_expanded: "{is_owner_open}",
                     onclick: move |_| {
-                        if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_del) {
-                            w.is_delete_confirm_open = true;
+                        if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_owner) {
+                            w.is_owner_open = !w.is_owner_open;
+                            w.edit_is_owner_menu_open = false;
                             w.is_info_open = false;
-                            w.is_owner_open = false;
+                            w.is_delete_confirm_open = false;
                         }
                     },
-                    Trash2 { class: "app-icon", size: 15 }
+                    User { class: "app-icon", size: 15 }
                 }
-                if is_delete_confirm_open {
-                    DeleteConfirmPopover {
-                        on_cancel: {
-                            let win_id = win_id.clone();
-                            move |_| {
-                                if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
-                                    w.is_delete_confirm_open = false;
+                if is_owner_open {
+                    div {
+                        class: "include-attribute-popover entity-ownership-popover",
+                        onclick: move |event| event.stop_propagation(),
+                        onpointerdown: move |event| event.stop_propagation(),
+                        if can_assign_owner {
+                            div { class: "entity-ownership-field",
+                                span { "Owner: {owner_label}" }
+                                div {
+                                    class: "entity-ownership-options",
+                                    role: "listbox",
+                                    aria_multiselectable: "false",
+                                    for option in owner_options.clone() {
+                                        button {
+                                            key: "{option.value}",
+                                            class: "security-user-permission-option single-select-option",
+                                            "aria-selected": "{option.value == selected_owner_user_id}",
+                                            r#type: "button",
+                                            disabled: window.is_saving,
+                                            onpointerdown: {
+                                                let wid = win_id.clone();
+                                                let owner_user_id = option.value.clone();
+                                                move |event| {
+                                                    event.prevent_default();
+                                                    event.stop_propagation();
+                                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                        w.edit_owner_user_id = owner_user_id.clone();
+                                                    }
+                                                }
+                                            },
+                                            onclick: move |event| {
+                                                event.prevent_default();
+                                                event.stop_propagation();
+                                            },
+                                            span { "{option.label}" }
+                                        }
+                                    }
                                 }
                             }
-                        },
-                        on_confirm: move |_| {
-                            let sk = sk_del.clone();
-                            let eid = eid_del.clone();
-                            let mut entities_sig = entities;
-                            let mut windows_sig = windows;
-                            let wid = win_id.clone();
-                            spawn(async move {
-                                let result = Request::delete(&format!("{API_BASE_URL}/entities/{eid}"))
-                                    .header("Authorization", &format!("Bearer {sk}"))
-                                    .send()
-                                    .await;
-                                if result.map(|r| r.ok()).unwrap_or(false) {
-                                    entities_sig.write().retain(|e| e.id != eid);
-                                    windows_sig.write().retain(|w| w.id != wid);
-                                }
-                            });
-                        },
+                        } else {
+                            p { class: "entity-ownership-read-title", "Owner: {owner_label}" }
+                        }
                     }
                 }
             }
@@ -661,7 +748,14 @@ fn EntityDetailsTitlebarActions(
                 disabled: !can_save || window.is_saving,
                 onclick: move |_| {
                     if can_save {
-                        save_entity_window(windows, win_id_save.clone(), sk_save.clone(), eid_save.clone(), entities);
+                        save_entity_window(
+                            windows,
+                            win_id_save.clone(),
+                            sk_save.clone(),
+                            eid_save.clone(),
+                            entities,
+                            owner_for_save.clone(),
+                        );
                     }
                 },
                 Save { class: "app-icon", size: 15 }
@@ -669,16 +763,10 @@ fn EntityDetailsTitlebarActions(
         };
     }
 
-    let win_id_info = win_id.clone();
     let win_id_edit = win_id.clone();
     let win_id_del2 = win_id.clone();
     let eid_del2 = entity_id.clone();
     let sk_del2 = session_key.clone();
-    let entity_id_str = window
-        .entity
-        .as_ref()
-        .map(|e| e.id.clone())
-        .unwrap_or_default();
 
     rsx! {
         div { class: "draggable-modal-info-action",
@@ -751,6 +839,31 @@ fn EntityDetailsTitlebarActions(
                 }
             }
         }
+        div { class: "draggable-modal-info-action",
+            button {
+                class: "draggable-modal-titlebar-button draggable-modal-info-button",
+                "data-tooltip": "Ownership",
+                aria_label: "Ownership",
+                aria_expanded: "{is_owner_open}",
+                onclick: move |_| {
+                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_owner) {
+                        w.is_owner_open = !w.is_owner_open;
+                        w.edit_is_owner_menu_open = false;
+                        w.is_info_open = false;
+                        w.is_delete_confirm_open = false;
+                    }
+                },
+                User { class: "app-icon", size: 15 }
+            }
+            if is_owner_open {
+                div {
+                    class: "include-attribute-popover entity-ownership-popover entity-ownership-read-popover",
+                    onclick: move |event| event.stop_propagation(),
+                    onpointerdown: move |event| event.stop_propagation(),
+                    p { class: "entity-ownership-read-title", "Owner: {owner_label}" }
+                }
+            }
+        }
         button {
             class: "draggable-modal-titlebar-button",
             "data-tooltip": "Edit",
@@ -769,27 +882,16 @@ fn EntityDetailsTitlebarActions(
                         w.edit_is_include_attribute_open = false;
                         w.edit_include_attribute_source = None;
                         w.edit_is_attribute_template_menu_open = false;
+                        w.edit_is_owner_menu_open = false;
                         w.dragged_edit_attribute_id = None;
                         if let Some(entity) = &w.entity {
                             w.edit_attributes = entity.attributes.clone();
                             w.edit_listing_attribute_id = entity.listing_attribute_id.clone();
+                            w.edit_owner_user_id = entity.owner_user_id.clone();
                         }
                 }
             },
             Pencil { class: "app-icon", size: 15 }
-        }
-        button {
-            class: "draggable-modal-titlebar-button",
-            "data-tooltip": "Owner",
-            aria_label: "Ownership",
-            onclick: move |_| {
-                if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_owner) {
-                    w.is_owner_open = !w.is_owner_open;
-                    w.is_info_open = false;
-                    w.is_delete_confirm_open = false;
-                }
-            },
-            User { class: "app-icon", size: 15 }
         }
     }
 }
@@ -800,6 +902,7 @@ fn save_entity_window(
     session_key: String,
     entity_id: String,
     mut entities: Signal<Vec<Entity>>,
+    owner_user_id: Option<String>,
 ) {
     // Mark saving
     if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
@@ -828,7 +931,7 @@ fn save_entity_window(
         .unwrap_or_default();
 
     spawn(async move {
-        let body = build_entity_update_body(&attributes, &listing_attribute_id, &links);
+        let body = build_entity_update_body(&attributes, &listing_attribute_id, &links, owner_user_id.as_deref());
         let result = Request::put(&format!("{API_BASE_URL}/entities/{entity_id}"))
             .header("Authorization", &format!("Bearer {session_key}"))
             .header("Content-Type", "application/json")
@@ -862,6 +965,8 @@ fn save_entity_window(
                             w.edit_is_include_attribute_open = false;
                             w.edit_include_attribute_source = None;
                             w.edit_is_attribute_template_menu_open = false;
+                            w.edit_owner_user_id = String::new();
+                            w.edit_is_owner_menu_open = false;
                             w.dragged_edit_attribute_id = None;
                         }
                     }
@@ -894,6 +999,7 @@ fn build_entity_update_body(
     attributes: &[EntityAttribute],
     listing_attribute_id: &str,
     links: &[EntityLink],
+    owner_user_id: Option<&str>,
 ) -> String {
     let attrs_json = attributes
         .iter()
@@ -931,8 +1037,12 @@ fn build_entity_update_body(
         })
         .collect::<Vec<_>>()
         .join(",");
+    let owner_part = owner_user_id
+        .filter(|owner_user_id| !owner_user_id.is_empty())
+        .map(|owner_user_id| format!(",\"ownerUserId\":{}", json_string(owner_user_id)))
+        .unwrap_or_default();
     format!(
-        "{{\"attributes\":[{attrs_json}],\"listingAttributeId\":{},\"links\":[{links_json}]}}",
+        "{{\"attributes\":[{attrs_json}],\"listingAttributeId\":{},\"links\":[{links_json}]{owner_part}}}",
         json_string(listing_attribute_id),
     )
 }
