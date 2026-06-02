@@ -3,7 +3,11 @@
 	--fg: #504945;
 	--brand-logo-filter: saturate(0.01) contrast(5) brightness(0.45);
 	--striped-title-fg: #1d2021;
-	--striped-title-fill: color-mix(in srgb, var(--striped-title-fg) 18%, transparent);
+	--striped-title-fill: color-mix(
+		in srgb,
+		var(--striped-title-fg) 18%,
+		transparent
+	);
 	--striped-title-line: 0.019em;
 	--striped-title-gap: 0.043em;
 	--muted: #7c6f64;
@@ -24,12 +28,19 @@
 	--tooltip-fg: #ffffff;
 	color: var(--fg);
 	background: var(--bg);
-	font-family: "Work Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	font-family:
+		'Work Sans',
+		ui-sans-serif,
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		sans-serif;
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 }
 
-.app-root[data-theme="dark"] {
+.app-root[data-theme='dark'] {
 	--bg: #3c3c3c;
 	--fg: #e0e0e0;
 	--brand-logo-filter: saturate(0.01) contrast(5) brightness(1.25);
@@ -636,7 +647,8 @@ button.entity-views-manage-button:hover {
 }
 
 .entity-view-select-wrap .security-user-permission-option.single-select-option,
-.entity-view-select-wrap button.security-user-permission-option.single-select-option {
+.entity-view-select-wrap
+	button.security-user-permission-option.single-select-option {
 	align-items: center;
 	background: transparent;
 	background-color: transparent;
@@ -653,7 +665,8 @@ button.entity-views-manage-button:hover {
 	width: 100%;
 }
 
-.entity-view-select-wrap .security-user-permission-option.single-select-option:hover,
+.entity-view-select-wrap
+	.security-user-permission-option.single-select-option:hover,
 .entity-view-select-wrap
 	.security-user-permission-option.single-select-option[aria-selected='true'] {
 	background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -1089,17 +1102,25 @@ button.entity-views-manage-button:hover {
 }
 
 .entity-listing-value-cell {
-	position: relative;
-	text-align: right;
+	text-align: left;
 }
 
 .entity-listing-value-content {
-	display: inline;
+	align-items: center;
+	text-align: left;
+	display: grid;
+	gap: 0.7rem;
+	grid-template-columns: minmax(0, 1fr) auto;
+	width: 100%;
 }
 
 .entity-listing-value-cell strong {
 	color: var(--fg);
+	display: block;
 	font-weight: 400;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .entity-link-summary {
@@ -1109,10 +1130,6 @@ button.entity-views-manage-button:hover {
 	gap: 0.45rem;
 	opacity: 0;
 	pointer-events: none;
-	position: absolute;
-	right: 0.7rem;
-	top: 50%;
-	transform: translateY(-50%);
 	transition: opacity 120ms ease;
 	white-space: nowrap;
 }
@@ -1140,6 +1157,7 @@ button.entity-views-manage-button:hover {
 	border-radius: 6px;
 	color: var(--tooltip-fg);
 	content: attr(data-tooltip);
+	display: block;
 	font-size: 0.72rem;
 	font-weight: 400;
 	opacity: 0;
@@ -1153,6 +1171,7 @@ button.entity-views-manage-button:hover {
 		opacity 120ms ease,
 		transform 120ms ease;
 	white-space: nowrap;
+	width: max-content;
 	z-index: 2;
 }
 
@@ -1266,8 +1285,10 @@ button.entity-views-manage-button:hover {
 	padding-top: 0.13rem;
 }
 
-.entity-create-popover-fields .security-user-permission-option.single-select-option,
-.entity-create-popover-fields button.security-user-permission-option.single-select-option {
+.entity-create-popover-fields
+	.security-user-permission-option.single-select-option,
+.entity-create-popover-fields
+	button.security-user-permission-option.single-select-option {
 	align-items: center;
 	background: transparent;
 	background-color: transparent;
@@ -1284,7 +1305,8 @@ button.entity-views-manage-button:hover {
 	width: 100%;
 }
 
-.entity-create-popover-fields .security-user-permission-option.single-select-option:hover,
+.entity-create-popover-fields
+	.security-user-permission-option.single-select-option:hover,
 .entity-create-popover-fields
 	.security-user-permission-option.single-select-option[aria-selected='true'] {
 	background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -1465,9 +1487,12 @@ button.entity-views-manage-button:hover {
 }
 
 .entity-attributes-table .security-user-permission-option.single-select-option,
-.entity-attributes-table button.security-user-permission-option.single-select-option,
-.entity-create-summary-select-wrap .security-user-permission-option.single-select-option,
-.entity-create-summary-select-wrap button.security-user-permission-option.single-select-option {
+.entity-attributes-table
+	button.security-user-permission-option.single-select-option,
+.entity-create-summary-select-wrap
+	.security-user-permission-option.single-select-option,
+.entity-create-summary-select-wrap
+	button.security-user-permission-option.single-select-option {
 	align-items: center;
 	background: transparent;
 	background-color: transparent;
@@ -1484,7 +1509,8 @@ button.entity-views-manage-button:hover {
 	width: 100%;
 }
 
-.entity-attributes-table .security-user-permission-option.single-select-option:hover,
+.entity-attributes-table
+	.security-user-permission-option.single-select-option:hover,
 .entity-attributes-table
 	.security-user-permission-option.single-select-option[aria-selected='true'],
 .entity-create-summary-select-wrap
@@ -2552,7 +2578,9 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	background: var(--focus-ring);
 }
 
-.access-level-edit-form .attribute-template-checkbox-label input:checked::after {
+.access-level-edit-form
+	.attribute-template-checkbox-label
+	input:checked::after {
 	border-bottom: 2px solid var(--bg);
 	border-right: 2px solid var(--bg);
 	content: '';
@@ -2735,7 +2763,8 @@ button.security-user-permissions-trigger:focus-visible {
 	width: 100%;
 }
 
-.access-level-edit-form .security-user-permission-option.single-select-option:hover,
+.access-level-edit-form
+	.security-user-permission-option.single-select-option:hover,
 .access-level-edit-form
 	.security-user-permission-option.single-select-option[aria-selected='true'] {
 	background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -2756,7 +2785,9 @@ button.security-user-permissions-trigger:focus-visible {
 	width: 1.05rem;
 }
 
-.access-level-edit-form .security-user-permission-option input[type='checkbox']:checked {
+.access-level-edit-form
+	.security-user-permission-option
+	input[type='checkbox']:checked {
 	background: var(--focus-ring);
 	background-color: var(--focus-ring);
 	border-color: var(--focus-ring);
@@ -2951,14 +2982,17 @@ button.entity-template-tab[aria-selected='true'] {
 	width: 22%;
 }
 
-.entity-template-edit-attributes-table th.entity-template-attribute-action-column,
-.entity-template-edit-attributes-table td.entity-template-attribute-action-column {
+.entity-template-edit-attributes-table
+	th.entity-template-attribute-action-column,
+.entity-template-edit-attributes-table
+	td.entity-template-attribute-action-column {
 	padding-right: 0.35rem;
 	text-align: right;
 	width: 13%;
 }
 
-.entity-template-edit-attributes-table th.entity-template-attribute-action-column {
+.entity-template-edit-attributes-table
+	th.entity-template-attribute-action-column {
 	line-height: 0;
 }
 
@@ -2999,7 +3033,8 @@ button.entity-template-tab[aria-selected='true'] {
 }
 
 .entity-template-edit-attributes-table .security-user-permissions-trigger,
-.entity-template-edit-attributes-table button.security-user-permissions-trigger {
+.entity-template-edit-attributes-table
+	button.security-user-permissions-trigger {
 	font-size: 0.78rem;
 	min-height: 1.72rem;
 	padding-left: 0.36rem;
@@ -3308,11 +3343,15 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 	width: 1rem;
 }
 
-.entity-template-edit-form .entity-template-new-attribute-checkbox input:checked {
+.entity-template-edit-form
+	.entity-template-new-attribute-checkbox
+	input:checked {
 	background: var(--focus-ring);
 }
 
-.entity-template-edit-form .entity-template-new-attribute-checkbox input:checked::after {
+.entity-template-edit-form
+	.entity-template-new-attribute-checkbox
+	input:checked::after {
 	border-bottom: 2px solid var(--bg);
 	border-right: 2px solid var(--bg);
 	content: '';
