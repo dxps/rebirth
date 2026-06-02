@@ -21,6 +21,16 @@ pub fn SingleSelectPicker(
         span { class: "security-user-permissions-picker",
             onclick: move |event| event.stop_propagation(),
             onpointerdown: move |event| event.stop_propagation(),
+            if is_open {
+                span {
+                    class: "single-select-outside-click-layer",
+                    onclick: move |event| {
+                        event.stop_propagation();
+                        on_toggle_open.call(event);
+                    },
+                    onpointerdown: move |event| event.stop_propagation(),
+                }
+            }
             button {
                 class: "security-user-permissions-trigger",
                 "data-empty": if summary.is_empty() { "true" },

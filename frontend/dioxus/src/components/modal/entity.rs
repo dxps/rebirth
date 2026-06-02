@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
 use gloo_net::http::Request;
-use lucide_dioxus::{Info, Pencil, Plus, Save, Trash2, User, X};
+use lucide_dioxus::{Clipboard, Eye, EyeOff, Info, Pencil, Plus, Save, Trash2, User, X};
 
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
-    AccessLevel, AccessLevelsResponse, Entity, EntityAttribute, EntityIncomingLink, EntityLink,
-    EntityResponse, EntityTemplate, EntityTemplatesResponse, EntitiesResponse, SavedView,
-    User as RebirthUser, UsersResponse, API_BASE_URL,
+    AccessLevel, AccessLevelsResponse, AuthSession, EntitiesResponse, Entity, EntityAttribute,
+    EntityIncomingLink, EntityLink, EntityResponse, EntityTemplate, EntityTemplatesResponse,
+    SavedView, User as RebirthUser, UsersResponse, API_BASE_URL,
 };
 
 use super::{json_string, read_response_error, DeleteConfirmPopover};
@@ -43,28 +43,92 @@ pub struct EntityDetailsWindow {
     pub edit_attributes: Vec<EntityAttribute>,
     pub edit_error: Option<String>,
     pub is_saving: bool,
+    pub revealed_attribute_ids: Vec<String>,
+    pub edit_open_access_level_menu_id: Option<String>,
+    pub edit_open_value_type_menu_id: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
-// Helper: find listing value for an entity
-// ---------------------------------------------------------------------------
-fn entity_listing_value(entity: &Entity) -> String {
-    entity
-        .attributes
+fn is_public_access_level(access_levels: &[AccessLevel], access_level_id: u32) -> bool {
+    access_levels
         .iter()
-        .find(|attr| attr.id == entity.listing_attribute_id)
-        .map(|attr| attr.value.clone())
-        .unwrap_or_default()
+        .find(|access_level| access_level.id == access_level_id)
+        .map(|access_level| access_level.name.eq_ignore_ascii_case("public"))
+        .unwrap_or(access_level_id == 1)
 }
 
-fn entity_listing_name(entity: &Entity) -> String {
-    entity
-        .attributes
+fn is_owner_view_access_level(access_levels: &[AccessLevel], access_level_id: u32) -> bool {
+    access_levels
         .iter()
-        .find(|attr| attr.id == entity.listing_attribute_id)
-        .map(|attr| attr.name.clone())
-        .unwrap_or_default()
+        .find(|access_level| access_level.id == access_level_id)
+        .map(|access_level| access_level.name.eq_ignore_ascii_case("owner view"))
+        .unwrap_or(access_level_id == 4)
 }
+
+fn has_any_permission(session: Option<&AuthSession>, names: &[&str]) -> bool {
+    session.is_some_and(|session| {
+        session
+            .user
+            .permissions
+            .iter()
+            .any(|permission| names.contains(&permission.name.as_str()))
+    })
+}
+
+fn can_edit_entity(session: Option<&AuthSession>, entity: &Entity) -> bool {
+    has_any_permission(session, &["Admin", "Editor"])
+        || (has_any_permission(session, &["ManageOwnData"])
+            && session.is_some_and(|session| session.user.id == entity.owner_user_id))
+}
+
+fn can_access_attribute_value(
+    session: Option<&AuthSession>,
+    entity: &Entity,
+    attribute: &EntityAttribute,
+    access_levels: &[AccessLevel],
+) -> bool {
+    can_edit_entity(session, entity)
+        || is_public_access_level(access_levels, attribute.access_level_id)
+        || if is_owner_view_access_level(access_levels, attribute.access_level_id) {
+            session.is_some_and(|session| session.user.id == entity.owner_user_id)
+        } else {
+            session.is_some_and(|session| {
+                session
+                    .user
+                    .access_levels
+                    .iter()
+                    .any(|access_level| access_level.id == attribute.access_level_id)
+            })
+        }
+}
+
+fn entity_attribute_visible_value(
+    attribute: &EntityAttribute,
+    access_levels: &[AccessLevel],
+    is_revealed: bool,
+    can_use_restricted_actions: bool,
+) -> String {
+    let should_mask = !is_public_access_level(access_levels, attribute.access_level_id);
+
+    if should_mask && (!is_revealed || !can_use_restricted_actions) {
+        "******".to_string()
+    } else {
+        attribute.value.clone()
+    }
+}
+
+fn copy_text_to_clipboard(value: String) {
+    copy_text_to_clipboard_impl(value);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn copy_text_to_clipboard_impl(value: String) {
+    if let Some(clipboard) = web_sys::window().map(|window| window.navigator().clipboard()) {
+        let _ = clipboard.write_text(&value);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn copy_text_to_clipboard_impl(_value: String) {}
 
 // ---------------------------------------------------------------------------
 // API helpers
@@ -115,9 +179,7 @@ pub async fn fetch_entities(
         .map_err(|_| "Data is unavailable".to_string())
 }
 
-pub async fn fetch_entity_templates_list(
-    session_key: &str,
-) -> Result<Vec<EntityTemplate>, String> {
+pub async fn fetch_entity_templates_list(session_key: &str) -> Result<Vec<EntityTemplate>, String> {
     let response = Request::get(&format!("{API_BASE_URL}/entity-templates"))
         .header("Authorization", &format!("Bearer {session_key}"))
         .send()
@@ -176,8 +238,18 @@ fn js_encode_uri_component(s: &str) -> String {
     let mut encoded = String::new();
     for byte in s.bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'!' | b'~'
-            | b'*' | b'\'' | b'(' | b')' => encoded.push(byte as char),
+            b'A'..=b'Z'
+            | b'a'..=b'z'
+            | b'0'..=b'9'
+            | b'-'
+            | b'_'
+            | b'.'
+            | b'!'
+            | b'~'
+            | b'*'
+            | b'\''
+            | b'('
+            | b')' => encoded.push(byte as char),
             _ => encoded.push_str(&format!("%{byte:02X}")),
         }
     }
@@ -219,9 +291,7 @@ pub fn store_saved_views(user_id: &str, views: &[SavedView]) {
 fn store_saved_views_impl(user_id: &str, views: &[SavedView]) {
     let key = saved_views_key(user_id);
     if let Ok(json) = serde_json::to_string(views) {
-        if let Some(storage) =
-            web_sys::window().and_then(|w| w.local_storage().ok().flatten())
-        {
+        if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
             let _ = storage.set_item(&key, &json);
         }
     }
@@ -238,6 +308,7 @@ fn store_saved_views_impl(_user_id: &str, _views: &[SavedView]) {}
 pub fn EntityDetailsModal(
     window: EntityDetailsWindow,
     windows: Signal<Vec<EntityDetailsWindow>>,
+    auth_session: Option<AuthSession>,
     session_key: String,
     access_levels: Vec<AccessLevel>,
     entities: Signal<Vec<Entity>>,
@@ -248,17 +319,13 @@ pub fn EntityDetailsModal(
     let win_id_resize = win_id.clone();
     let win_id_click = win_id.clone();
     let win_id_close = win_id.clone();
+    let mut drag_offset = use_signal(|| None::<(f64, f64)>);
+    let mut resize_start = use_signal(|| None::<(f64, f64, f64, f64)>);
 
     let mut raise_window = {
         let win_id = win_id.clone();
         move || {
-            let next_z = windows
-                .read()
-                .iter()
-                .map(|w| w.z_index)
-                .max()
-                .unwrap_or(20)
-                + 1;
+            let next_z = windows.read().iter().map(|w| w.z_index).max().unwrap_or(20) + 1;
             if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
                 w.z_index = next_z;
             }
@@ -268,14 +335,62 @@ pub fn EntityDetailsModal(
     let position = window.position;
     let size = window.size;
     let z_index = window.z_index;
+    let is_dragging = drag_offset().is_some();
+    let is_resizing = resize_start().is_some();
+    let win_id_move = win_id_drag.clone();
+    let win_id_resize_move = win_id_resize.clone();
 
     rsx! {
         div {
-            key: "{window.id}",
-            class: "draggable-modal",
-            style: "left: {position.x}px; top: {position.y}px; width: {size.width}px; height: {size.height}px; min-width: 400px; min-height: 200px; z-index: {z_index};",
-            onpointerdown: move |_| raise_window(),
+            class: if is_dragging {
+                "draggable-modal-layer is-dragging"
+            } else if is_resizing {
+                "draggable-modal-layer is-resizing"
+            } else {
+                "draggable-modal-layer"
+            },
+            style: "z-index: {z_index};",
+            onpointermove: move |event| {
+                let point = event.data().client_coordinates();
+
+                if let Some((offset_x, offset_y)) = drag_offset() {
+                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_move) {
+                        w.position = crate::types::ModalPosition {
+                            x: (point.x - offset_x).max(16.0),
+                            y: (point.y - offset_y).max(64.0),
+                        };
+                    }
+                }
+
+                if let Some((start_width, start_height, start_x, start_y)) = resize_start() {
+                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_resize_move) {
+                        w.size = crate::types::ModalSize {
+                            height: (start_height + point.y - start_y).max(200.0),
+                            width: (start_width + point.x - start_x).max(400.0),
+                        };
+                    }
+                }
+            },
+            onpointerup: move |_| {
+                drag_offset.set(None);
+                resize_start.set(None);
+            },
+            onpointercancel: move |_| {
+                drag_offset.set(None);
+                resize_start.set(None);
+            },
             div {
+                key: "{window.id}",
+                class: if is_dragging {
+                    "draggable-modal is-dragging"
+                } else if is_resizing {
+                    "draggable-modal is-resizing"
+                } else {
+                    "draggable-modal"
+                },
+                style: "left: {position.x}px; top: {position.y}px; width: {size.width}px; height: {size.height}px; min-width: 400px; min-height: 200px;",
+                onpointerdown: move |_| raise_window(),
+                div {
                 class: "draggable-modal-body",
                 onclick: move |_| {
                     // close popovers
@@ -299,16 +414,13 @@ pub fn EntityDetailsModal(
                             + 1;
                         if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
                             w.z_index = next_z;
-                            // store drag origin in a signal via a side-channel — we use the
-                            // draggable-modal-layer drag mechanism; for self-contained windows
-                            // we reuse a simple approach: store offset in z_index scratch space.
-                            // Instead, we delegate to the parent layer's pointermove.
-                            let _ = point;
                         }
+                        drag_offset.set(Some((point.x - position.x, point.y - position.y)));
+                        resize_start.set(None);
                     }
                 },
                 div { class: "draggable-modal-header",
-                    h2 { "Entity" }
+                    h2 { if window.is_edit_mode { "Entity :: Edit" } else { "Entity" } }
                     div {
                         class: "draggable-modal-titlebar-actions",
                         onclick: move |event| event.stop_propagation(),
@@ -337,6 +449,7 @@ pub fn EntityDetailsModal(
                     EntityDetailsContent {
                         window: window.clone(),
                         windows,
+                        auth_session,
                         access_levels,
                         session_key: session_key.clone(),
                         on_open_entity,
@@ -347,7 +460,7 @@ pub fn EntityDetailsModal(
                 class: "draggable-modal-resize",
                 "data-tooltip": "Resize",
                 onpointerdown: {
-                    let win_id = win_id_resize.clone();
+                    let win_id = win_id.clone();
                     move |event: Event<PointerData>| {
                         event.stop_propagation();
                         let point = event.data().client_coordinates();
@@ -361,12 +474,14 @@ pub fn EntityDetailsModal(
                         if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
                             w.z_index = next_z;
                         }
-                        let _ = point;
+                        resize_start.set(Some((size.width, size.height, point.x, point.y)));
+                        drag_offset.set(None);
                     }
                 },
                 for _ in 0..6 {
                     span {}
                 }
+            }
             }
         }
     }
@@ -410,6 +525,8 @@ fn EntityDetailsTitlebarActions(
                     if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_cancel) {
                         w.is_edit_mode = false;
                         w.edit_error = None;
+                        w.edit_open_access_level_menu_id = None;
+                        w.edit_open_value_type_menu_id = None;
                         // restore edit_attributes from entity
                         if let Some(entity) = &w.entity {
                             w.edit_attributes = entity.attributes.clone();
@@ -482,7 +599,11 @@ fn EntityDetailsTitlebarActions(
     let win_id_del2 = win_id.clone();
     let eid_del2 = entity_id.clone();
     let sk_del2 = session_key.clone();
-    let entity_id_str = window.entity.as_ref().map(|e| e.id.clone()).unwrap_or_default();
+    let entity_id_str = window
+        .entity
+        .as_ref()
+        .map(|e| e.id.clone())
+        .unwrap_or_default();
 
     rsx! {
         div { class: "draggable-modal-info-action",
@@ -560,13 +681,18 @@ fn EntityDetailsTitlebarActions(
             "data-tooltip": "Edit",
             aria_label: "Edit entity",
             onclick: move |_| {
-                if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_edit) {
-                    w.is_edit_mode = true;
-                    w.is_info_open = false;
-                    w.is_delete_confirm_open = false;
-                    if let Some(entity) = &w.entity {
-                        w.edit_attributes = entity.attributes.clone();
-                    }
+                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_edit) {
+                        w.is_edit_mode = true;
+                        if w.active_tab == EntityTab::Inlinks {
+                            w.active_tab = EntityTab::Attributes;
+                        }
+                        w.is_info_open = false;
+                        w.is_delete_confirm_open = false;
+                        w.edit_open_access_level_menu_id = None;
+                        w.edit_open_value_type_menu_id = None;
+                        if let Some(entity) = &w.entity {
+                            w.edit_attributes = entity.attributes.clone();
+                        }
                 }
             },
             Pencil { class: "app-icon", size: 15 }
@@ -600,16 +726,24 @@ fn save_entity_window(
         w.edit_error = None;
     }
 
-    // Collect attributes
-    let attributes = windows
+    // Collect the current edit state and immutable entity fields required by UpdateEntityInput.
+    let (attributes, listing_attribute_id, links) = windows
         .read()
         .iter()
         .find(|w| w.id == win_id)
-        .map(|w| w.edit_attributes.clone())
+        .and_then(|w| {
+            w.entity.as_ref().map(|entity| {
+                (
+                    w.edit_attributes.clone(),
+                    entity.listing_attribute_id.clone(),
+                    entity.links.clone(),
+                )
+            })
+        })
         .unwrap_or_default();
 
     spawn(async move {
-        let body = build_entity_update_body(&attributes);
+        let body = build_entity_update_body(&attributes, &listing_attribute_id, &links);
         let result = Request::put(&format!("{API_BASE_URL}/entities/{entity_id}"))
             .header("Authorization", &format!("Bearer {session_key}"))
             .header("Content-Type", "application/json")
@@ -636,6 +770,8 @@ fn save_entity_window(
                             w.is_saving = false;
                             w.is_edit_mode = false;
                             w.edit_error = None;
+                            w.edit_open_access_level_menu_id = None;
+                            w.edit_open_value_type_menu_id = None;
                         }
                     }
                     Err(_) => {
@@ -663,19 +799,51 @@ fn save_entity_window(
     });
 }
 
-fn build_entity_update_body(attributes: &[EntityAttribute]) -> String {
+fn build_entity_update_body(
+    attributes: &[EntityAttribute],
+    listing_attribute_id: &str,
+    links: &[EntityLink],
+) -> String {
     let attrs_json = attributes
         .iter()
         .map(|attr| {
             format!(
-                "{{\"id\":{},\"value\":{}}}",
+                "{{\"accessLevelId\":{},\"description\":{},\"id\":{},\"isRequired\":{},\"listingIndex\":{},\"name\":{},\"value\":{},\"valueType\":{}}}",
+                attr.access_level_id,
+                json_string(&attr.description),
                 json_string(&attr.id),
+                attr.is_required,
+                attr.listing_index,
+                json_string(attr.name.trim()),
                 json_string(&attr.value),
+                json_string(&attr.value_type),
             )
         })
         .collect::<Vec<_>>()
         .join(",");
-    format!("{{\"attributes\":[{attrs_json}]}}")
+    let links_json = links
+        .iter()
+        .map(|link| {
+            format!(
+                "{{\"description\":{},\"listingIndex\":{},\"name\":{},\"targetEntityId\":{}}}",
+                link.description
+                    .as_ref()
+                    .map(|description| json_string(description))
+                    .unwrap_or_else(|| "null".to_string()),
+                link.listing_index,
+                json_string(link.name.trim()),
+                link.target_entity_id
+                    .as_ref()
+                    .map(|target_id| json_string(target_id))
+                    .unwrap_or_else(|| "null".to_string()),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "{{\"attributes\":[{attrs_json}],\"listingAttributeId\":{},\"links\":[{links_json}]}}",
+        json_string(listing_attribute_id),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -686,6 +854,7 @@ fn build_entity_update_body(attributes: &[EntityAttribute]) -> String {
 fn EntityDetailsContent(
     window: EntityDetailsWindow,
     windows: Signal<Vec<EntityDetailsWindow>>,
+    auth_session: Option<AuthSession>,
     access_levels: Vec<AccessLevel>,
     session_key: String,
     on_open_entity: EventHandler<String>,
@@ -715,6 +884,26 @@ fn EntityDetailsContent(
     };
 
     let active_tab = window.active_tab.clone();
+    let listing_attribute = entity
+        .attributes
+        .iter()
+        .find(|attr| attr.id == entity.listing_attribute_id)
+        .cloned();
+    let listing_attribute_name = listing_attribute
+        .as_ref()
+        .map(|attr| attr.name.clone())
+        .unwrap_or_default();
+    let listing_attribute_value = listing_attribute
+        .as_ref()
+        .map(|attr| {
+            entity_attribute_visible_value(
+                attr,
+                &access_levels,
+                window.revealed_attribute_ids.contains(&attr.id),
+                can_access_attribute_value(auth_session.as_ref(), &entity, attr, &access_levels),
+            )
+        })
+        .unwrap_or_default();
     let win_id = window.id.clone();
     let win_id2 = window.id.clone();
     let win_id3 = window.id.clone();
@@ -734,9 +923,32 @@ fn EntityDetailsContent(
     let is_edit = window.is_edit_mode;
 
     rsx! {
-        div { class: "entity-template-edit-form entity-template-view-form access-level-details",
-            if let Some(err) = window.edit_error.clone() {
-                p { class: "draggable-modal-error", "{err}" }
+        div { class: if is_edit {
+                "entity-template-edit-form entity-template-view-form entity-details-view-form entity-edit-form access-level-details"
+            } else {
+                "entity-template-edit-form entity-template-view-form entity-details-view-form access-level-details"
+            },
+            div { class: "entity-view-summary entity-create-summary",
+                table { class: "data-table entity-create-summary-table",
+                    thead {
+                        tr {
+                            th { "listing attribute name" }
+                            th { "value" }
+                        }
+                    }
+                    tbody {
+                        tr {
+                            td {
+                                span { class: "entity-create-summary-value", "{listing_attribute_name}" }
+                            }
+                            td {
+                                span { class: "entity-attribute-value-view entity-create-summary-value",
+                                    span { class: "entity-attribute-value-text", "{listing_attribute_value}" }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             div { class: "entity-template-tabs",
                 div { class: "entity-template-tab-row",
@@ -764,20 +976,22 @@ fn EntityDetailsContent(
                                     w.active_tab = EntityTab::Links;
                                 }
                             },
-                            "Links"
+                            "Outlinks"
                             span { class: "entity-template-tab-badge", "{link_count}" }
                         }
-                        button {
-                            class: if active_tab == EntityTab::Inlinks { "entity-template-tab is-active" } else { "entity-template-tab" },
-                            role: "tab",
-                            onpointerdown: move |event| event.stop_propagation(),
-                            onclick: move |_| {
-                                if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id3) {
-                                    w.active_tab = EntityTab::Inlinks;
-                                }
-                            },
-                            "Inlinks"
-                            span { class: "entity-template-tab-badge", "{inlink_count}" }
+                        if !is_edit {
+                            button {
+                                class: if active_tab == EntityTab::Inlinks { "entity-template-tab is-active" } else { "entity-template-tab" },
+                                role: "tab",
+                                onpointerdown: move |event| event.stop_propagation(),
+                                onclick: move |_| {
+                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id3) {
+                                        w.active_tab = EntityTab::Inlinks;
+                                    }
+                                },
+                                "Inlinks"
+                                span { class: "entity-template-tab-badge", "{inlink_count}" }
+                            }
                         }
                     }
                 }
@@ -787,8 +1001,13 @@ fn EntityDetailsContent(
                             attributes: sorted_attrs,
                             edit_attributes: window.edit_attributes.clone(),
                             access_levels,
+                            auth_session,
+                            entity,
                             is_edit,
                             is_saving: window.is_saving,
+                            open_access_level_menu_id: window.edit_open_access_level_menu_id.clone(),
+                            open_value_type_menu_id: window.edit_open_value_type_menu_id.clone(),
+                            revealed_attribute_ids: window.revealed_attribute_ids.clone(),
                             win_id: window.id.clone(),
                             windows,
                         }
@@ -807,6 +1026,13 @@ fn EntityDetailsContent(
                     },
                 }
             }
+            div { class: "entity-details-status-bar", role: "status",
+                if let Some(err) = window.edit_error.clone() {
+                    span { class: "entity-details-status-error", "{err}" }
+                } else if window.is_saving {
+                    span { "Saving" }
+                }
+            }
         }
     }
 }
@@ -816,25 +1042,37 @@ fn EntityAttributesTab(
     attributes: Vec<EntityAttribute>,
     edit_attributes: Vec<EntityAttribute>,
     access_levels: Vec<AccessLevel>,
+    auth_session: Option<AuthSession>,
+    entity: Entity,
     is_edit: bool,
     is_saving: bool,
+    open_access_level_menu_id: Option<String>,
+    open_value_type_menu_id: Option<String>,
+    revealed_attribute_ids: Vec<String>,
     win_id: String,
     windows: Signal<Vec<EntityDetailsWindow>>,
 ) -> Element {
     rsx! {
-        div { class: "entity-template-tab-content",
-            table { class: "data-table",
+        div { class: "entity-template-tab-content entity-attributes-tabpanel", role: "tabpanel",
+            table { class: "data-table entity-template-modal-table entity-template-attributes-table entity-attributes-table",
+                colgroup {
+                    col { class: "entity-attribute-name-column" }
+                    col { class: "entity-attribute-value-column" }
+                    col { class: "entity-attribute-value-type-column" }
+                    col { class: "entity-attribute-access-level-column" }
+                }
                 thead {
                     tr {
                         th { "name" }
                         th { "value" }
+                        th { "value type" }
                         th { "access level" }
                     }
                 }
                 tbody {
                     if attributes.is_empty() {
                         tr {
-                            td { class: "data-table-empty-cell", colspan: "3",
+                            td { class: "data-table-empty-cell", colspan: "4",
                                 span { "No attributes" }
                             }
                         }
@@ -845,8 +1083,13 @@ fn EntityAttributesTab(
                                 attr: attr.clone(),
                                 edit_attrs: edit_attributes.clone(),
                                 access_levels: access_levels.clone(),
+                                auth_session: auth_session.clone(),
+                                entity: entity.clone(),
                                 is_edit,
                                 is_saving,
+                                open_access_level_menu_id: open_access_level_menu_id.clone(),
+                                open_value_type_menu_id: open_value_type_menu_id.clone(),
+                                is_revealed: revealed_attribute_ids.contains(&attr.id),
                                 win_id: win_id.clone(),
                                 windows,
                             }
@@ -863,23 +1106,68 @@ fn EntityAttributeRow(
     attr: EntityAttribute,
     edit_attrs: Vec<EntityAttribute>,
     access_levels: Vec<AccessLevel>,
+    auth_session: Option<AuthSession>,
+    entity: Entity,
     is_edit: bool,
     is_saving: bool,
+    open_access_level_menu_id: Option<String>,
+    open_value_type_menu_id: Option<String>,
+    is_revealed: bool,
     win_id: String,
     windows: Signal<Vec<EntityDetailsWindow>>,
 ) -> Element {
-    let access_level_name = access_levels
-        .iter()
-        .find(|al| al.id == attr.access_level_id)
-        .map(|al| al.name.clone())
-        .unwrap_or_default();
-
-    let attr_id = attr.id.clone();
-    let current_edit_value = edit_attrs
+    let current_edit_attribute = edit_attrs
         .iter()
         .find(|a| a.id == attr.id)
-        .map(|a| a.value.clone())
-        .unwrap_or_else(|| attr.value.clone());
+        .cloned()
+        .unwrap_or_else(|| attr.clone());
+    let access_level_name = access_levels
+        .iter()
+        .find(|al| al.id == current_edit_attribute.access_level_id)
+        .map(|al| al.name.clone())
+        .unwrap_or_default();
+    let access_level_options = access_levels
+        .iter()
+        .map(|access_level| SingleSelectOption {
+            label: access_level.name.clone(),
+            value: access_level.id.to_string(),
+        })
+        .collect::<Vec<_>>();
+    let value_type_options = VALUE_TYPES
+        .iter()
+        .map(|value_type| SingleSelectOption {
+            label: value_type.to_string(),
+            value: value_type.to_string(),
+        })
+        .collect::<Vec<_>>();
+
+    let attr_id = attr.id.clone();
+    let attr_id_value_type = attr.id.clone();
+    let attr_id_value_type_select = attr.id.clone();
+    let attr_id_access_level = attr.id.clone();
+    let attr_id_access_level_select = attr.id.clone();
+    let current_edit_value = current_edit_attribute.value.clone();
+    let should_mask = !is_public_access_level(&access_levels, attr.access_level_id);
+    let can_use_restricted_actions = should_mask
+        && can_access_attribute_value(auth_session.as_ref(), &entity, &attr, &access_levels);
+    let visible_value = entity_attribute_visible_value(
+        &attr,
+        &access_levels,
+        is_revealed,
+        can_use_restricted_actions,
+    );
+    let value_class = if should_mask {
+        "entity-attribute-value-view entity-attribute-value-view-sensitive"
+    } else {
+        "entity-attribute-value-view"
+    };
+    let attr_id_toggle = attr.id.clone();
+    let attr_name = if attr.name.trim().is_empty() {
+        "attribute".to_string()
+    } else {
+        attr.name.clone()
+    };
+    let attr_value_copy = attr.value.clone();
 
     rsx! {
         tr {
@@ -887,7 +1175,7 @@ fn EntityAttributeRow(
             td {
                 if is_edit {
                     input {
-                        r#type: "text",
+                        r#type: if current_edit_attribute.value_type == "number" { "number" } else { "text" },
                         value: "{current_edit_value}",
                         disabled: is_saving,
                         onpointerdown: move |event| event.stop_propagation(),
@@ -905,22 +1193,155 @@ fn EntityAttributeRow(
                         },
                     }
                 } else {
-                    span { class: "empty-value-space", "{attr.value}" }
+                    span { class: "{value_class}",
+                        span { class: "entity-attribute-value-text", "{visible_value}" }
+                        if can_use_restricted_actions {
+                            span { class: "entity-attribute-value-actions",
+                                button {
+                                    class: "icon-only-button entity-attribute-value-action",
+                                    "data-tooltip": if is_revealed { "Hide" } else { "Show" },
+                                    aria_label: if is_revealed {
+                                        "Hide {attr_name} value"
+                                    } else {
+                                        "Show {attr_name} value"
+                                    },
+                                    r#type: "button",
+                                    onpointerdown: move |event| event.stop_propagation(),
+                                    onclick: {
+                                        let wid = win_id.clone();
+                                        let aid = attr_id_toggle.clone();
+                                        move |_| {
+                                            if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                if w.revealed_attribute_ids.contains(&aid) {
+                                                    w.revealed_attribute_ids.retain(|id| id != &aid);
+                                                } else {
+                                                    w.revealed_attribute_ids.push(aid.clone());
+                                                }
+                                            }
+                                        }
+                                    },
+                                    if is_revealed {
+                                        EyeOff { class: "app-icon", size: 14 }
+                                    } else {
+                                        Eye { class: "app-icon", size: 14 }
+                                    }
+                                }
+                                button {
+                                    class: "icon-only-button entity-attribute-value-action",
+                                    "data-tooltip": "Copy",
+                                    aria_label: "Copy {attr_name} value",
+                                    r#type: "button",
+                                    onpointerdown: move |event| event.stop_propagation(),
+                                    onclick: move |_| copy_text_to_clipboard(attr_value_copy.clone()),
+                                    Clipboard { class: "app-icon", size: 14 }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            td { class: "data-table-muted-cell", "{access_level_name}" }
+            td {
+                if is_edit {
+                    span {
+                        class: "entity-template-value-type-wrap",
+                        onpointerdown: move |event| event.stop_propagation(),
+                        SingleSelectPicker {
+                            disabled: is_saving,
+                            empty_text: "type",
+                            is_open: open_value_type_menu_id.as_deref() == Some(&attr.id),
+                            options: value_type_options,
+                            selected_value: current_edit_attribute.value_type.clone(),
+                            summary: current_edit_attribute.value_type.clone(),
+                            on_toggle_open: {
+                                let aid = attr_id_value_type.clone();
+                                let wid = win_id.clone();
+                                move |_| {
+                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                        w.edit_open_value_type_menu_id =
+                                            if w.edit_open_value_type_menu_id.as_deref() == Some(&aid) {
+                                                None
+                                            } else {
+                                                Some(aid.clone())
+                                            };
+                                        w.edit_open_access_level_menu_id = None;
+                                    }
+                                }
+                            },
+                            on_select_item: {
+                                let aid = attr_id_value_type_select.clone();
+                                let wid = win_id.clone();
+                                move |value_type: String| {
+                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                        if let Some(a) = w.edit_attributes.iter_mut().find(|a| a.id == aid) {
+                                            a.value_type = value_type;
+                                            a.value.clear();
+                                        }
+                                        w.edit_open_value_type_menu_id = None;
+                                    }
+                                }
+                            },
+                        }
+                    }
+                } else {
+                    span { class: "data-table-muted-cell", "{attr.value_type}" }
+                }
+            }
+            td {
+                if is_edit {
+                    span {
+                        class: "entity-template-access-level-wrap",
+                        onpointerdown: move |event| event.stop_propagation(),
+                        SingleSelectPicker {
+                            disabled: is_saving,
+                            empty_text: "access",
+                            is_open: open_access_level_menu_id.as_deref() == Some(&attr.id),
+                            options: access_level_options,
+                            selected_value: current_edit_attribute.access_level_id.to_string(),
+                            summary: access_level_name,
+                            on_toggle_open: {
+                                let aid = attr_id_access_level.clone();
+                                let wid = win_id.clone();
+                                move |_| {
+                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                        w.edit_open_access_level_menu_id =
+                                            if w.edit_open_access_level_menu_id.as_deref() == Some(&aid) {
+                                                None
+                                            } else {
+                                                Some(aid.clone())
+                                            };
+                                        w.edit_open_value_type_menu_id = None;
+                                    }
+                                }
+                            },
+                            on_select_item: {
+                                let aid = attr_id_access_level_select.clone();
+                                let wid = win_id.clone();
+                                move |access_level_id: String| {
+                                    if let Ok(access_level_id) = access_level_id.parse::<u32>() {
+                                        if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                            if let Some(a) = w.edit_attributes.iter_mut().find(|a| a.id == aid) {
+                                                a.access_level_id = access_level_id;
+                                            }
+                                            w.edit_open_access_level_menu_id = None;
+                                        }
+                                    }
+                                }
+                            },
+                        }
+                    }
+                } else {
+                    span { class: "data-table-muted-cell", "{access_level_name}" }
+                }
+            }
         }
     }
 }
 
 #[component]
-fn EntityLinksTab(
-    links: Vec<EntityLink>,
-    on_open_entity: EventHandler<String>,
-) -> Element {
+fn EntityLinksTab(links: Vec<EntityLink>, on_open_entity: EventHandler<String>) -> Element {
     rsx! {
-        div { class: "entity-template-tab-content",
-            table { class: "data-table",
+        div { class: "entity-template-tab-content entity-links-tabpanel", role: "tabpanel",
+            table { class: "data-table entity-template-modal-table entity-template-links-table entity-template-view-links-table",
                 thead {
                     tr {
                         th { "name" }
@@ -968,8 +1389,8 @@ fn EntityInlinksTab(
     on_open_entity: EventHandler<String>,
 ) -> Element {
     rsx! {
-        div { class: "entity-template-tab-content",
-            table { class: "data-table",
+        div { class: "entity-template-tab-content entity-inlinks-tabpanel", role: "tabpanel",
+            table { class: "data-table entity-template-modal-table entity-template-links-table entity-template-view-inlinks-table",
                 thead {
                     tr {
                         th { "name" }
@@ -1076,19 +1497,71 @@ pub fn CreateEntityModal(
 
     let can_save = !state.attributes.is_empty()
         && !state.listing_attribute_id.is_empty()
-        && state
-            .attributes
-            .iter()
-            .all(|a| !a.name.trim().is_empty());
+        && state.attributes.iter().all(|a| !a.name.trim().is_empty());
 
     let title = "Entity :: New";
+    let mut modal_position = use_signal(move || position);
+    let mut modal_size = use_signal(move || size);
+    let mut drag_offset = use_signal(|| None::<(f64, f64)>);
+    let mut resize_start = use_signal(|| None::<(f64, f64, f64, f64)>);
+    let current_position = modal_position();
+    let current_size = modal_size();
+    let is_dragging = drag_offset().is_some();
+    let is_resizing = resize_start().is_some();
 
     rsx! {
         div {
-            class: "draggable-modal",
-            style: "left: {position.x}px; top: {position.y}px; width: {size.width}px; height: {size.height}px; min-width: 400px; min-height: 200px; z-index: {z_index};",
+            class: if is_dragging {
+                "draggable-modal-layer is-dragging"
+            } else if is_resizing {
+                "draggable-modal-layer is-resizing"
+            } else {
+                "draggable-modal-layer"
+            },
+            style: "z-index: {z_index};",
+            onpointermove: move |event| {
+                let point = event.data().client_coordinates();
+
+                if let Some((offset_x, offset_y)) = drag_offset() {
+                    modal_position.set(crate::types::ModalPosition {
+                        x: (point.x - offset_x).max(16.0),
+                        y: (point.y - offset_y).max(64.0),
+                    });
+                }
+
+                if let Some((start_width, start_height, start_x, start_y)) = resize_start() {
+                    modal_size.set(crate::types::ModalSize {
+                        height: (start_height + point.y - start_y).max(200.0),
+                        width: (start_width + point.x - start_x).max(400.0),
+                    });
+                }
+            },
+            onpointerup: move |_| {
+                drag_offset.set(None);
+                resize_start.set(None);
+            },
+            onpointercancel: move |_| {
+                drag_offset.set(None);
+                resize_start.set(None);
+            },
             div {
+                class: if is_dragging {
+                    "draggable-modal is-dragging"
+                } else if is_resizing {
+                    "draggable-modal is-resizing"
+                } else {
+                    "draggable-modal"
+                },
+                style: "left: {current_position.x}px; top: {current_position.y}px; width: {current_size.width}px; height: {current_size.height}px; min-width: 400px; min-height: 200px;",
+                div {
                 class: "draggable-modal-body",
+                onpointerdown: move |event| {
+                    event.stop_propagation();
+                    let point = event.data().client_coordinates();
+                    let position = modal_position();
+                    drag_offset.set(Some((point.x - position.x, point.y - position.y)));
+                    resize_start.set(None);
+                },
                 div { class: "draggable-modal-header",
                     h2 { "{title}" }
                     div {
@@ -1279,7 +1752,16 @@ pub fn CreateEntityModal(
             }
             span {
                 class: "draggable-modal-resize",
+                "data-tooltip": "Resize",
+                onpointerdown: move |event| {
+                    event.stop_propagation();
+                    let point = event.data().client_coordinates();
+                    let size = modal_size();
+                    resize_start.set(Some((size.width, size.height, point.x, point.y)));
+                    drag_offset.set(None);
+                },
                 for _ in 0..6 { span {} }
+            }
             }
         }
     }
@@ -1502,7 +1984,8 @@ fn remove_create_entity_attribute(
     attribute_id: String,
 ) {
     if let Some(s) = create_state.write().as_mut() {
-        s.attributes.retain(|attribute| attribute.id != attribute_id);
+        s.attributes
+            .retain(|attribute| attribute.id != attribute_id);
         for (index, attribute) in s.attributes.iter_mut().enumerate() {
             attribute.listing_index = index as i32;
         }

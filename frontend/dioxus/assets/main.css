@@ -1446,6 +1446,14 @@ button.entity-views-manage-button:hover {
 	width: 6.3rem;
 }
 
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	.entity-template-access-level-wrap
+	.security-user-permissions-menu {
+	min-width: 100%;
+	width: 100%;
+}
+
 .entity-attributes-table .security-user-permissions-trigger,
 .entity-attributes-table button.security-user-permissions-trigger,
 .entity-create-summary-select-wrap .security-user-permissions-trigger,
@@ -1509,6 +1517,38 @@ button.entity-attribute-value-action {
 .entity-attribute-value-action.icon-only-button[data-tooltip]:hover::after,
 .entity-attribute-value-action.icon-only-button[data-tooltip]:focus-visible::after {
 	transform: translateY(0);
+}
+
+.entity-attribute-value-view {
+	align-items: center;
+	display: flex;
+	gap: 0.35rem;
+	min-width: 0;
+	width: 100%;
+}
+
+.entity-attribute-value-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.entity-attribute-value-actions {
+	align-items: center;
+	display: inline-flex;
+	flex: 0 0 auto;
+	gap: 0.12rem;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.entity-attribute-value-view:hover .entity-attribute-value-actions,
+.entity-attribute-value-view:focus-within .entity-attribute-value-actions {
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .data-explorer-views-modal-content {
@@ -1584,6 +1624,284 @@ button.data-explorer-view-copy {
 	min-width: 0;
 	padding: 0.14rem 0.22rem;
 	text-align: left;
+}
+
+.entity-details-view-form {
+	grid-template-rows: auto auto minmax(0, 1fr);
+	height: 100%;
+	min-height: 0;
+	position: relative;
+}
+
+.entity-details-view-form .entity-create-summary-table th,
+.entity-details-view-form .entity-create-summary-table td {
+	background: transparent;
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	border-radius: 0;
+	padding-bottom: 0.34rem;
+	padding-top: 0.34rem;
+}
+
+.entity-details-view-form .entity-create-summary-table th:last-child,
+.entity-details-view-form .entity-create-summary-table td:last-child {
+	text-align: left;
+}
+
+.entity-details-view-form .entity-create-summary-table td:last-child {
+	line-height: 1.25;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	) {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	height: 100%;
+	min-height: 0;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	colgroup {
+	display: none;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	thead,
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody {
+	display: block;
+	min-width: 0;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	th,
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	td {
+	box-sizing: border-box;
+	display: block;
+	width: 100%;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody {
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-color: color-mix(in srgb, var(--fg) 28%, transparent) transparent;
+	scrollbar-width: thin;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	tbody:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	tr:has(.security-user-permissions-menu),
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	td:has(.security-user-permissions-menu) {
+	overflow: visible;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	tr:has(.security-user-permissions-menu) {
+	position: relative;
+	z-index: 20;
+}
+
+.entity-details-view-form
+	.entity-attributes-tabpanel
+	.entity-attributes-table
+	tr {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1fr) minmax(0, 1.6fr) 5.2rem
+		6.6rem;
+	width: 100%;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-tabpanel
+	.entity-attributes-table
+	tr {
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 8.6rem 7rem;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	td:nth-child(2) {
+	padding-right: 0.8rem;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	td:nth-child(3) {
+	padding-left: 0;
+	padding-right: 0.8rem;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	td:nth-child(4) {
+	padding-left: 0;
+	width: 7rem;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	:is(input, .entity-template-value-type-wrap) {
+	box-sizing: border-box;
+	display: block;
+	width: 100%;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	.entity-template-access-level-wrap {
+	box-sizing: border-box;
+	display: block;
+	width: 7rem;
+}
+
+.entity-details-view-form
+	.entity-links-tabpanel
+	.entity-template-view-links-table
+	tr {
+	display: grid;
+	grid-template-columns: minmax(0, 24%) minmax(0, 1fr);
+	width: 100%;
+}
+
+.entity-details-view-form
+	.entity-inlinks-tabpanel
+	.entity-template-view-inlinks-table
+	tr {
+	display: grid;
+	grid-template-columns: minmax(0, 32%) minmax(0, 1fr);
+	width: 100%;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	.data-table-empty-cell {
+	grid-column: 1 / -1;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar {
+	width: 0.35rem;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--fg) 28%, transparent);
+	border-radius: 999px;
+}
+
+.entity-details-view-form
+	:is(
+		.entity-attributes-tabpanel .entity-attributes-table,
+		.entity-links-tabpanel .entity-template-view-links-table,
+		.entity-inlinks-tabpanel .entity-template-view-inlinks-table
+	)
+	tbody::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.entity-details-view-form .entity-attributes-table th:first-child,
+.entity-details-view-form .entity-attributes-table td:first-child {
+	padding-left: 0;
+}
+
+.entity-details-view-form .entity-attributes-table th:nth-child(3),
+.entity-details-view-form .entity-attributes-table td:nth-child(3) {
+	padding-left: 0;
+	padding-right: 0.3rem;
+}
+
+.entity-details-view-form .entity-attributes-table th:nth-child(4),
+.entity-details-view-form .entity-attributes-table td:nth-child(4) {
+	color: var(--muted);
+	padding-left: 0.35rem;
+	padding-right: 0;
+	text-align: left;
+	width: 6.6rem;
+}
+
+.entity-details-view-form .entity-attributes-table td,
+.entity-details-view-form .entity-template-view-links-table td,
+.entity-details-view-form .entity-template-view-inlinks-table td {
+	cursor: text;
+}
+
+.entity-details-status-bar {
+	align-items: center;
+	display: flex;
+	inset: auto 1.55rem 0.1rem 0;
+	justify-content: flex-end;
+	line-height: 0;
+	min-height: 1.25rem;
+	pointer-events: none;
+	position: absolute;
+}
+
+.entity-details-status-error {
+	color: var(--error);
+	font-size: 0.86rem;
+	font-weight: 600;
+	line-height: 1.2;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .data-explorer-view-copy:hover,
@@ -2309,8 +2627,8 @@ button.security-user-permissions-trigger {
 
 .security-user-permissions-trigger::after,
 button.security-user-permissions-trigger::after {
-	border-bottom: 1.5px solid var(--fg);
-	border-right: 1.5px solid var(--fg);
+	border-bottom: 1.5px solid color-mix(in srgb, var(--fg) 62%, transparent);
+	border-right: 1.5px solid color-mix(in srgb, var(--fg) 62%, transparent);
 	content: '';
 	height: 0.46rem;
 	position: absolute;
@@ -2342,6 +2660,13 @@ button.security-user-permissions-trigger:focus-visible {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.single-select-outside-click-layer {
+	cursor: default;
+	inset: 0;
+	position: fixed;
+	z-index: 999;
 }
 
 .security-user-permissions-menu {

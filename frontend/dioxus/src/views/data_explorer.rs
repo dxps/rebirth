@@ -495,6 +495,7 @@ pub fn DataExplorerView(
                     key: "{window.id}",
                     window: window.clone(),
                     windows: entity_details_windows,
+                    auth_session: auth_session.clone(),
                     session_key: session_key.clone().unwrap_or_default(),
                     access_levels: access_level_rows.clone(),
                     entities,
@@ -1081,6 +1082,9 @@ fn open_entity_details_window(
         edit_attributes: Vec::new(),
         edit_error: None,
         is_saving: false,
+        revealed_attribute_ids: Vec::new(),
+        edit_open_access_level_menu_id: None,
+        edit_open_value_type_menu_id: None,
     });
 
     spawn(async move {
