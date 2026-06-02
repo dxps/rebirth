@@ -7,9 +7,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
-    AccessLevel, AccessLevelsResponse, AuthSession, EntitiesResponse, Entity, EntityAttribute,
-    EntityIncomingLink, EntityLink, EntityResponse, EntityTemplate, EntityTemplatesResponse,
-    SavedView, User as RebirthUser, UsersResponse, API_BASE_URL,
+    AccessLevel, AccessLevelsResponse, AttributeTemplate, AttributeTemplatesResponse, AuthSession,
+    EntitiesResponse, Entity, EntityAttribute, EntityIncomingLink, EntityLink, EntityResponse,
+    EntityTemplate, EntityTemplatesResponse, SavedView, User as RebirthUser, UsersResponse,
+    API_BASE_URL,
 };
 
 use super::{json_string, read_response_error, DeleteConfirmPopover};
@@ -26,6 +27,12 @@ pub enum EntityTab {
     Attributes,
     Links,
     Inlinks,
+}
+
+#[derive(Clone, PartialEq)]
+pub enum EntityAttributeIncludeSource {
+    Template,
+    Scratch,
 }
 
 #[derive(Clone, PartialEq)]
@@ -51,6 +58,14 @@ pub struct EntityDetailsWindow {
     pub edit_open_access_level_menu_id: Option<String>,
     pub edit_open_value_type_menu_id: Option<String>,
     pub edit_listing_attribute_id: String,
+    pub edit_is_listing_attribute_menu_open: bool,
+    pub edit_is_include_attribute_open: bool,
+    pub edit_include_attribute_source: Option<EntityAttributeIncludeSource>,
+    pub edit_attribute_templates: Vec<AttributeTemplate>,
+    pub edit_attribute_templates_error: Option<String>,
+    pub edit_is_attribute_templates_loading: bool,
+    pub edit_selected_attribute_template_id: Option<String>,
+    pub edit_is_attribute_template_menu_open: bool,
     pub dragged_edit_attribute_id: Option<String>,
 }
 
@@ -198,6 +213,26 @@ pub async fn fetch_entity_templates_list(session_key: &str) -> Result<Vec<Entity
 
     response
         .json::<EntityTemplatesResponse>()
+        .await
+        .map(|payload| payload.data)
+        .map_err(|_| "Data is unavailable".to_string())
+}
+
+pub async fn fetch_attribute_templates_list(
+    session_key: &str,
+) -> Result<Vec<AttributeTemplate>, String> {
+    let response = Request::get(&format!("{API_BASE_URL}/attribute-templates"))
+        .header("Authorization", &format!("Bearer {session_key}"))
+        .send()
+        .await
+        .map_err(|_| "Data is unavailable".to_string())?;
+
+    if !response.ok() {
+        return Err("Data is unavailable".to_string());
+    }
+
+    response
+        .json::<AttributeTemplatesResponse>()
         .await
         .map(|payload| payload.data)
         .map_err(|_| "Data is unavailable".to_string())
@@ -388,6 +423,9 @@ pub fn EntityDetailsModal(
                     .find(|w| w.id == win_id_pointer_up)
                 {
                     w.dragged_edit_attribute_id = None;
+                    w.edit_is_listing_attribute_menu_open = false;
+                    w.edit_is_include_attribute_open = false;
+                    w.edit_is_attribute_template_menu_open = false;
                 }
             },
             onpointercancel: move |_| {
@@ -399,6 +437,9 @@ pub fn EntityDetailsModal(
                     .find(|w| w.id == win_id_pointer_cancel)
                 {
                     w.dragged_edit_attribute_id = None;
+                    w.edit_is_listing_attribute_menu_open = false;
+                    w.edit_is_include_attribute_open = false;
+                    w.edit_is_attribute_template_menu_open = false;
                 }
             },
             div {
@@ -422,6 +463,9 @@ pub fn EntityDetailsModal(
                         w.is_owner_open = false;
                         w.edit_open_access_level_menu_id = None;
                         w.edit_open_value_type_menu_id = None;
+                        w.edit_is_listing_attribute_menu_open = false;
+                        w.edit_is_include_attribute_open = false;
+                        w.edit_is_attribute_template_menu_open = false;
                         w.dragged_edit_attribute_id = None;
                     }
                 },
@@ -552,6 +596,10 @@ fn EntityDetailsTitlebarActions(
                         w.edit_error = None;
                         w.edit_open_access_level_menu_id = None;
                         w.edit_open_value_type_menu_id = None;
+                        w.edit_is_listing_attribute_menu_open = false;
+                        w.edit_is_include_attribute_open = false;
+                        w.edit_include_attribute_source = None;
+                        w.edit_is_attribute_template_menu_open = false;
                         w.dragged_edit_attribute_id = None;
                         // restore edit_attributes from entity
                         if let Some(entity) = &w.entity {
@@ -717,6 +765,10 @@ fn EntityDetailsTitlebarActions(
                         w.is_delete_confirm_open = false;
                         w.edit_open_access_level_menu_id = None;
                         w.edit_open_value_type_menu_id = None;
+                        w.edit_is_listing_attribute_menu_open = false;
+                        w.edit_is_include_attribute_open = false;
+                        w.edit_include_attribute_source = None;
+                        w.edit_is_attribute_template_menu_open = false;
                         w.dragged_edit_attribute_id = None;
                         if let Some(entity) = &w.entity {
                             w.edit_attributes = entity.attributes.clone();
@@ -806,6 +858,10 @@ fn save_entity_window(
                             w.edit_open_access_level_menu_id = None;
                             w.edit_open_value_type_menu_id = None;
                             w.edit_listing_attribute_id = String::new();
+                            w.edit_is_listing_attribute_menu_open = false;
+                            w.edit_is_include_attribute_open = false;
+                            w.edit_include_attribute_source = None;
+                            w.edit_is_attribute_template_menu_open = false;
                             w.dragged_edit_attribute_id = None;
                         }
                     }
@@ -919,10 +975,20 @@ fn EntityDetailsContent(
     };
 
     let active_tab = window.active_tab.clone();
-    let listing_attribute = entity
-        .attributes
+    let is_edit = window.is_edit_mode;
+    let effective_listing_attribute_id = if is_edit && !window.edit_listing_attribute_id.is_empty() {
+        window.edit_listing_attribute_id.clone()
+    } else {
+        entity.listing_attribute_id.clone()
+    };
+    let summary_attributes = if is_edit {
+        &window.edit_attributes
+    } else {
+        &entity.attributes
+    };
+    let listing_attribute = summary_attributes
         .iter()
-        .find(|attr| attr.id == entity.listing_attribute_id)
+        .find(|attr| attr.id == effective_listing_attribute_id)
         .cloned();
     let listing_attribute_name = listing_attribute
         .as_ref()
@@ -931,19 +997,34 @@ fn EntityDetailsContent(
     let listing_attribute_value = listing_attribute
         .as_ref()
         .map(|attr| {
-            entity_attribute_visible_value(
-                attr,
-                &access_levels,
-                window.revealed_attribute_ids.contains(&attr.id),
-                can_access_attribute_value(auth_session.as_ref(), &entity, attr, &access_levels),
-            )
+            if is_edit {
+                attr.value.clone()
+            } else {
+                entity_attribute_visible_value(
+                    attr,
+                    &access_levels,
+                    window.revealed_attribute_ids.contains(&attr.id),
+                    can_access_attribute_value(
+                        auth_session.as_ref(),
+                        &entity,
+                        attr,
+                        &access_levels,
+                    ),
+                )
+            }
         })
         .unwrap_or_default();
+    let listing_attribute_options = summary_attributes
+        .iter()
+        .map(|attribute| SingleSelectOption {
+            label: attribute.name.clone(),
+            value: attribute.id.clone(),
+        })
+        .collect::<Vec<_>>();
     let win_id = window.id.clone();
     let win_id2 = window.id.clone();
     let win_id3 = window.id.clone();
 
-    let is_edit = window.is_edit_mode;
     let mut sorted_attrs = if is_edit {
         window.edit_attributes.clone()
     } else {
@@ -979,7 +1060,45 @@ fn EntityDetailsContent(
                     tbody {
                         tr {
                             td {
-                                span { class: "entity-create-summary-value", "{listing_attribute_name}" }
+                                if is_edit {
+                                    span {
+                                        class: "attribute-template-select-wrap entity-create-summary-select-wrap",
+                                        onpointerdown: move |event| event.stop_propagation(),
+                                        SingleSelectPicker {
+                                            disabled: window.edit_attributes.is_empty() || window.is_saving,
+                                            empty_text: "Select attribute",
+                                            is_open: window.edit_is_listing_attribute_menu_open,
+                                            options: listing_attribute_options,
+                                            selected_value: effective_listing_attribute_id,
+                                            summary: listing_attribute_name,
+                                            on_toggle_open: {
+                                                let wid = window.id.clone();
+                                                move |_| {
+                                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                        w.edit_is_listing_attribute_menu_open =
+                                                            !w.edit_is_listing_attribute_menu_open;
+                                                        w.edit_open_access_level_menu_id = None;
+                                                        w.edit_open_value_type_menu_id = None;
+                                                        w.edit_is_include_attribute_open = false;
+                                                        w.edit_is_attribute_template_menu_open = false;
+                                                        w.dragged_edit_attribute_id = None;
+                                                    }
+                                                }
+                                            },
+                                            on_select_item: {
+                                                let wid = window.id.clone();
+                                                move |attribute_id: String| {
+                                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                        w.edit_listing_attribute_id = attribute_id;
+                                                        w.edit_is_listing_attribute_menu_open = false;
+                                                    }
+                                                }
+                                            },
+                                        }
+                                    }
+                                } else {
+                                    span { class: "entity-create-summary-value", "{listing_attribute_name}" }
+                                }
                             }
                             td {
                                 span { class: "entity-attribute-value-view entity-create-summary-value",
@@ -1050,6 +1169,14 @@ fn EntityDetailsContent(
                             revealed_attribute_ids: window.revealed_attribute_ids.clone(),
                             dragged_attribute_id: window.dragged_edit_attribute_id.clone(),
                             default_access_level_id,
+                            session_key: session_key.clone(),
+                            is_include_attribute_open: window.edit_is_include_attribute_open,
+                            include_attribute_source: window.edit_include_attribute_source.clone(),
+                            attribute_templates: window.edit_attribute_templates.clone(),
+                            attribute_templates_error: window.edit_attribute_templates_error.clone(),
+                            is_attribute_templates_loading: window.edit_is_attribute_templates_loading,
+                            selected_attribute_template_id: window.edit_selected_attribute_template_id.clone(),
+                            is_attribute_template_menu_open: window.edit_is_attribute_template_menu_open,
                             win_id: window.id.clone(),
                             windows,
                         }
@@ -1093,9 +1220,39 @@ fn EntityAttributesTab(
     revealed_attribute_ids: Vec<String>,
     dragged_attribute_id: Option<String>,
     default_access_level_id: u32,
+    session_key: String,
+    is_include_attribute_open: bool,
+    include_attribute_source: Option<EntityAttributeIncludeSource>,
+    attribute_templates: Vec<AttributeTemplate>,
+    attribute_templates_error: Option<String>,
+    is_attribute_templates_loading: bool,
+    selected_attribute_template_id: Option<String>,
+    is_attribute_template_menu_open: bool,
     win_id: String,
     windows: Signal<Vec<EntityDetailsWindow>>,
 ) -> Element {
+    let selected_attribute_template_id = selected_attribute_template_id.or_else(|| {
+        attribute_templates
+            .first()
+            .map(|attribute_template| attribute_template.id.clone())
+    });
+    let selected_attribute_template_id_value =
+        selected_attribute_template_id.clone().unwrap_or_default();
+    let selected_attribute_template_label = attribute_templates
+        .iter()
+        .find(|attribute_template| {
+            Some(attribute_template.id.as_str()) == selected_attribute_template_id.as_deref()
+        })
+        .map(|attribute_template| attribute_template.name.clone())
+        .unwrap_or_default();
+    let attribute_template_options = attribute_templates
+        .iter()
+        .map(|attribute_template| SingleSelectOption {
+            label: attribute_template.name.clone(),
+            value: attribute_template.id.clone(),
+        })
+        .collect::<Vec<_>>();
+
     rsx! {
         div { class: "entity-template-tab-content entity-attributes-tabpanel", role: "tabpanel",
             table { class: "data-table entity-template-modal-table entity-template-attributes-table entity-attributes-table",
@@ -1119,19 +1276,197 @@ fn EntityAttributesTab(
                                 span { class: "include-attribute-action entity-attribute-header-action",
                                     button {
                                         class: "section-action-button",
-                                        "data-tooltip": "Add attribute",
+                                        "data-tooltip": "Include an attribute",
                                         aria_label: "Add attribute",
                                         disabled: is_saving,
                                         onpointerdown: move |event| event.stop_propagation(),
                                         onclick: {
                                             let wid = win_id.clone();
-                                            move |_| add_edit_entity_attribute(
-                                                windows,
-                                                wid.clone(),
-                                                default_access_level_id,
-                                            )
+                                            let sk = session_key.clone();
+                                            move |event| {
+                                                event.stop_propagation();
+                                                let should_load =
+                                                    if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                        w.edit_is_include_attribute_open = !w.edit_is_include_attribute_open;
+                                                        w.edit_open_access_level_menu_id = None;
+                                                        w.edit_open_value_type_menu_id = None;
+                                                        w.edit_is_listing_attribute_menu_open = false;
+                                                        w.edit_is_attribute_template_menu_open = false;
+                                                        w.dragged_edit_attribute_id = None;
+                                                        w.edit_is_include_attribute_open
+                                                            && w.edit_attribute_templates.is_empty()
+                                                            && !w.edit_is_attribute_templates_loading
+                                                    } else {
+                                                        false
+                                                    };
+
+                                                if should_load {
+                                                    load_edit_attribute_templates(windows, wid.clone(), sk.clone());
+                                                }
+                                            }
                                         },
                                         Plus { class: "app-icon", size: 16 }
+                                    }
+                                    if is_include_attribute_open {
+                                        div {
+                                            class: "include-attribute-popover entity-include-attribute-popover",
+                                            onclick: move |event| {
+                                                event.prevent_default();
+                                                event.stop_propagation();
+                                            },
+                                            onpointerdown: move |event| {
+                                                event.prevent_default();
+                                                event.stop_propagation();
+                                            },
+                                            onpointerup: move |event| {
+                                                event.prevent_default();
+                                                event.stop_propagation();
+                                            },
+                                            p { class: "entity-create-popover-title", "Include attribute from:" }
+                                            div { class: "entity-create-radio-group",
+                                                button {
+                                                    class: "entity-include-source-option",
+                                                    aria_pressed: "{include_attribute_source == Some(EntityAttributeIncludeSource::Template)}",
+                                                    r#type: "button",
+                                                    onpointerdown: move |event| {
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                    },
+                                                    onpointerup: move |event| {
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                    },
+                                                    onclick: {
+                                                        let wid = win_id.clone();
+                                                        let sk = session_key.clone();
+                                                        move |event| {
+                                                            event.prevent_default();
+                                                            event.stop_propagation();
+                                                            let should_load = if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                                w.edit_include_attribute_source = Some(EntityAttributeIncludeSource::Template);
+                                                                w.edit_is_attribute_template_menu_open = false;
+                                                                if w.edit_selected_attribute_template_id.is_none() {
+                                                                    w.edit_selected_attribute_template_id = w
+                                                                        .edit_attribute_templates
+                                                                        .first()
+                                                                        .map(|template| template.id.clone());
+                                                                }
+                                                                w.edit_attribute_templates.is_empty()
+                                                                    && !w.edit_is_attribute_templates_loading
+                                                            } else {
+                                                                false
+                                                            };
+
+                                                            if should_load {
+                                                                load_edit_attribute_templates(windows, wid.clone(), sk.clone());
+                                                            }
+                                                        }
+                                                    },
+                                                    span { class: "entity-include-source-dot" }
+                                                    span { class: "entity-include-source-label", "Attribute template" }
+                                                }
+                                                button {
+                                                    class: "entity-include-source-option",
+                                                    aria_pressed: "{include_attribute_source == Some(EntityAttributeIncludeSource::Scratch)}",
+                                                    r#type: "button",
+                                                    onpointerdown: move |event| {
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                    },
+                                                    onpointerup: move |event| {
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                    },
+                                                    onclick: {
+                                                        let wid = win_id.clone();
+                                                        move |event| {
+                                                            event.prevent_default();
+                                                            event.stop_propagation();
+                                                            if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                                w.edit_include_attribute_source = Some(EntityAttributeIncludeSource::Scratch);
+                                                                w.edit_is_attribute_template_menu_open = false;
+                                                            }
+                                                        }
+                                                    },
+                                                    span { class: "entity-include-source-dot" }
+                                                    span { class: "entity-include-source-label", "Scratch" }
+                                                }
+                                            }
+                                            if include_attribute_source == Some(EntityAttributeIncludeSource::Template) {
+                                                div { class: "entity-create-popover-fields",
+                                                    label {
+                                                        span { "attribute template" }
+                                                        span { class: "attribute-template-select-wrap",
+                                                            SingleSelectPicker {
+                                                                disabled: is_saving || is_attribute_templates_loading || attribute_templates.is_empty(),
+                                                                empty_text: if is_attribute_templates_loading {
+                                                                    "Loading templates".to_string()
+                                                                } else {
+                                                                    "No attribute templates".to_string()
+                                                                },
+                                                                is_open: is_attribute_template_menu_open,
+                                                                options: attribute_template_options,
+                                                                selected_value: selected_attribute_template_id_value.clone(),
+                                                                summary: selected_attribute_template_label,
+                                                                on_toggle_open: {
+                                                                    let wid = win_id.clone();
+                                                                    move |_| {
+                                                                        if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                                            w.edit_is_attribute_template_menu_open =
+                                                                                !w.edit_is_attribute_template_menu_open;
+                                                                        }
+                                                                    }
+                                                                },
+                                                                on_select_item: {
+                                                                    let wid = win_id.clone();
+                                                                    move |attribute_template_id: String| {
+                                                                        if let Some(w) = windows.write().iter_mut().find(|w| w.id == wid) {
+                                                                            w.edit_selected_attribute_template_id = Some(attribute_template_id);
+                                                                            w.edit_is_attribute_template_menu_open = false;
+                                                                        }
+                                                                    }
+                                                                },
+                                                            }
+                                                        }
+                                                    }
+                                                    if let Some(message) = attribute_templates_error {
+                                                        span { class: "entity-details-status-error", "{message}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                class: "icon-only-button include-attribute-submit-button entity-include-attribute-continue",
+                                                "data-tooltip": "Continue",
+                                                aria_label: "Continue",
+                                                disabled: is_saving
+                                                    || include_attribute_source.is_none()
+                                                    || (include_attribute_source == Some(EntityAttributeIncludeSource::Template)
+                                                        && selected_attribute_template_id_value.is_empty()),
+                                                r#type: "button",
+                                                onclick: {
+                                                    let wid = win_id.clone();
+                                                    let template_id = selected_attribute_template_id_value.clone();
+                                                    move |event| {
+                                                        event.prevent_default();
+                                                        event.stop_propagation();
+                                                        if include_attribute_source == Some(EntityAttributeIncludeSource::Template) {
+                                                            add_edit_entity_attribute_from_template(
+                                                                windows,
+                                                                wid.clone(),
+                                                                template_id.clone(),
+                                                            );
+                                                        } else if include_attribute_source == Some(EntityAttributeIncludeSource::Scratch) {
+                                                            add_edit_entity_attribute(
+                                                            windows,
+                                                            wid.clone(),
+                                                            default_access_level_id,
+                                                            );
+                                                        }
+                                                    }
+                                                },
+                                                Plus { class: "app-icon", size: 16 }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1381,6 +1716,9 @@ fn EntityAttributeRow(
                                                 Some(aid.clone())
                                             };
                                         w.edit_open_access_level_menu_id = None;
+                                        w.edit_is_listing_attribute_menu_open = false;
+                                        w.edit_is_include_attribute_open = false;
+                                        w.edit_is_attribute_template_menu_open = false;
                                     }
                                 }
                             },
@@ -1394,6 +1732,9 @@ fn EntityAttributeRow(
                                             a.value.clear();
                                         }
                                         w.edit_open_value_type_menu_id = None;
+                                        w.edit_is_listing_attribute_menu_open = false;
+                                        w.edit_is_include_attribute_open = false;
+                                        w.edit_is_attribute_template_menu_open = false;
                                     }
                                 }
                             },
@@ -1427,6 +1768,9 @@ fn EntityAttributeRow(
                                                 Some(aid.clone())
                                             };
                                         w.edit_open_value_type_menu_id = None;
+                                        w.edit_is_listing_attribute_menu_open = false;
+                                        w.edit_is_include_attribute_open = false;
+                                        w.edit_is_attribute_template_menu_open = false;
                                     }
                                 }
                             },
@@ -1440,6 +1784,9 @@ fn EntityAttributeRow(
                                                 a.access_level_id = access_level_id;
                                             }
                                             w.edit_open_access_level_menu_id = None;
+                                            w.edit_is_listing_attribute_menu_open = false;
+                                            w.edit_is_include_attribute_open = false;
+                                            w.edit_is_attribute_template_menu_open = false;
                                         }
                                     }
                                 }
@@ -1481,6 +1828,9 @@ fn EntityAttributeRow(
                                     w.dragged_edit_attribute_id = Some(aid.clone());
                                     w.edit_open_access_level_menu_id = None;
                                     w.edit_open_value_type_menu_id = None;
+                                    w.edit_is_listing_attribute_menu_open = false;
+                                    w.edit_is_include_attribute_open = false;
+                                    w.edit_is_attribute_template_menu_open = false;
                                 }
                             }
                         },
@@ -1585,8 +1935,99 @@ fn add_edit_entity_attribute(
         w.edit_error = None;
         w.edit_open_access_level_menu_id = None;
         w.edit_open_value_type_menu_id = None;
+        w.edit_is_listing_attribute_menu_open = false;
+        w.edit_is_include_attribute_open = false;
+        w.edit_include_attribute_source = None;
+        w.edit_is_attribute_template_menu_open = false;
         w.dragged_edit_attribute_id = None;
     }
+}
+
+fn add_edit_entity_attribute_from_template(
+    mut windows: Signal<Vec<EntityDetailsWindow>>,
+    win_id: String,
+    attribute_template_id: String,
+) {
+    if attribute_template_id.is_empty() {
+        return;
+    }
+
+    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
+        let Some(attribute_template) = w
+            .edit_attribute_templates
+            .iter()
+            .find(|template| template.id == attribute_template_id)
+            .cloned()
+        else {
+            return;
+        };
+
+        let id = new_entity_attribute_id();
+        let listing_index = w.edit_attributes.len() as i32;
+
+        w.edit_attributes.push(EntityAttribute {
+            access_level_id: attribute_template.access_level_id,
+            description: attribute_template.description,
+            id: id.clone(),
+            is_required: attribute_template.is_required,
+            listing_index,
+            name: attribute_template.name,
+            value: attribute_template.default_value.unwrap_or_default(),
+            value_type: attribute_template.value_type,
+        });
+
+        if w.edit_listing_attribute_id.is_empty() {
+            w.edit_listing_attribute_id = id;
+        }
+
+        w.active_tab = EntityTab::Attributes;
+        w.edit_error = None;
+        w.edit_open_access_level_menu_id = None;
+        w.edit_open_value_type_menu_id = None;
+        w.edit_is_listing_attribute_menu_open = false;
+        w.edit_is_include_attribute_open = false;
+        w.edit_include_attribute_source = None;
+        w.edit_is_attribute_template_menu_open = false;
+        w.dragged_edit_attribute_id = None;
+    }
+}
+
+fn load_edit_attribute_templates(
+    mut windows: Signal<Vec<EntityDetailsWindow>>,
+    win_id: String,
+    session_key: String,
+) {
+    if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
+        w.edit_is_attribute_templates_loading = true;
+        w.edit_attribute_templates_error = None;
+    }
+
+    spawn(async move {
+        match fetch_attribute_templates_list(&session_key).await {
+            Ok(mut templates) => {
+                templates.sort_by(|left, right| {
+                    left.name
+                        .to_ascii_lowercase()
+                        .cmp(&right.name.to_ascii_lowercase())
+                });
+                if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
+                    w.edit_selected_attribute_template_id = w
+                        .edit_selected_attribute_template_id
+                        .clone()
+                        .or_else(|| templates.first().map(|template| template.id.clone()));
+                    w.edit_attribute_templates = templates;
+                    w.edit_attribute_templates_error = None;
+                    w.edit_is_attribute_templates_loading = false;
+                }
+            }
+            Err(message) => {
+                if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
+                    w.edit_attribute_templates_error = Some(message);
+                    w.edit_is_attribute_templates_loading = false;
+                }
+            }
+        }
+    });
 }
 
 fn remove_edit_entity_attribute(
@@ -1614,6 +2055,10 @@ fn remove_edit_entity_attribute(
         w.edit_error = None;
         w.edit_open_access_level_menu_id = None;
         w.edit_open_value_type_menu_id = None;
+        w.edit_is_listing_attribute_menu_open = false;
+        w.edit_is_include_attribute_open = false;
+        w.edit_include_attribute_source = None;
+        w.edit_is_attribute_template_menu_open = false;
         w.dragged_edit_attribute_id = None;
     }
 }

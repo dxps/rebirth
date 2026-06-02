@@ -1086,6 +1086,14 @@ fn open_entity_details_window(
         edit_open_access_level_menu_id: None,
         edit_open_value_type_menu_id: None,
         edit_listing_attribute_id: String::new(),
+        edit_is_listing_attribute_menu_open: false,
+        edit_is_include_attribute_open: false,
+        edit_include_attribute_source: None,
+        edit_attribute_templates: Vec::new(),
+        edit_attribute_templates_error: None,
+        edit_is_attribute_templates_loading: false,
+        edit_selected_attribute_template_id: None,
+        edit_is_attribute_template_menu_open: false,
         dragged_edit_attribute_id: None,
     });
 
