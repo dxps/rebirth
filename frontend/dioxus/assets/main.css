@@ -1759,7 +1759,7 @@ button.data-explorer-view-copy {
 	.entity-attributes-tabpanel
 	.entity-attributes-table
 	tr {
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 8.6rem 7rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 8.6rem 7rem 3.6rem;
 }
 
 .entity-details-view-form.entity-edit-form
@@ -1784,6 +1784,17 @@ button.data-explorer-view-copy {
 
 .entity-details-view-form.entity-edit-form
 	.entity-attributes-table
+	th:nth-child(5),
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	td:nth-child(5) {
+	padding-left: 0.35rem;
+	padding-right: 0;
+	width: 3.6rem;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
 	:is(input, .entity-template-value-type-wrap) {
 	box-sizing: border-box;
 	display: block;
@@ -1796,6 +1807,21 @@ button.data-explorer-view-copy {
 	box-sizing: border-box;
 	display: block;
 	width: 7rem;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
+	.entity-template-attribute-actions {
+	align-items: center;
+	display: inline-flex;
+	gap: 0.22rem;
+	justify-content: flex-end;
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attribute-edit-row.is-dragging
+	td {
+	background: color-mix(in srgb, var(--fg) 5%, transparent);
 }
 
 .entity-details-view-form

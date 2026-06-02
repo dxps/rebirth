@@ -1085,6 +1085,8 @@ fn open_entity_details_window(
         revealed_attribute_ids: Vec::new(),
         edit_open_access_level_menu_id: None,
         edit_open_value_type_menu_id: None,
+        edit_listing_attribute_id: String::new(),
+        dragged_edit_attribute_id: None,
     });
 
     spawn(async move {
