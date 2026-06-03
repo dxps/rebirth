@@ -46,10 +46,13 @@ pub fn DataExplorerView(
     let is_authenticated = auth_session.is_some();
     let is_authorized = auth_session
         .as_ref()
-        .is_some_and(|s| has_any_permission(s, &["Admin", "Editor", "ManageOwnData", "Viewer"]));
+        .is_some_and(|s| has_any_permission(s, &["Admin", "Editor", "Manage Own Data", "Viewer"]));
     let can_create = auth_session
         .as_ref()
-        .is_some_and(|s| has_any_permission(s, &["Admin", "Editor", "ManageOwnData"]));
+        .is_some_and(|s| has_any_permission(s, &["Admin", "Editor", "Manage Own Data"]));
+    let can_assign_owner = auth_session
+        .as_ref()
+        .is_some_and(|s| has_any_permission(s, &["Admin"]));
 
     let session_key = auth_session
         .as_ref()
@@ -151,10 +154,13 @@ pub fn DataExplorerView(
     let sk_create_choice = session_key.clone().unwrap_or_default();
     let sk_open_entity = session_key.clone().unwrap_or_default();
     let sk_retry = session_key.clone().unwrap_or_default();
+    let create_owner_user_id = user_id.clone().unwrap_or_default();
+    let modal_owner_user_id = create_owner_user_id.clone();
 
     let entity_rows = entities.read().clone();
     let access_level_rows = access_levels.read().clone();
     let template_rows = entity_templates.read().clone();
+    let owner_user_rows = owner_users.read().clone();
     let has_template_rows = !template_rows.is_empty();
     let saved_view_rows = saved_views.read().clone();
     let saved_view_options = std::iter::once(SingleSelectOption {
@@ -398,6 +404,7 @@ pub fn DataExplorerView(
                                                             create_entity_state.set(Some(CreateEntityState {
                                                                 source,
                                                                 entity_template_id: tmpl_id,
+                                                                owner_user_id: create_owner_user_id.clone(),
                                                                 attributes: attrs,
                                                                 listing_attribute_id,
                                                                 error: None,
@@ -406,6 +413,7 @@ pub fn DataExplorerView(
                                                                 open_access_level_menu_id: None,
                                                                 open_value_type_menu_id: None,
                                                                 is_listing_attribute_menu_open: false,
+                                                                is_owner_open: false,
                                                                 position: modal_position_from_pointer(&event),
                                                             }));
                                                             is_create_choice_open.set(false);
@@ -509,7 +517,9 @@ pub fn DataExplorerView(
                     entity_templates: template_rows.clone(),
                     access_levels: access_level_rows.clone(),
                     session_key: session_key.clone().unwrap_or_default(),
-                    owner_user_id: user_id.clone().unwrap_or_default(),
+                    owner_user_id: modal_owner_user_id.clone(),
+                    owner_users: owner_user_rows.clone(),
+                    can_assign_owner,
                     entities,
                     position: state.position,
                     size: ModalSize { height: 440.0, width: 600.0 },

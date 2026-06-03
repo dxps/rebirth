@@ -102,7 +102,7 @@ fn has_any_permission(session: Option<&AuthSession>, names: &[&str]) -> bool {
 
 fn can_edit_entity(session: Option<&AuthSession>, entity: &Entity) -> bool {
     has_any_permission(session, &["Admin", "Editor"])
-        || (has_any_permission(session, &["ManageOwnData"])
+        || (has_any_permission(session, &["Manage Own Data"])
             && session.is_some_and(|session| session.user.id == entity.owner_user_id))
 }
 
@@ -2772,6 +2772,7 @@ fn EntityInlinkRow(
 pub struct CreateEntityState {
     pub source: CreateEntitySource,
     pub entity_template_id: String,
+    pub owner_user_id: String,
     pub attributes: Vec<EntityAttribute>,
     pub listing_attribute_id: String,
     pub error: Option<String>,
@@ -2780,6 +2781,7 @@ pub struct CreateEntityState {
     pub open_access_level_menu_id: Option<String>,
     pub open_value_type_menu_id: Option<String>,
     pub is_listing_attribute_menu_open: bool,
+    pub is_owner_open: bool,
     pub position: ModalPosition,
 }
 
@@ -2797,6 +2799,8 @@ pub fn CreateEntityModal(
     access_levels: Vec<AccessLevel>,
     session_key: String,
     owner_user_id: String,
+    owner_users: Vec<RebirthUser>,
+    can_assign_owner: bool,
     entities: Signal<Vec<Entity>>,
     position: crate::types::ModalPosition,
     size: crate::types::ModalSize,
@@ -2831,6 +2835,23 @@ pub fn CreateEntityModal(
         .first()
         .map(|access_level| access_level.id)
         .unwrap_or(4);
+    let selected_owner_user_id = if state.owner_user_id.is_empty() {
+        owner_user_id.clone()
+    } else {
+        state.owner_user_id.clone()
+    };
+    let owner_label = owner_users
+        .iter()
+        .find(|user| user.id == selected_owner_user_id)
+        .map(|user| user.username.clone())
+        .unwrap_or_else(|| selected_owner_user_id.clone());
+    let owner_options = owner_users
+        .iter()
+        .map(|user| SingleSelectOption {
+            label: user.username.clone(),
+            value: user.id.clone(),
+        })
+        .collect::<Vec<_>>();
 
     let can_save = !state.attributes.is_empty()
         && !state.listing_attribute_id.is_empty()
@@ -2905,6 +2926,65 @@ pub fn CreateEntityModal(
                         class: "draggable-modal-titlebar-actions",
                         onclick: move |event| event.stop_propagation(),
                         onpointerdown: move |event| event.stop_propagation(),
+                        if can_assign_owner {
+                            div { class: "draggable-modal-info-action",
+                                button {
+                                    class: "draggable-modal-titlebar-button draggable-modal-info-button",
+                                    "data-tooltip": "Ownership",
+                                    aria_label: "Ownership",
+                                    aria_expanded: "{state.is_owner_open}",
+                                    disabled: is_saving,
+                                    onclick: move |_| {
+                                        if let Some(s) = create_state.write().as_mut() {
+                                            s.is_owner_open = !s.is_owner_open;
+                                            s.is_listing_attribute_menu_open = false;
+                                            s.open_access_level_menu_id = None;
+                                            s.open_value_type_menu_id = None;
+                                        }
+                                    },
+                                    User { class: "app-icon", size: 15 }
+                                }
+                                if state.is_owner_open {
+                                    div {
+                                        class: "include-attribute-popover entity-ownership-popover",
+                                        onclick: move |event| event.stop_propagation(),
+                                        onpointerdown: move |event| event.stop_propagation(),
+                                        div { class: "entity-ownership-field",
+                                            span { "Owner: {owner_label}" }
+                                            div {
+                                                class: "entity-ownership-options",
+                                                role: "listbox",
+                                                aria_multiselectable: "false",
+                                                for option in owner_options.clone() {
+                                                    button {
+                                                        key: "{option.value}",
+                                                        class: "security-user-permission-option single-select-option",
+                                                        "aria-selected": "{option.value == selected_owner_user_id}",
+                                                        r#type: "button",
+                                                        disabled: is_saving,
+                                                        onpointerdown: {
+                                                            let owner_user_id = option.value.clone();
+                                                            move |event| {
+                                                                event.prevent_default();
+                                                                event.stop_propagation();
+                                                                if let Some(s) = create_state.write().as_mut() {
+                                                                    s.owner_user_id = owner_user_id.clone();
+                                                                }
+                                                            }
+                                                        },
+                                                        onclick: move |event| {
+                                                            event.prevent_default();
+                                                            event.stop_propagation();
+                                                        },
+                                                        span { "{option.label}" }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         button {
                             class: "draggable-modal-titlebar-button",
                             "data-tooltip": if can_save { "Save" } else { "Add at least one attribute" },
@@ -3342,7 +3422,7 @@ fn remove_create_entity_attribute(
 fn save_new_entity(
     mut create_state: Signal<Option<CreateEntityState>>,
     session_key: String,
-    owner_user_id: String,
+    fallback_owner_user_id: String,
     mut entities: Signal<Vec<Entity>>,
 ) {
     if let Some(state) = create_state.write().as_mut() {
@@ -3366,6 +3446,17 @@ fn save_new_entity(
         .as_ref()
         .map(|s| s.listing_attribute_id.clone())
         .unwrap_or_default();
+    let owner_user_id = create_state
+        .read()
+        .as_ref()
+        .map(|s| {
+            if s.owner_user_id.is_empty() {
+                fallback_owner_user_id.clone()
+            } else {
+                s.owner_user_id.clone()
+            }
+        })
+        .unwrap_or(fallback_owner_user_id);
 
     spawn(async move {
         let body = build_entity_create_body(

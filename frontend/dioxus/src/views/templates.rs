@@ -19,17 +19,17 @@ pub fn TemplatesView(
 ) -> Element {
     let is_authenticated = auth_session.is_some();
     let is_authorized = auth_session.as_ref().is_some_and(|session| {
-        has_any_permission(session, &["Admin", "Editor", "ManageOwnData", "Viewer"])
+        has_any_permission(session, &["Admin", "Editor", "Manage Own Data", "Viewer"])
     });
-    let can_create_managed_data = auth_session
-        .as_ref()
-        .is_some_and(|session| has_any_permission(session, &["Admin", "Editor", "ManageOwnData"]));
+    let can_create_managed_data = auth_session.as_ref().is_some_and(|session| {
+        has_any_permission(session, &["Admin", "Editor", "Manage Own Data"])
+    });
     let can_manage_templates = auth_session
         .as_ref()
         .is_some_and(|session| has_any_permission(session, &["Admin", "Editor"]));
     let can_manage_own_data = auth_session
         .as_ref()
-        .is_some_and(|session| has_any_permission(session, &["ManageOwnData"]));
+        .is_some_and(|session| has_any_permission(session, &["Manage Own Data"]));
     let current_user_id = auth_session.as_ref().map(|session| session.user.id.clone());
     let session_key = auth_session
         .as_ref()
@@ -92,9 +92,9 @@ pub fn TemplatesView(
         .map(|entity_template| {
             let can_edit = can_manage_templates
                 || (can_manage_own_data
-                && current_user_id
-                .as_ref()
-                .is_some_and(|user_id| user_id == &entity_template.owner_user_id));
+                    && current_user_id
+                        .as_ref()
+                        .is_some_and(|user_id| user_id == &entity_template.owner_user_id));
 
             (entity_template, can_edit)
         })
@@ -106,9 +106,9 @@ pub fn TemplatesView(
         .map(|attribute_template| {
             let can_edit = can_manage_templates
                 || (can_manage_own_data
-                && current_user_id
-                .as_ref()
-                .is_some_and(|user_id| user_id == &attribute_template.owner_user_id));
+                    && current_user_id
+                        .as_ref()
+                        .is_some_and(|user_id| user_id == &attribute_template.owner_user_id));
 
             (attribute_template, can_edit)
         })
@@ -398,11 +398,11 @@ fn load_attribute_templates(
 
         match result {
             Ok((
-                   mut next_attribute_templates,
-                   mut next_entity_templates,
-                   next_access_levels,
-                   next_owner_users,
-               )) => {
+                mut next_attribute_templates,
+                mut next_entity_templates,
+                next_access_levels,
+                next_owner_users,
+            )) => {
                 next_attribute_templates.sort_by(|left, right| {
                     left.name
                         .to_ascii_lowercase()
