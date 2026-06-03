@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use gloo_net::http::Request;
 use lucide_dioxus::{
-    Clipboard, Eye, EyeOff, GripVertical, Info, Pencil, Plus, Save, Trash2, User, X,
+    Clipboard, ExternalLink, Eye, EyeOff, GripVertical, Info, Pencil, Plus, Save, Trash2, User, X,
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -2274,20 +2274,18 @@ fn EntityLinksTab(
                 } else {
                     "data-table entity-template-modal-table entity-template-links-table entity-template-view-links-table"
                 },
-                if is_edit {
-                    colgroup {
-                        col { class: "entity-template-link-name-column" }
-                        col { class: "entity-template-link-description-column" }
-                        col { class: "entity-template-link-target-column" }
+                colgroup {
+                    col { class: "entity-template-link-name-column" }
+                    col { class: "entity-template-link-description-column" }
+                    col { class: "entity-template-link-target-column" }
+                    if is_edit {
                         col { class: "entity-template-link-action-column" }
                     }
                 }
                 thead {
                     tr {
                         th { "name" }
-                        if is_edit {
-                            th { "description" }
-                        }
+                        th { "description" }
                         th { "target" }
                         if is_edit {
                             th { class: "data-table-action-heading",
@@ -2312,7 +2310,7 @@ fn EntityLinksTab(
                 tbody {
                     if links.is_empty() {
                         tr {
-                            td { class: "data-table-empty-cell", colspan: if is_edit { "4" } else { "2" },
+                            td { class: "data-table-empty-cell", colspan: if is_edit { "4" } else { "3" },
                                 span { "No links" }
                             }
                         }
@@ -2359,7 +2357,7 @@ fn EntityLinkRow(
         .find(|entity| Some(entity.id.as_str()) == link.target_entity_id.as_deref())
         .map(entity_listing_label)
         .or_else(|| link.target_entity_label.clone())
-        .unwrap_or_default();
+        .unwrap_or_else(|| target_id.clone());
     let link_name = if link.name.trim().is_empty() {
         "link".to_string()
     } else {
@@ -2417,8 +2415,8 @@ fn EntityLinkRow(
                     "{link.name}"
                 }
             }
-            if is_edit {
-                td {
+            td {
+                if is_edit {
                     span {
                         class: "entity-template-link-description-value entity-template-link-description-edit-value",
                         "data-tooltip": if description.is_empty() { None } else { Some(description.clone()) },
@@ -2446,6 +2444,12 @@ fn EntityLinkRow(
                                 }
                             },
                         }
+                    }
+                } else {
+                    span {
+                        class: "entity-template-link-description-value entity-template-link-description-view-value",
+                        "data-tooltip": if description.is_empty() { None } else { Some(description.clone()) },
+                        span { "{description}" }
                     }
                 }
             }
@@ -2508,13 +2512,16 @@ fn EntityLinkRow(
                     }
                 } else if let Some(target_id) = link.target_entity_id.clone() {
                     button {
-                        class: "entity-link-target-button",
+                        class: "entity-reference-button",
                         "data-tooltip": "Open target entity",
+                        aria_label: "Open entity {target_label}",
+                        r#type: "button",
                         onclick: {
                             let tid = target_id.clone();
                             move |_| on_open_entity.call(tid.clone())
                         },
-                        "{link.target_entity_label.clone().unwrap_or_else(|| target_id.clone())}"
+                        span { "{target_label}" }
+                        ExternalLink { size: 14 }
                     }
                 } else {
                     span { class: "data-table-muted-cell", "-" }
@@ -2676,39 +2683,71 @@ fn EntityInlinksTab(
     rsx! {
         div { class: "entity-template-tab-content entity-inlinks-tabpanel", role: "tabpanel",
             table { class: "data-table entity-template-modal-table entity-template-links-table entity-template-view-inlinks-table",
+                colgroup {
+                    col { class: "entity-template-inlink-source-column" }
+                    col { class: "entity-template-inlink-name-column" }
+                    col { class: "entity-template-inlink-description-column" }
+                }
                 thead {
                     tr {
-                        th { "name" }
                         th { "source" }
+                        th { "name" }
+                        th { "description" }
                     }
                 }
                 tbody {
                     if inlinks.is_empty() {
                         tr {
-                            td { class: "data-table-empty-cell", colspan: "2",
+                            td { class: "data-table-empty-cell", colspan: "3",
                                 span { "No incoming links" }
                             }
                         }
                     } else {
                         for link in inlinks {
-                            tr { key: "{link.id}",
-                                td {
-                                    "{link.name}"
-                                }
-                                td {
-                                    button {
-                                        class: "entity-link-target-button",
-                                        "data-tooltip": "Open source entity",
-                                        onclick: {
-                                            let sid = link.source_entity_id.clone();
-                                            move |_| on_open_entity.call(sid.clone())
-                                        },
-                                        "{link.source_entity_label}"
-                                    }
-                                }
+                            EntityInlinkRow {
+                                key: "{link.id}",
+                                link: link.clone(),
+                                on_open_entity,
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn EntityInlinkRow(
+    link: EntityIncomingLink,
+    on_open_entity: EventHandler<String>,
+) -> Element {
+    let description = link.description.clone().unwrap_or_default();
+
+    rsx! {
+        tr {
+            td {
+                button {
+                    class: "entity-reference-button",
+                    "data-tooltip": "Open source entity",
+                    aria_label: "Open entity {link.source_entity_label}",
+                    r#type: "button",
+                    onclick: {
+                        let sid = link.source_entity_id.clone();
+                        move |_| on_open_entity.call(sid.clone())
+                    },
+                    span { "{link.source_entity_label}" }
+                    ExternalLink { size: 14 }
+                }
+            }
+            td {
+                "{link.name}"
+            }
+            td {
+                span {
+                    class: "entity-template-link-description-value entity-template-link-description-view-value",
+                    "data-tooltip": if description.is_empty() { None } else { Some(description.clone()) },
+                    span { "{description}" }
                 }
             }
         }
