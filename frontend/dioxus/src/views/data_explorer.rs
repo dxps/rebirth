@@ -282,99 +282,6 @@ pub fn DataExplorerView(
                                 },
                             }
                         }
-
-                        // Create button + popover
-                        if can_create {
-                            div { class: "entity-create-action",
-                                button {
-                                    class: "section-action-button",
-                                    "data-tooltip": "Create entity",
-                                    aria_label: "Create entity",
-                                    aria_expanded: "{is_create_choice_open()}",
-                                    onclick: move |_| {
-                                        if !has_template_rows {
-                                            create_choice_source.set(CreateEntitySource::Scratch);
-                                        }
-                                        is_create_choice_open.set(!is_create_choice_open());
-                                    },
-                                    Plus { class: "app-icon", size: 16 }
-                                }
-                                if is_create_choice_open() {
-                                    CreateChoicePopover {
-                                        entity_templates: template_rows.clone(),
-                                        selected_source: create_choice_source(),
-                                        selected_template_id: create_choice_template_id(),
-                                        on_close: move |_| is_create_choice_open.set(false),
-                                        on_source_change: move |source| create_choice_source.set(source),
-                                        on_template_change: move |id| create_choice_template_id.set(id),
-                                        on_open_create: move |_| {
-                                            let source = if entity_templates.read().is_empty() {
-                                                CreateEntitySource::Scratch
-                                            } else {
-                                                create_choice_source()
-                                            };
-                                            let tmpl_id = create_choice_template_id();
-                                            let mut listing_attribute_id = String::new();
-                                            let attrs = match &source {
-                                                CreateEntitySource::Template => {
-                                                    entity_templates
-                                                        .read()
-                                                        .iter()
-                                                        .find(|t| t.id == tmpl_id)
-                                                        .map(|t| {
-                                                            let template_listing_attribute_id =
-                                                                t.listing_attribute_id.clone();
-                                                            let mut sorted = t.attributes.clone();
-                                                            sorted.sort_by_key(|a| a.listing_index);
-                                                            let attrs = sorted
-                                                                .into_iter()
-                                                                .enumerate()
-                                                                .map(|(i, ta)| {
-                                                                    let id = format!("new-{i}");
-                                                                    if ta.id == template_listing_attribute_id {
-                                                                        listing_attribute_id = id.clone();
-                                                                    }
-                                                                    EntityAttribute {
-                                                                        access_level_id: ta.access_level_id,
-                                                                        description: ta.description.clone(),
-                                                                        id,
-                                                                        is_required: ta.is_required,
-                                                                        listing_index: ta.listing_index,
-                                                                        name: ta.name.clone(),
-                                                                        value: String::new(),
-                                                                        value_type: ta.value_type.clone(),
-                                                                    }
-                                                                })
-                                                                .collect::<Vec<_>>();
-                                                            if listing_attribute_id.is_empty() {
-                                                                listing_attribute_id =
-                                                                    attrs.first().map(|a| a.id.clone()).unwrap_or_default();
-                                                            }
-                                                            attrs
-                                                        })
-                                                        .unwrap_or_default()
-                                                }
-                                                CreateEntitySource::Scratch => Vec::new(),
-                                            };
-                                            create_entity_state.set(Some(CreateEntityState {
-                                                source,
-                                                entity_template_id: tmpl_id,
-                                                attributes: attrs,
-                                                listing_attribute_id,
-                                                error: None,
-                                                is_saving: false,
-                                                active_tab: EntityTab::Attributes,
-                                                open_access_level_menu_id: None,
-                                                open_value_type_menu_id: None,
-                                                is_listing_attribute_menu_open: false,
-                                            }));
-                                            is_create_choice_open.set(false);
-                                        },
-                                        session_key: sk_create_choice.clone(),
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -402,7 +309,99 @@ pub fn DataExplorerView(
                             }
                             thead {
                                 tr {
-                                    th { colspan: "2", class: "data-table-action-heading", "" }
+                                    th { colspan: "2", class: "data-table-action-heading",
+                                        if can_create {
+                                            div { class: "entity-create-action",
+                                                button {
+                                                    class: "section-action-button",
+                                                    "data-tooltip": "Create entity",
+                                                    aria_label: "Create entity",
+                                                    aria_expanded: "{is_create_choice_open()}",
+                                                    onclick: move |_| {
+                                                        if !has_template_rows {
+                                                            create_choice_source.set(CreateEntitySource::Scratch);
+                                                        }
+                                                        is_create_choice_open.set(!is_create_choice_open());
+                                                    },
+                                                    Plus { class: "app-icon", size: 16 }
+                                                }
+                                                if is_create_choice_open() {
+                                                    CreateChoicePopover {
+                                                        entity_templates: template_rows.clone(),
+                                                        selected_source: create_choice_source(),
+                                                        selected_template_id: create_choice_template_id(),
+                                                        on_close: move |_| is_create_choice_open.set(false),
+                                                        on_source_change: move |source| create_choice_source.set(source),
+                                                        on_template_change: move |id| create_choice_template_id.set(id),
+                                                        on_open_create: move |_| {
+                                                            let source = if entity_templates.read().is_empty() {
+                                                                CreateEntitySource::Scratch
+                                                            } else {
+                                                                create_choice_source()
+                                                            };
+                                                            let tmpl_id = create_choice_template_id();
+                                                            let mut listing_attribute_id = String::new();
+                                                            let attrs = match &source {
+                                                                CreateEntitySource::Template => {
+                                                                    entity_templates
+                                                                        .read()
+                                                                        .iter()
+                                                                        .find(|t| t.id == tmpl_id)
+                                                                        .map(|t| {
+                                                                            let template_listing_attribute_id =
+                                                                                t.listing_attribute_id.clone();
+                                                                            let mut sorted = t.attributes.clone();
+                                                                            sorted.sort_by_key(|a| a.listing_index);
+                                                                            let attrs = sorted
+                                                                                .into_iter()
+                                                                                .enumerate()
+                                                                                .map(|(i, ta)| {
+                                                                                    let id = format!("new-{i}");
+                                                                                    if ta.id == template_listing_attribute_id {
+                                                                                        listing_attribute_id = id.clone();
+                                                                                    }
+                                                                                    EntityAttribute {
+                                                                                        access_level_id: ta.access_level_id,
+                                                                                        description: ta.description.clone(),
+                                                                                        id,
+                                                                                        is_required: ta.is_required,
+                                                                                        listing_index: ta.listing_index,
+                                                                                        name: ta.name.clone(),
+                                                                                        value: String::new(),
+                                                                                        value_type: ta.value_type.clone(),
+                                                                                    }
+                                                                                })
+                                                                                .collect::<Vec<_>>();
+                                                                            if listing_attribute_id.is_empty() {
+                                                                                listing_attribute_id =
+                                                                                    attrs.first().map(|a| a.id.clone()).unwrap_or_default();
+                                                                            }
+                                                                            attrs
+                                                                        })
+                                                                        .unwrap_or_default()
+                                                                }
+                                                                CreateEntitySource::Scratch => Vec::new(),
+                                                            };
+                                                            create_entity_state.set(Some(CreateEntityState {
+                                                                source,
+                                                                entity_template_id: tmpl_id,
+                                                                attributes: attrs,
+                                                                listing_attribute_id,
+                                                                error: None,
+                                                                is_saving: false,
+                                                                active_tab: EntityTab::Attributes,
+                                                                open_access_level_menu_id: None,
+                                                                open_value_type_menu_id: None,
+                                                                is_listing_attribute_menu_open: false,
+                                                            }));
+                                                            is_create_choice_open.set(false);
+                                                        },
+                                                        session_key: sk_create_choice.clone(),
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             tbody {
