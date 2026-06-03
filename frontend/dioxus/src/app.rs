@@ -410,7 +410,7 @@ pub fn App() -> Element {
                     access_levels: data_access_levels.read().clone(),
                     entities: data_entities,
                     owner_users: data_owner_users.read().clone(),
-                    on_open_entity: move |entity_id: String| {
+                    on_open_entity: move |(entity_id, position)| {
                         let session_key = auth_session
                             .read()
                             .as_ref()
@@ -421,6 +421,7 @@ pub fn App() -> Element {
                             entity_details_windows,
                             next_entity_window_id,
                             session_key,
+                            position,
                         );
                     },
                 }

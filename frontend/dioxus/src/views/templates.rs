@@ -3,7 +3,8 @@ use gloo_net::http::Request;
 use lucide_dioxus::{Plus, RefreshCw};
 
 use crate::components::modal::{
-    open_attribute_template_modal, open_create_entity_template_modal, open_entity_template_modal,
+    modal_position_from_pointer, open_attribute_template_modal, open_create_entity_template_modal,
+    open_entity_template_modal,
 };
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AttributeTemplate, AttributeTemplatesResponse, AuthSession,
@@ -138,7 +139,7 @@ pub fn TemplatesView(
                                             class: "section-action-button",
                                             "data-tooltip": "Add an entity template",
                                             aria_label: "Create entity template",
-                                            onclick: move |_| open_create_entity_template_modal(
+                                            onclick: move |event| open_create_entity_template_modal(
                                                 modals,
                                                 next_modal_id,
                                                 create_entity_session_key.clone(),
@@ -147,6 +148,7 @@ pub fn TemplatesView(
                                                 create_entity_access_level_rows.clone(),
                                                 create_entity_owner_user_rows.clone(),
                                                 create_entity_owner_user_id.clone(),
+                                                modal_position_from_pointer(&event),
                                             ),
                                             Plus { class: "app-icon", size: 16 }
                                         }
@@ -229,7 +231,7 @@ pub fn TemplatesView(
                                             class: "section-action-button",
                                             "data-tooltip": "Add an attribute template",
                                             aria_label: "Create attribute template",
-                                                onclick: move |_| open_attribute_template_modal(
+                                                onclick: move |event| open_attribute_template_modal(
                                                     modals,
                                                     next_modal_id,
                                                     create_attribute_session_key.clone(),
@@ -239,6 +241,7 @@ pub fn TemplatesView(
                                                     None,
                                                     can_manage_templates,
                                                     true,
+                                                    modal_position_from_pointer(&event),
                                                 ),
                                                 Plus { class: "app-icon", size: 16 }
                                             }
@@ -298,7 +301,7 @@ fn EntityTemplateTableRow(
         tr {
             class: "data-table-row",
             tabindex: "0",
-            onclick: move |_| open_entity_template_modal(
+            onclick: move |event| open_entity_template_modal(
                 modals,
                 next_modal_id,
                 session_key.clone(),
@@ -308,6 +311,7 @@ fn EntityTemplateTableRow(
                 owner_users.clone(),
                 entity_template.clone(),
                 can_edit,
+                modal_position_from_pointer(&event),
             ),
             td { "{entity_template.name}" }
             td { class: "data-table-muted-cell",
@@ -334,7 +338,7 @@ fn AttributeTemplateTableRow(
         tr {
             class: "data-table-row",
             tabindex: "0",
-            onclick: move |_| open_attribute_template_modal(
+            onclick: move |event| open_attribute_template_modal(
                 modals,
                 next_modal_id,
                 session_key.clone(),
@@ -344,6 +348,7 @@ fn AttributeTemplateTableRow(
                 Some(attribute_template.clone()),
                 can_assign_owner,
                 can_edit,
+                modal_position_from_pointer(&event),
             ),
             td { "{attribute_template.name}" }
             AttributeTemplateDescriptionValue {

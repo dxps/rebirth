@@ -10,10 +10,13 @@ use crate::types::{
     AccessLevel, AttributeTemplate, EntityTemplate, EntityTemplateAttribute,
     EntityTemplateAttributeSourceTab, EntityTemplateLink, EntityTemplateModal,
     EntityTemplateResponse, EntityTemplateTab, ModalContent, ModalInteraction, ModalSize,
-    OpenModal, SecurityModalMode, User as RebirthUser, API_BASE_URL,
+    ModalPosition, OpenModal, SecurityModalMode, User as RebirthUser, API_BASE_URL,
 };
 
-use super::{json_string, next_modal_z_index, read_response_error, DeleteConfirmPopover};
+use super::{
+    json_string, modal_position_from_pointer, next_modal_z_index, read_response_error,
+    DeleteConfirmPopover,
+};
 
 const VALUE_TYPES: [&str; 5] = ["text", "number", "boolean", "date", "datetime"];
 static ATTRIBUTE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -28,6 +31,7 @@ pub fn open_entity_template_modal(
     owner_users: Vec<RebirthUser>,
     entity_template: EntityTemplate,
     can_edit: bool,
+    position: ModalPosition,
 ) {
     let existing_modal_id = {
         let open_modals = modals.read();
@@ -59,7 +63,6 @@ pub fn open_entity_template_modal(
     }
 
     let id = next_modal_id();
-    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
     let z_index = next_modal_z_index(&modals.read());
 
     next_modal_id.set(id + 1);
@@ -97,10 +100,7 @@ pub fn open_entity_template_modal(
             session_key,
         }),
         id,
-        position: crate::types::ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: 440.0,
             width: 600.0,
@@ -119,9 +119,9 @@ pub fn open_create_entity_template_modal(
     access_levels: Vec<AccessLevel>,
     owner_users: Vec<RebirthUser>,
     owner_user_id: Option<String>,
+    position: ModalPosition,
 ) {
     let id = next_modal_id();
-    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
     let z_index = next_modal_z_index(&modals.read());
 
     next_modal_id.set(id + 1);
@@ -168,10 +168,7 @@ pub fn open_create_entity_template_modal(
             session_key,
         }),
         id,
-        position: crate::types::ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: 440.0,
             width: 600.0,
@@ -2073,6 +2070,7 @@ fn EntityReferenceButton(
                     owner_users.clone(),
                     entity_template.clone(),
                     can_edit,
+                    modal_position_from_pointer(&event),
                 );
             },
             span { "{entity_template.name}" }

@@ -2,7 +2,9 @@ use dioxus::prelude::*;
 use gloo_net::http::Request;
 use lucide_dioxus::{Plus, RefreshCw};
 
-use crate::components::modal::{open_access_level_modal, open_user_modal};
+use crate::components::modal::{
+    modal_position_from_pointer, open_access_level_modal, open_user_modal,
+};
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AuthSession, OpenModal, Permission, PermissionsResponse,
     User, UsersResponse, API_BASE_URL,
@@ -129,12 +131,13 @@ pub fn SecurityView(
                                         class: "section-action-button",
                                         "data-tooltip": "Add an access level",
                                         aria_label: "Create access level",
-                                        onclick: move |_| open_access_level_modal(
+                                        onclick: move |event| open_access_level_modal(
                                             modals,
                                             next_modal_id,
                                             access_level_create_session_key.clone(),
                                             access_levels,
                                             None,
+                                            modal_position_from_pointer(&event),
                                         ),
                                         Plus { class: "app-icon", size: 16 }
                                     }
@@ -158,12 +161,13 @@ pub fn SecurityView(
                                         key: "{access_level.id}",
                                         class: "data-table-row",
                                         tabindex: "0",
-                                        onclick: move |_| open_access_level_modal(
+                                        onclick: move |event| open_access_level_modal(
                                             modals,
                                             next_modal_id,
                                             row_session_key.clone(),
                                             access_levels,
                                             Some(access_level.clone()),
+                                            modal_position_from_pointer(&event),
                                         ),
                                         td { "{access_level.name}" }
                                         td { class: "data-table-muted-cell", "{access_level.description}" }
@@ -215,7 +219,7 @@ pub fn SecurityView(
                                         class: "section-action-button",
                                         "data-tooltip": "Add a user",
                                         aria_label: "Create user",
-                                        onclick: move |_| open_user_modal(
+                                        onclick: move |event| open_user_modal(
                                             modals,
                                             next_modal_id,
                                             user_create_session_key.clone(),
@@ -223,6 +227,7 @@ pub fn SecurityView(
                                             permissions,
                                             access_levels,
                                             None,
+                                            modal_position_from_pointer(&event),
                                         ),
                                         Plus { class: "app-icon", size: 16 }
                                     }
@@ -246,7 +251,7 @@ pub fn SecurityView(
                                         key: "{user.id}",
                                         class: "data-table-row",
                                         tabindex: "0",
-                                        onclick: move |_| open_user_modal(
+                                        onclick: move |event| open_user_modal(
                                             modals,
                                             next_modal_id,
                                             row_session_key.clone(),
@@ -254,6 +259,7 @@ pub fn SecurityView(
                                             permissions,
                                             access_levels,
                                             Some(user.clone()),
+                                            modal_position_from_pointer(&event),
                                         ),
                                         td { "{user.username}" }
                                         td { class: "data-table-muted-cell", "{user.email}" }

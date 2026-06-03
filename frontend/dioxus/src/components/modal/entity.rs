@@ -9,11 +9,12 @@ use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPi
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AttributeTemplate, AttributeTemplatesResponse, AuthSession,
     EntitiesResponse, Entity, EntityAttribute, EntityIncomingLink, EntityLink, EntityResponse,
-    EntityTemplate, EntityTemplatesResponse, SavedView, User as RebirthUser, UsersResponse,
+    EntityTemplate, EntityTemplatesResponse, ModalPosition, SavedView, User as RebirthUser,
+    UsersResponse,
     API_BASE_URL,
 };
 
-use super::{json_string, read_response_error, DeleteConfirmPopover};
+use super::{json_string, modal_position_from_pointer, read_response_error, DeleteConfirmPopover};
 
 const VALUE_TYPES: [&str; 5] = ["text", "number", "boolean", "date", "datetime"];
 static ENTITY_ATTRIBUTE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -359,7 +360,7 @@ pub fn EntityDetailsModal(
     access_levels: Vec<AccessLevel>,
     entities: Signal<Vec<Entity>>,
     owner_users: Vec<RebirthUser>,
-    on_open_entity: EventHandler<String>,
+    on_open_entity: EventHandler<(String, ModalPosition)>,
 ) -> Element {
     let win_id = window.id.clone();
     let win_id_drag = win_id.clone();
@@ -1085,7 +1086,7 @@ fn EntityDetailsContent(
     access_levels: Vec<AccessLevel>,
     session_key: String,
     entities: Signal<Vec<Entity>>,
-    on_open_entity: EventHandler<String>,
+    on_open_entity: EventHandler<(String, ModalPosition)>,
 ) -> Element {
     if window.is_loading {
         return rsx! {
@@ -2256,7 +2257,7 @@ fn EntityLinksTab(
     dragged_link_id: Option<String>,
     win_id: String,
     windows: Signal<Vec<EntityDetailsWindow>>,
-    on_open_entity: EventHandler<String>,
+    on_open_entity: EventHandler<(String, ModalPosition)>,
 ) -> Element {
     let target_entities = entities.read().clone();
     let target_options = target_entities
@@ -2348,7 +2349,7 @@ fn EntityLinkRow(
     is_dragging: bool,
     win_id: String,
     windows: Signal<Vec<EntityDetailsWindow>>,
-    on_open_entity: EventHandler<String>,
+    on_open_entity: EventHandler<(String, ModalPosition)>,
 ) -> Element {
     let description = link.description.clone().unwrap_or_default();
     let target_id = link.target_entity_id.clone().unwrap_or_default();
@@ -2518,7 +2519,12 @@ fn EntityLinkRow(
                         r#type: "button",
                         onclick: {
                             let tid = target_id.clone();
-                            move |_| on_open_entity.call(tid.clone())
+                            move |event| {
+                                on_open_entity.call((
+                                    tid.clone(),
+                                    modal_position_from_pointer(&event),
+                                ))
+                            }
                         },
                         span { "{target_label}" }
                         ExternalLink { size: 14 }
@@ -2678,7 +2684,7 @@ fn reorder_dragged_edit_entity_link(
 #[component]
 fn EntityInlinksTab(
     inlinks: Vec<EntityIncomingLink>,
-    on_open_entity: EventHandler<String>,
+    on_open_entity: EventHandler<(String, ModalPosition)>,
 ) -> Element {
     rsx! {
         div { class: "entity-template-tab-content entity-inlinks-tabpanel", role: "tabpanel",
@@ -2720,7 +2726,7 @@ fn EntityInlinksTab(
 #[component]
 fn EntityInlinkRow(
     link: EntityIncomingLink,
-    on_open_entity: EventHandler<String>,
+    on_open_entity: EventHandler<(String, ModalPosition)>,
 ) -> Element {
     let description = link.description.clone().unwrap_or_default();
 
@@ -2734,7 +2740,12 @@ fn EntityInlinkRow(
                     r#type: "button",
                     onclick: {
                         let sid = link.source_entity_id.clone();
-                        move |_| on_open_entity.call(sid.clone())
+                        move |event| {
+                            on_open_entity.call((
+                                sid.clone(),
+                                modal_position_from_pointer(&event),
+                            ))
+                        }
                     },
                     span { "{link.source_entity_label}" }
                     ExternalLink { size: 14 }
@@ -2770,6 +2781,7 @@ pub struct CreateEntityState {
     pub open_access_level_menu_id: Option<String>,
     pub open_value_type_menu_id: Option<String>,
     pub is_listing_attribute_menu_open: bool,
+    pub position: ModalPosition,
 }
 
 #[derive(Clone, PartialEq)]

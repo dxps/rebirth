@@ -6,6 +6,7 @@ use crate::components::modal::entity::{
     fetch_entity_templates_list, load_saved_views, store_saved_views, CreateEntityModal,
     CreateEntitySource, CreateEntityState, EntityDetailsWindow, EntityTab,
 };
+use crate::components::modal::modal_position_from_pointer;
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AuthSession, Entity, EntityAttribute, EntityTemplate, ModalPosition, ModalSize,
@@ -82,6 +83,7 @@ pub fn DataExplorerView(
     let mut views_modal_desc = use_signal(String::new);
     let mut views_modal_search = use_signal(String::new);
     let mut views_modal_error = use_signal(|| None::<String>);
+    let mut views_modal_initial_position = use_signal(|| ModalPosition { x: 160.0, y: 80.0 });
 
     // --- Initial load ---
     let mut has_loaded = use_signal(|| false);
@@ -194,7 +196,10 @@ pub fn DataExplorerView(
                                 class: "entity-views-manage-button",
                                 "data-tooltip": "Manage views",
                                 aria_label: "Manage data explorer views",
-                                onclick: move |_| is_views_modal_open.set(!is_views_modal_open()),
+                                onclick: move |event| {
+                                    views_modal_initial_position.set(modal_position_from_pointer(&event));
+                                    is_views_modal_open.set(!is_views_modal_open());
+                                },
                                 ListFilter { class: "app-icon", size: 16 }
                             }
                         }
@@ -337,7 +342,7 @@ pub fn DataExplorerView(
                                                         selected_template_id: create_choice_template_id(),
                                                         on_source_change: move |source| create_choice_source.set(source),
                                                         on_template_change: move |id| create_choice_template_id.set(id),
-                                                        on_open_create: move |_| {
+                                                        on_open_create: move |event| {
                                                             let source = if entity_templates.read().is_empty() {
                                                                 CreateEntitySource::Scratch
                                                             } else {
@@ -397,6 +402,7 @@ pub fn DataExplorerView(
                                                                 open_access_level_menu_id: None,
                                                                 open_value_type_menu_id: None,
                                                                 is_listing_attribute_menu_open: false,
+                                                                position: modal_position_from_pointer(&event),
                                                             }));
                                                             is_create_choice_open.set(false);
                                                         },
@@ -442,12 +448,13 @@ pub fn DataExplorerView(
                                             entity: entity.clone(),
                                             on_open: {
                                                 let sk = sk_open_entity.clone();
-                                                move |entity_id: String| {
+                                                move |(entity_id, position): (String, ModalPosition)| {
                                                     open_entity_details_window(
                                                         entity_id,
                                                         entity_details_windows,
                                                         next_window_id,
                                                         sk.clone(),
+                                                        position,
                                                     );
                                                 }
                                             },
@@ -493,14 +500,14 @@ pub fn DataExplorerView(
             // Create entity modal
             if let Some(state) = create_entity_state() {
                 CreateEntityModal {
-                    state,
+                    state: state.clone(),
                     create_state: create_entity_state,
                     entity_templates: template_rows.clone(),
                     access_levels: access_level_rows.clone(),
                     session_key: session_key.clone().unwrap_or_default(),
                     owner_user_id: user_id.clone().unwrap_or_default(),
                     entities,
-                    position: ModalPosition { x: 420.0, y: 100.0 },
+                    position: state.position,
                     size: ModalSize { height: 440.0, width: 600.0 },
                     z_index: 50,
                 }
@@ -518,6 +525,7 @@ pub fn DataExplorerView(
                     search_input: views_modal_search,
                     form_error: views_modal_error,
                     current_search: current_search.clone(),
+                    initial_position: views_modal_initial_position(),
                 }
             }
         }
@@ -529,7 +537,7 @@ pub fn DataExplorerView(
 // ---------------------------------------------------------------------------
 
 #[component]
-fn EntityTableRow(entity: Entity, on_open: EventHandler<String>) -> Element {
+fn EntityTableRow(entity: Entity, on_open: EventHandler<(String, ModalPosition)>) -> Element {
     let listing_value = entity
         .attributes
         .iter()
@@ -571,7 +579,9 @@ fn EntityTableRow(entity: Entity, on_open: EventHandler<String>) -> Element {
             tabindex: "0",
             role: "button",
             aria_label: "Open entity {listing_value}",
-            onclick: move |_| on_open.call(entity_id.clone()),
+            onclick: move |event| {
+                on_open.call((entity_id.clone(), modal_position_from_pointer(&event)))
+            },
             td { class: "entity-listing-name-cell",
                 span { "{listing_name}" }
             }
@@ -735,8 +745,9 @@ fn ViewsManagementModal(
     search_input: Signal<String>,
     form_error: Signal<Option<String>>,
     current_search: String,
+    initial_position: ModalPosition,
 ) -> Element {
-    let mut position = use_signal(|| ModalPosition { x: 160.0, y: 80.0 });
+    let mut position = use_signal(move || initial_position);
     let mut drag_offset = use_signal(|| None::<(f64, f64)>);
     let views = saved_views.read().clone();
     let sel_id = selected_id();
@@ -1022,6 +1033,7 @@ pub fn open_entity_details_window(
     mut windows: Signal<Vec<EntityDetailsWindow>>,
     mut next_window_id: Signal<u32>,
     session_key: String,
+    position: ModalPosition,
 ) {
     // If already open, just raise it.
     let existing = {
@@ -1039,7 +1051,6 @@ pub fn open_entity_details_window(
     }
 
     let id_num = next_window_id();
-    let offset = ((id_num - 1) % 6) as f64 * 28.0;
     let z_index = windows.read().iter().map(|w| w.z_index).max().unwrap_or(20) + 1;
     next_window_id.set(id_num + 1);
 
@@ -1058,10 +1069,7 @@ pub fn open_entity_details_window(
         is_owner_open: false,
         is_edit_mode: false,
         z_index,
-        position: ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: 440.0,
             width: 600.0,

@@ -21,6 +21,7 @@ pub fn open_user_modal(
     permissions: Signal<Vec<Permission>>,
     access_levels: Signal<Vec<AccessLevel>>,
     user: Option<User>,
+    position: ModalPosition,
 ) {
     let target_id = user.as_ref().map(|user| user.id.clone());
     let existing_modal_id = {
@@ -53,7 +54,6 @@ pub fn open_user_modal(
     }
 
     let id = next_modal_id();
-    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
     let z_index = next_modal_z_index(&modals.read());
     let permission_options = permissions.read().clone();
     let access_level_options = access_levels.read().clone();
@@ -136,10 +136,7 @@ pub fn open_user_modal(
     modals.write().push(OpenModal {
         content: ModalContent::User(content.clone()),
         id,
-        position: ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: if content.mode == SecurityModalMode::Details {
                 300.0

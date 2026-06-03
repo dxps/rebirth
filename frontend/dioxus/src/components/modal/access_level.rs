@@ -3,8 +3,8 @@ use gloo_net::http::Request;
 use lucide_dioxus::{ArrowLeft, Info, Pencil, Save, Trash2};
 
 use crate::types::{
-    AccessLevel, AccessLevelModal, AccessLevelResponse, ModalContent, ModalInteraction, ModalSize,
-    OpenModal, SecurityModalMode, API_BASE_URL,
+    AccessLevel, AccessLevelModal, AccessLevelResponse, ModalContent, ModalInteraction,
+    ModalPosition, ModalSize, OpenModal, SecurityModalMode, API_BASE_URL,
 };
 
 use super::{
@@ -18,6 +18,7 @@ pub fn open_access_level_modal(
     session_key: String,
     access_levels: Signal<Vec<AccessLevel>>,
     access_level: Option<AccessLevel>,
+    position: ModalPosition,
 ) {
     let existing_modal_id = {
         let open_modals = modals.read();
@@ -49,7 +50,6 @@ pub fn open_access_level_modal(
     }
 
     let id = next_modal_id();
-    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
     let z_index = next_modal_z_index(&modals.read());
     let content = access_level
         .map(|access_level| AccessLevelModal {
@@ -82,10 +82,7 @@ pub fn open_access_level_modal(
     modals.write().push(OpenModal {
         content: ModalContent::AccessLevel(content),
         id,
-        position: crate::types::ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: 120.0,
             width: 360.0,

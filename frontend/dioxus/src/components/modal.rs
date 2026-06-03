@@ -21,19 +21,16 @@ pub fn open_modal(
     mut modals: Signal<Vec<OpenModal>>,
     mut next_modal_id: Signal<u32>,
     title: impl Into<String>,
+    position: ModalPosition,
 ) {
     let id = next_modal_id();
-    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
     let z_index = next_modal_z_index(&modals.read());
 
     next_modal_id.set(id + 1);
     modals.write().push(OpenModal {
         content: ModalContent::Generic,
         id,
-        position: ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: 150.0,
             width: MODAL_DEFAULT_WIDTH,
@@ -41,6 +38,35 @@ pub fn open_modal(
         title: title.into(),
         z_index,
     });
+}
+
+pub fn modal_position_from_pointer(event: &MouseEvent) -> ModalPosition {
+    let point = event.data().client_coordinates();
+    let (viewport_width, viewport_height) = viewport_size();
+    let max_x = (viewport_width - 600.0 - 16.0).max(0.0);
+    let max_y = (viewport_height - 440.0 - 16.0).max(0.0);
+
+    ModalPosition {
+        x: point.x.clamp(0.0, max_x),
+        y: point.y.clamp(0.0, max_y),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn viewport_size() -> (f64, f64) {
+    web_sys::window()
+        .and_then(|window| {
+            Some((
+                window.inner_width().ok()?.as_f64()?,
+                window.inner_height().ok()?.as_f64()?,
+            ))
+        })
+        .unwrap_or((1280.0, 720.0))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn viewport_size() -> (f64, f64) {
+    (1280.0, 720.0)
 }
 
 pub(super) fn next_modal_z_index(modals: &[OpenModal]) -> u32 {

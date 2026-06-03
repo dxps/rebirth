@@ -5,7 +5,8 @@ use lucide_dioxus::{ArrowLeft, Info, Pencil, Save, Trash2, User};
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AttributeTemplate, AttributeTemplateModal, AttributeTemplateResponse,
-    ModalContent, ModalInteraction, ModalSize, OpenModal, SecurityModalMode, User, API_BASE_URL,
+    ModalContent, ModalInteraction, ModalPosition, ModalSize, OpenModal, SecurityModalMode, User,
+    API_BASE_URL,
 };
 
 use super::{
@@ -25,6 +26,7 @@ pub fn open_attribute_template_modal(
     attribute_template: Option<AttributeTemplate>,
     can_assign_owner: bool,
     can_edit: bool,
+    position: ModalPosition,
 ) {
     let existing_modal_id = {
         let open_modals = modals.read();
@@ -61,7 +63,6 @@ pub fn open_attribute_template_modal(
     }
 
     let id = next_modal_id();
-    let offset = (id.saturating_sub(1) % 6) as f64 * 28.0;
     let z_index = next_modal_z_index(&modals.read());
     let fallback_access_level_id = access_levels
         .first()
@@ -124,10 +125,7 @@ pub fn open_attribute_template_modal(
     modals.write().push(OpenModal {
         content: ModalContent::AttributeTemplate(content),
         id,
-        position: crate::types::ModalPosition {
-            x: 420.0 + offset,
-            y: 100.0 + offset,
-        },
+        position,
         size: ModalSize {
             height: 362.0,
             width: 360.0,

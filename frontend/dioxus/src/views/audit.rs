@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use lucide_dioxus::{ExternalLink, RefreshCw};
 
-use crate::components::modal::open_modal;
+use crate::components::modal::{modal_position_from_pointer, open_modal};
 use crate::types::OpenModal;
 
 #[derive(Clone, Copy)]
@@ -70,7 +70,14 @@ pub fn AuditView(modals: Signal<Vec<OpenModal>>, next_modal_id: Signal<u32>) -> 
                                             class: "icon-only-button",
                                             "data-tooltip": "Open audit event",
                                             aria_label: "Open audit event",
-                                            onclick: move |_| open_modal(modals, next_modal_id, event.event),
+                                            onclick: move |pointer_event| {
+                                                open_modal(
+                                                    modals,
+                                                    next_modal_id,
+                                                    event.event,
+                                                    modal_position_from_pointer(&pointer_event),
+                                                )
+                                            },
                                             ExternalLink { class: "app-icon", size: 15 }
                                         }
                                     }
