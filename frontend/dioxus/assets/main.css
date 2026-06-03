@@ -1809,11 +1809,13 @@ button.entity-attribute-value-action {
 .data-explorer-views-list {
 	border-right: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
 	display: grid;
+	align-content: start;
 	gap: 0.35rem;
+	grid-auto-rows: max-content;
 	min-height: 0;
 	overflow-x: hidden;
 	overflow-y: auto;
-	padding-right: 0.8rem;
+	padding-right: 1.05rem;
 }
 
 .data-explorer-views-list > * {
@@ -1842,7 +1844,7 @@ button.entity-attribute-value-action {
 	display: grid;
 	gap: 0.25rem;
 	grid-template-columns: minmax(0, 1fr) auto;
-	padding: 0.28rem;
+	padding: 0.04rem 0.12rem;
 }
 
 .data-explorer-view-item:hover,
@@ -1858,9 +1860,9 @@ button.data-explorer-view-copy {
 	color: var(--fg);
 	display: grid;
 	font: inherit;
-	gap: 0.16rem;
+	gap: 0.08rem;
 	min-width: 0;
-	padding: 0.14rem 0.22rem;
+	padding: 0.04rem 0.14rem;
 	text-align: left;
 }
 
@@ -2244,22 +2246,43 @@ button.data-explorer-view-copy:hover {
 .data-explorer-view-copy strong {
 	font-size: 0.86rem;
 	font-weight: 500;
+	line-height: 1.08;
 }
 
 .data-explorer-view-copy span {
 	color: var(--muted);
 	font-size: 0.76rem;
+	line-height: 1.08;
 }
 
 .data-explorer-view-copy code {
 	color: color-mix(in srgb, var(--fg) 76%, transparent);
 	font-size: 0.75rem;
+	line-height: 1.08;
 }
 
 .data-explorer-view-actions {
 	align-items: center;
 	display: flex;
 	gap: 0.12rem;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.data-explorer-view-actions .draggable-modal-titlebar-button[data-tooltip] {
+	--tooltip-left: auto;
+	--tooltip-right: calc(100% + 0.35rem);
+	--tooltip-top: 50%;
+	--tooltip-hidden-transform: translate(0.1rem, -50%);
+	--tooltip-visible-transform: translate(0, -50%);
+}
+
+.data-explorer-view-item:hover .data-explorer-view-actions,
+.data-explorer-view-item:focus-within .data-explorer-view-actions,
+.data-explorer-view-item.is-selected .data-explorer-view-actions {
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .data-explorer-view-editor {
@@ -2288,6 +2311,37 @@ button.data-explorer-view-copy:hover {
 	font-size: 0.82rem;
 	min-height: 1.8rem;
 	padding: 0.24rem 0.55rem;
+}
+
+.data-explorer-view-editor-actions .data-explorer-view-editor-action-button {
+	align-items: center;
+	display: inline-flex;
+	height: 1.8rem;
+	justify-content: center;
+	min-height: 1.8rem;
+	padding: 0;
+	width: 1.8rem;
+}
+
+.data-explorer-view-editor-actions
+	.data-explorer-view-editor-action-button.delete-confirm-danger {
+	background: transparent;
+	color: var(--button-fg);
+	padding: 0;
+}
+
+.data-explorer-view-editor-actions
+	.data-explorer-view-editor-action-button.delete-confirm-danger:hover {
+	background: var(--accent-strong);
+	color: #ffffff;
+}
+
+.data-explorer-view-editor-actions
+	.data-explorer-view-editor-action-button[data-tooltip] {
+	--tooltip-left: 50%;
+	--tooltip-right: auto;
+	--tooltip-hidden-transform: translate(-50%, -0.1rem);
+	--tooltip-visible-transform: translate(-50%, 0);
 }
 
 .data-explorer-view-editor-actions svg {
@@ -2759,8 +2813,10 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 
 .draggable-modal-content:has(.security-user-permissions-menu),
 .draggable-modal-content:has(.include-attribute-popover),
+.draggable-modal-content:has(.delete-confirm-popover),
 .draggable-modal-body:has(.security-user-permissions-menu),
-.draggable-modal-body:has(.include-attribute-popover) {
+.draggable-modal-body:has(.include-attribute-popover),
+.draggable-modal-body:has(.delete-confirm-popover) {
 	overflow: visible;
 }
 

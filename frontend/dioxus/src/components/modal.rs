@@ -202,7 +202,7 @@ fn ModalTitlebarActions(
 }
 
 #[component]
-pub(super) fn DeleteConfirmPopover(
+pub fn DeleteConfirmPopover(
     on_cancel: EventHandler<MouseEvent>,
     on_confirm: EventHandler<MouseEvent>,
 ) -> Element {
@@ -210,7 +210,7 @@ pub(super) fn DeleteConfirmPopover(
         div {
             class: "delete-confirm-popover",
             role: "dialog",
-            aria_label: "Confirm delete access level",
+            aria_label: "Confirm delete",
             onclick: move |event| event.stop_propagation(),
             onpointerdown: move |event| event.stop_propagation(),
             p { "Delete this entry?" }

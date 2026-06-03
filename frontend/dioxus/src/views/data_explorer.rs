@@ -1,12 +1,14 @@
 use dioxus::prelude::*;
-use lucide_dioxus::{ArrowDownLeft, ArrowUpRight, ListFilter, Plus, RefreshCw, Trash2};
+use lucide_dioxus::{
+    ArrowDownLeft, ArrowUpRight, ClipboardCopy, ListFilter, Plus, RefreshCw, Save, Trash2,
+};
 
 use crate::components::modal::entity::{
     fetch_access_levels_list, fetch_entities, fetch_entity, fetch_entity_owners,
     fetch_entity_templates_list, load_saved_views, store_saved_views, CreateEntityModal,
     CreateEntitySource, CreateEntityState, EntityDetailsWindow, EntityTab,
 };
-use crate::components::modal::modal_position_from_pointer;
+use crate::components::modal::{modal_position_from_pointer, DeleteConfirmPopover};
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
     AccessLevel, AuthSession, Entity, EntityAttribute, EntityTemplate, ModalPosition, ModalSize,
@@ -179,7 +181,9 @@ pub fn DataExplorerView(
                 view.description.clone()
             }
         })
-        .unwrap_or_else(|| "Search through entities' attributes names and values".to_string());
+        .unwrap_or_else(|| {
+            "Search through entities' attributes and links names and values".to_string()
+        });
     let total_pages = if total() == 0 { 1 } else { (total() + 9) / 10 };
     let uid = user_id.clone().unwrap_or_default();
 
@@ -749,9 +753,27 @@ fn ViewsManagementModal(
 ) -> Element {
     let mut position = use_signal(move || initial_position);
     let mut drag_offset = use_signal(|| None::<(f64, f64)>);
+    let mut delete_confirm_target = use_signal(|| None::<String>);
     let views = saved_views.read().clone();
     let sel_id = selected_id();
+    let current_delete_confirm_target = delete_confirm_target();
+    let view_rows = views
+        .iter()
+        .cloned()
+        .map(|view| {
+            let confirm_key = format!("list:{}", view.id);
+            let is_confirm_open =
+                current_delete_confirm_target.as_deref() == Some(confirm_key.as_str());
+            (view, confirm_key, is_confirm_open)
+        })
+        .collect::<Vec<_>>();
+    let editor_delete_confirm_key = sel_id.as_ref().map(|id| format!("editor:{id}"));
+    let is_editor_delete_confirm_open = editor_delete_confirm_key
+        .as_ref()
+        .is_some_and(|key| current_delete_confirm_target.as_deref() == Some(key.as_str()));
     let uid = user_id.clone();
+    let new_view_current_search = current_search.clone();
+    let use_current_search = current_search.clone();
     let modal_position = position();
     let is_dragging = drag_offset().is_some();
 
@@ -819,7 +841,7 @@ fn ViewsManagementModal(
                             if views.is_empty() {
                                 p { class: "data-explorer-views-empty", "No saved views yet" }
                             } else {
-                                for view in views.iter().cloned() {
+                                for (view, list_delete_confirm_key, is_list_delete_confirm_open) in view_rows {
                                     div {
                                         key: "{view.id}",
                                         class: if sel_id.as_deref() == Some(&view.id) {
@@ -851,42 +873,50 @@ fn ViewsManagementModal(
                                             code { "{view.search_text}" }
                                         }
                                         div { class: "data-explorer-view-actions",
+                                            div { class: "draggable-modal-delete-action data-explorer-view-delete-action",
                                             button {
                                                 class: "draggable-modal-titlebar-button",
-                                                "data-tooltip": "Delete view",
+                                                "data-tooltip": if is_list_delete_confirm_open {
+                                                    ""
+                                                } else {
+                                                    "Delete view"
+                                                },
                                                 aria_label: "Delete saved view",
+                                                aria_expanded: "{is_list_delete_confirm_open}",
                                                 onclick: {
-                                                    let uid2 = uid.clone();
-                                                    let vid = view.id.clone();
+                                                    let confirm_key = list_delete_confirm_key.clone();
                                                     move |_| {
-                                                        saved_views.write().retain(|v| v.id != vid);
-                                                        store_saved_views(&uid2, &saved_views.read());
-                                                        selected_id.set(None);
-                                                        name_input.set(String::new());
-                                                        desc_input.set(String::new());
-                                                        search_input.set(String::new());
-                                                        form_error.set(None);
+                                                        delete_confirm_target.set(Some(confirm_key.clone()));
                                                     }
                                                 },
                                                 Trash2 { class: "app-icon", size: 14 }
                                             }
+                                            if is_list_delete_confirm_open {
+                                                DeleteConfirmPopover {
+                                                    on_cancel: move |_| delete_confirm_target.set(None),
+                                                    on_confirm: {
+                                                        let uid2 = uid.clone();
+                                                        let vid = view.id.clone();
+                                                        move |_| {
+                                                            delete_confirm_target.set(None);
+                                                            delete_saved_view(
+                                                                saved_views,
+                                                                uid2.clone(),
+                                                                vid.clone(),
+                                                                selected_id,
+                                                                name_input,
+                                                                desc_input,
+                                                                search_input,
+                                                                form_error,
+                                                            );
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            button {
-                                class: "section-action-button",
-                                "data-tooltip": "New saved view",
-                                aria_label: "Add saved view",
-                                onpointerdown: move |event| event.stop_propagation(),
-                                onclick: move |_| {
-                                    selected_id.set(None);
-                                    name_input.set(String::new());
-                                    desc_input.set(String::new());
-                                    search_input.set(current_search.clone());
-                                    form_error.set(None);
-                                },
-                                Plus { class: "app-icon", size: 16 }
                             }
                         }
                         div { class: "data-explorer-view-editor",
@@ -926,28 +956,83 @@ fn ViewsManagementModal(
                                 p { class: "form-error", "{message}" }
                             }
                             div { class: "data-explorer-view-editor-actions",
+                                button {
+                                    class: "icon-only-button data-explorer-view-editor-action-button",
+                                    "data-tooltip": "Use current search",
+                                    aria_label: "Use current search",
+                                    r#type: "button",
+                                    onpointerdown: move |event| event.stop_propagation(),
+                                    onclick: move |_| {
+                                        search_input.set(use_current_search.clone());
+                                        form_error.set(None);
+                                    },
+                                    ClipboardCopy { class: "app-icon", size: 15 }
+                                }
                                 if sel_id.is_some() {
+                                    div { class: "draggable-modal-delete-action data-explorer-view-editor-delete-action",
                                     button {
-                                        class: "delete-confirm-danger",
+                                        class: "icon-only-button data-explorer-view-editor-action-button delete-confirm-danger",
+                                        "data-tooltip": if is_editor_delete_confirm_open {
+                                            ""
+                                        } else {
+                                            "Delete"
+                                        },
+                                        aria_label: "Delete saved view",
+                                        aria_expanded: "{is_editor_delete_confirm_open}",
+                                        r#type: "button",
                                         onpointerdown: move |event| event.stop_propagation(),
-                                        onclick: {
-                                            let uid2 = uid.clone();
-                                            move |_| {
-                                                if let Some(id) = selected_id() {
-                                                    saved_views.write().retain(|v| v.id != id);
-                                                    store_saved_views(&uid2, &saved_views.read());
-                                                    selected_id.set(None);
-                                                    name_input.set(String::new());
-                                                    desc_input.set(String::new());
-                                                    search_input.set(String::new());
-                                                    form_error.set(None);
-                                                }
+                                        onclick: move |_| {
+                                            if let Some(id) = selected_id() {
+                                                delete_confirm_target.set(Some(format!("editor:{id}")));
                                             }
                                         },
-                                        "Delete"
+                                        Trash2 { class: "app-icon", size: 15 }
+                                    }
+                                    if let Some(id) = sel_id.clone() {
+                                        if is_editor_delete_confirm_open {
+                                            DeleteConfirmPopover {
+                                                on_cancel: move |_| delete_confirm_target.set(None),
+                                                on_confirm: {
+                                                    let uid2 = uid.clone();
+                                                    move |_| {
+                                                        delete_confirm_target.set(None);
+                                                        delete_saved_view(
+                                                            saved_views,
+                                                            uid2.clone(),
+                                                            id.clone(),
+                                                            selected_id,
+                                                            name_input,
+                                                            desc_input,
+                                                            search_input,
+                                                            form_error,
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                     }
                                 }
                                 button {
+                                    class: "icon-only-button data-explorer-view-editor-action-button",
+                                    "data-tooltip": "New saved view",
+                                    aria_label: "Add saved view",
+                                    r#type: "button",
+                                    onpointerdown: move |event| event.stop_propagation(),
+                                    onclick: move |_| {
+                                        selected_id.set(None);
+                                        name_input.set(String::new());
+                                        desc_input.set(String::new());
+                                        search_input.set(new_view_current_search.clone());
+                                        form_error.set(None);
+                                    },
+                                    Plus { class: "app-icon", size: 15 }
+                                }
+                                button {
+                                    class: "icon-only-button data-explorer-view-editor-action-button",
+                                    "data-tooltip": "Save",
+                                    aria_label: "Save",
+                                    r#type: "button",
                                     disabled: name_input().trim().is_empty(),
                                     onpointerdown: move |event| event.stop_propagation(),
                                     onclick: {
@@ -984,7 +1069,7 @@ fn ViewsManagementModal(
                                             form_error.set(None);
                                         }
                                     },
-                                    "Save"
+                                    Save { class: "app-icon", size: 15 }
                                 }
                             }
                         }
@@ -995,6 +1080,29 @@ fn ViewsManagementModal(
             }
         }
     }
+}
+
+fn delete_saved_view(
+    mut saved_views: Signal<Vec<SavedView>>,
+    user_id: String,
+    view_id: String,
+    mut selected_id: Signal<Option<String>>,
+    mut name_input: Signal<String>,
+    mut desc_input: Signal<String>,
+    mut search_input: Signal<String>,
+    mut form_error: Signal<Option<String>>,
+) {
+    saved_views.write().retain(|view| view.id != view_id);
+    store_saved_views(&user_id, &saved_views.read());
+
+    if selected_id().as_deref() == Some(view_id.as_str()) {
+        selected_id.set(None);
+        name_input.set(String::new());
+        desc_input.set(String::new());
+        search_input.set(String::new());
+    }
+
+    form_error.set(None);
 }
 
 // ---------------------------------------------------------------------------
