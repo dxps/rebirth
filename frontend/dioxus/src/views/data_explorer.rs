@@ -685,7 +685,10 @@ fn CreateChoicePopover(
                         value: "template",
                         checked: is_template_source,
                         disabled: !has_templates,
-                        onchange: move |_| on_source_change.call(CreateEntitySource::Template),
+                        onchange: move |_| {
+                            is_template_menu_open.set(false);
+                            on_source_change.call(CreateEntitySource::Template);
+                        },
                     }
                     span { "Template" }
                 }
@@ -695,13 +698,27 @@ fn CreateChoicePopover(
                         name: "entity-create-source",
                         value: "scratch",
                         checked: !is_template_source,
-                        onchange: move |_| on_source_change.call(CreateEntitySource::Scratch),
+                        onchange: move |_| {
+                            is_template_menu_open.set(false);
+                            on_source_change.call(CreateEntitySource::Scratch);
+                        },
                     }
                     span { "Scratch" }
                 }
             }
             if is_template_source {
                 div { class: "entity-create-popover-fields",
+                    if is_template_menu_open() {
+                        span {
+                            class: "entity-create-template-menu-outside-click-layer",
+                            onclick: move |event| {
+                                event.stop_propagation();
+                                is_template_menu_open.set(false);
+                            },
+                            onpointerdown: move |event| event.stop_propagation(),
+                            onpointerup: move |event| event.stop_propagation(),
+                        }
+                    }
                     label {
                         span { "entity template" }
                         SingleSelectPicker {

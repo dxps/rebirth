@@ -1241,7 +1241,7 @@ button.entity-views-manage-button:hover {
 	cursor: pointer;
 	display: flex;
 	flex-direction: row;
-	font-size: 0.82rem;
+	font-size: 0.85rem;
 	gap: 0.42rem;
 	grid-template-columns: none;
 	line-height: 1.2;
@@ -1307,10 +1307,21 @@ button.entity-views-manage-button:hover {
 	gap: 0.45rem;
 }
 
+.entity-create-template-menu-outside-click-layer {
+	cursor: default;
+	inset: 0;
+	position: fixed;
+	z-index: 1001;
+}
+
+.entity-create-popover-fields .security-user-permissions-menu {
+	z-index: 1002;
+}
+
 .entity-create-popover-fields label {
 	color: var(--muted);
 	display: grid;
-	font-size: 0.8rem;
+	font-size: 0.82rem;
 	gap: 0.2rem;
 }
 
