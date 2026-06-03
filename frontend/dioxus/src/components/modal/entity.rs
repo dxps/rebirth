@@ -10,8 +10,7 @@ use crate::types::{
     AccessLevel, AccessLevelsResponse, AttributeTemplate, AttributeTemplatesResponse, AuthSession,
     EntitiesResponse, Entity, EntityAttribute, EntityIncomingLink, EntityLink, EntityResponse,
     EntityTemplate, EntityTemplatesResponse, ModalPosition, SavedView, User as RebirthUser,
-    UsersResponse,
-    API_BASE_URL,
+    UsersResponse, API_BASE_URL,
 };
 
 use super::{json_string, modal_position_from_pointer, read_response_error, DeleteConfirmPopover};

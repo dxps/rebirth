@@ -776,6 +776,7 @@ button.entity-views-manage-button:hover {
 }
 
 .section-action-button[data-tooltip],
+.access-level-refresh-button[data-tooltip],
 .icon-only-button[data-tooltip] {
 	--tooltip-left: auto;
 	--tooltip-right: 0;
@@ -795,7 +796,8 @@ button.entity-views-manage-button:hover {
 }
 
 .security-table-wrap,
-.templates-table-wrap {
+.templates-table-wrap,
+.audit-table-wrap {
 	overflow: visible;
 }
 
@@ -855,6 +857,157 @@ button.entity-views-manage-button:hover {
 .data-table td.data-table-empty-cell:last-child {
 	text-align: center;
 	width: auto;
+}
+
+.audit-table {
+	table-layout: fixed;
+}
+
+.audit-table th,
+.audit-table td {
+	background: transparent;
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	padding: 0.34rem 0.7rem;
+}
+
+.audit-table th {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	font-size: 0.82rem;
+	padding-bottom: 0.3rem;
+	text-transform: none;
+}
+
+.audit-table td:first-child,
+.audit-table td:last-child {
+	border-radius: 0;
+}
+
+.audit-table .data-table-row {
+	cursor: pointer;
+}
+
+.audit-table .data-table-row:hover td {
+	background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.audit-table th:first-child,
+.audit-table td:first-child {
+	width: 22%;
+}
+
+.audit-table th:nth-child(2),
+.audit-table td:nth-child(2) {
+	color: var(--muted);
+	width: auto;
+}
+
+.audit-table th:nth-child(3),
+.audit-table td:nth-child(3) {
+	text-align: left;
+	width: 11rem;
+}
+
+.audit-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.audit-table td {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.audit-table td > span {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.audit-table .data-table-empty-cell {
+	font-family: inherit;
+	font-size: inherit;
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
+}
+
+.draggable-modal-content.audit-details-content {
+	cursor: auto;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	user-select: text;
+}
+
+.draggable-modal-content.audit-details-content * {
+	user-select: text;
+}
+
+.audit-details-meta-table {
+	border-collapse: collapse;
+	margin-bottom: 0.85rem;
+	table-layout: fixed;
+	width: 100%;
+}
+
+.audit-details-meta-table th,
+.audit-details-meta-table td {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+	font-size: 0.86rem;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+	padding: 0.28rem 0;
+	text-align: left;
+	vertical-align: top;
+}
+
+.audit-details-meta-table th {
+	color: var(--muted);
+	font-weight: 400;
+	width: 6.4rem;
+}
+
+.audit-details-meta-table tr:last-child th,
+.audit-details-meta-table tr:last-child td {
+	border-bottom: 0;
+}
+
+.audit-details-content-block {
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	scrollbar-gutter: stable;
+}
+
+.audit-details-content-block p {
+	color: var(--muted);
+	font-size: 0.76rem;
+	margin: 0 0 0.25rem;
+}
+
+.audit-details-content pre {
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.78rem;
+	line-height: 1.45;
+	margin: 0;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.audit-refresh-row {
+	display: grid;
+	justify-content: center;
+	padding-top: 0.8rem;
+}
+
+.audit-refresh-row .access-level-refresh-button[data-tooltip] {
+	--tooltip-left: 50%;
+	--tooltip-right: auto;
+	--tooltip-hidden-transform: translate(-50%, -0.1rem);
+	--tooltip-visible-transform: translate(-50%, 0);
 }
 
 .security-access-levels-table,

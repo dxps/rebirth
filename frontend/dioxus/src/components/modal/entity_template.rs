@@ -9,8 +9,8 @@ use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPi
 use crate::types::{
     AccessLevel, AttributeTemplate, EntityTemplate, EntityTemplateAttribute,
     EntityTemplateAttributeSourceTab, EntityTemplateLink, EntityTemplateModal,
-    EntityTemplateResponse, EntityTemplateTab, ModalContent, ModalInteraction, ModalSize,
-    ModalPosition, OpenModal, SecurityModalMode, User as RebirthUser, API_BASE_URL,
+    EntityTemplateResponse, EntityTemplateTab, ModalContent, ModalInteraction, ModalPosition,
+    ModalSize, OpenModal, SecurityModalMode, User as RebirthUser, API_BASE_URL,
 };
 
 use super::{

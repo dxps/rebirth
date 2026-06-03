@@ -374,7 +374,9 @@ pub fn App() -> Element {
                         }
                     },
                     Route::Audit => rsx! {
-                        AuditView { modals, next_modal_id }
+                        AuditView {
+                            auth_session: auth_session(),
+                        }
                     },
                     Route::Profile => rsx! {
                         ProfileView {

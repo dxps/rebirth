@@ -307,6 +307,20 @@ pub struct LoginResponse {
     pub data: AuthSession,
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditEvent {
+    pub id: String,
+    pub name: String,
+    pub content: String,
+    pub created_at: String,
+}
+
+#[derive(Deserialize)]
+pub struct AuditEventsResponse {
+    pub data: Vec<AuditEvent>,
+}
+
 #[derive(Deserialize)]
 pub struct AccessLevelsResponse {
     pub data: Vec<AccessLevel>,
