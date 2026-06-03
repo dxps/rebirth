@@ -38,6 +38,15 @@ pub fn Header(
             }
 
             div { class: "header-actions",
+                if menu_open {
+                    span {
+                        class: "user-menu-outside-click-layer",
+                        onclick: move |event| {
+                            event.stop_propagation();
+                            on_toggle_menu.call(event);
+                        },
+                    }
+                }
                 button {
                     class: "icon-button header-user-button",
                     aria_label: "Open user menu",
@@ -47,7 +56,12 @@ pub fn Header(
                 }
 
                 if menu_open {
-                    div { class: "user-menu", role: "menu",
+                    div {
+                        class: "user-menu",
+                        role: "menu",
+                        onclick: move |event| event.stop_propagation(),
+                        onpointerdown: move |event| event.stop_propagation(),
+                        onpointerup: move |event| event.stop_propagation(),
                         if logged_in {
                             button {
                                 role: "menuitem",

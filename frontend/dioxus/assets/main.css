@@ -272,6 +272,18 @@ textarea {
 	position: relative;
 }
 
+.header-user-button {
+	position: relative;
+	z-index: 1001;
+}
+
+.user-menu-outside-click-layer {
+	cursor: default;
+	inset: 0;
+	position: fixed;
+	z-index: 999;
+}
+
 .user-menu {
 	align-items: stretch;
 	background: var(--menu-bg);
@@ -284,6 +296,7 @@ textarea {
 	position: absolute;
 	right: 0;
 	top: calc(100% + 0.4rem);
+	z-index: 1001;
 }
 
 .user-menu button,
@@ -790,13 +803,13 @@ button.entity-views-manage-button:hover {
 	border-collapse: separate;
 	border-spacing: 0;
 	color: var(--fg);
-	font-size: 0.85rem;
+	font-size: 0.9rem;
 	width: 100%;
 }
 
 .data-table th {
 	color: var(--muted);
-	font-size: 0.72rem;
+	font-size: 0.84rem;
 	font-weight: 400;
 	padding: 0 0.55rem 0.35rem;
 	text-align: left;
@@ -1869,6 +1882,14 @@ button.data-explorer-view-copy {
 
 .entity-details-view-form.entity-edit-form
 	.entity-attributes-table
+	td:first-child
+	input {
+	margin-left: 1px;
+	width: calc(100% - 1px);
+}
+
+.entity-details-view-form.entity-edit-form
+	.entity-attributes-table
 	.entity-template-access-level-wrap {
 	box-sizing: border-box;
 	display: block;
@@ -2647,16 +2668,16 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 }
 
 .attribute-template-select-wrap::after {
-	border-bottom: 1.5px solid var(--select-chevron-color, var(--fg));
-	border-right: 1.5px solid var(--select-chevron-color, var(--fg));
+	border-bottom: 1.25px solid var(--select-chevron-color, var(--muted));
+	border-right: 1.25px solid var(--select-chevron-color, var(--muted));
 	content: '';
-	height: 0.48rem;
+	height: 0.34rem;
 	pointer-events: none;
 	position: absolute;
 	right: 0.62rem;
 	top: 50%;
 	transform: translateY(-65%) rotate(45deg);
-	width: 0.48rem;
+	width: 0.34rem;
 }
 
 .attribute-template-select-wrap:has(select:disabled)::after {
@@ -2816,15 +2837,15 @@ button.security-user-permissions-trigger {
 
 .security-user-permissions-trigger::after,
 button.security-user-permissions-trigger::after {
-	border-bottom: 1.5px solid color-mix(in srgb, var(--fg) 62%, transparent);
-	border-right: 1.5px solid color-mix(in srgb, var(--fg) 62%, transparent);
+	border-bottom: 1.25px solid var(--muted);
+	border-right: 1.25px solid var(--muted);
 	content: '';
-	height: 0.46rem;
+	height: 0.34rem;
 	position: absolute;
 	right: 0.62rem;
 	top: 50%;
 	transform: translateY(-65%) rotate(45deg);
-	width: 0.46rem;
+	width: 0.34rem;
 }
 
 .security-user-permissions-trigger[data-empty='true'] {
@@ -3066,7 +3087,7 @@ button.entity-template-tab[aria-selected='true'] {
 }
 
 .entity-template-modal-table {
-	font-size: 0.78rem;
+	font-size: 0.8rem;
 }
 
 .entity-template-attributes-table,
@@ -3093,7 +3114,7 @@ button.entity-template-tab[aria-selected='true'] {
 
 .entity-template-modal-table th {
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: 0.8rem;
 	font-weight: 400;
 }
 
@@ -3172,7 +3193,7 @@ button.entity-template-tab[aria-selected='true'] {
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	height: 1.72rem;
 	line-height: 1.35;
 	min-height: 1.72rem;
@@ -3192,13 +3213,13 @@ button.entity-template-tab[aria-selected='true'] {
 .entity-template-edit-attributes-table .security-user-permissions-trigger,
 .entity-template-edit-attributes-table
 	button.security-user-permissions-trigger {
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	min-height: 1.72rem;
 	padding-left: 0.36rem;
 }
 
 .entity-template-edit-attributes-table .security-user-permissions-menu {
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 }
 
 .entity-template-edit-form .security-user-permission-option,
@@ -3342,7 +3363,7 @@ button.entity-template-attribute-source-tab {
 	background: transparent;
 	border-radius: 6px;
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	min-height: 1.55rem;
 	padding: 0.24rem 0.48rem;
 }
@@ -3376,7 +3397,7 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 .entity-template-attribute-template-field {
 	color: var(--muted);
 	display: grid;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	gap: 0.3rem;
 }
 
@@ -3441,7 +3462,7 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 .entity-template-new-attribute-field {
 	color: var(--muted);
 	display: grid;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	gap: 0.28rem;
 }
 
@@ -3456,7 +3477,7 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	line-height: 1.3;
 	padding: 0.16rem 0.36rem;
 }
@@ -3466,8 +3487,8 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 }
 
 .entity-template-new-attribute-field textarea {
-	height: calc((0.78rem * 1.3 * 2) + 0.32rem);
-	min-height: calc((0.78rem * 1.3 * 2) + 0.32rem);
+	height: calc((0.82rem * 1.3 * 2) + 0.32rem);
+	min-height: calc((0.82rem * 1.3 * 2) + 0.32rem);
 	resize: none;
 }
 
@@ -3477,7 +3498,7 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 	cursor: pointer;
 	display: inline-flex;
 	flex-direction: row;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	gap: 0.45rem;
 	justify-self: start;
 	line-height: 1.2;

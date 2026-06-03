@@ -2612,7 +2612,7 @@ fn add_edit_entity_link(
 
         w.active_tab = EntityTab::Links;
         w.edit_error = None;
-        w.edit_open_link_target_menu_id = Some(id);
+        w.edit_open_link_target_menu_id = None;
         w.edit_open_access_level_menu_id = None;
         w.edit_open_value_type_menu_id = None;
         w.edit_is_listing_attribute_menu_open = false;
