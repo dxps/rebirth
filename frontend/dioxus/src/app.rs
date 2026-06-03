@@ -3,13 +3,15 @@ use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
 
 use crate::components::header::Header;
+use crate::components::modal::entity::{EntityDetailsModal, EntityDetailsWindow};
 use crate::components::modal::ModalLayer;
 use crate::types::{
-    AccessLevel, AuthSession, OpenModal, Permission, Route, Theme, User, FAVICON, MAIN_CSS,
-    WORK_SANS_300_NORMAL, WORK_SANS_400_ITALIC, WORK_SANS_400_NORMAL, WORK_SANS_600_NORMAL,
+    AccessLevel, AuthSession, Entity, EntityTemplate, OpenModal, Permission, Route, Theme, User,
+    FAVICON, MAIN_CSS, WORK_SANS_300_NORMAL, WORK_SANS_400_ITALIC, WORK_SANS_400_NORMAL,
+    WORK_SANS_600_NORMAL,
 };
 use crate::views::audit::AuditView;
-use crate::views::data_explorer::DataExplorerView;
+use crate::views::data_explorer::{open_entity_details_window, DataExplorerView};
 use crate::views::home::HomeView;
 use crate::views::login::LoginView;
 use crate::views::profile::ProfileView;
@@ -292,6 +294,12 @@ pub fn App() -> Element {
     let mut auth_session = use_signal(load_stored_auth_session);
     let modals = use_signal(Vec::<OpenModal>::new);
     let next_modal_id = use_signal(|| 1_u32);
+    let mut data_entities = use_signal(Vec::<Entity>::new);
+    let mut data_entity_templates = use_signal(Vec::<EntityTemplate>::new);
+    let mut data_access_levels = use_signal(Vec::<AccessLevel>::new);
+    let mut data_owner_users = use_signal(Vec::<User>::new);
+    let mut entity_details_windows = use_signal(Vec::<EntityDetailsWindow>::new);
+    let next_entity_window_id = use_signal(|| 1_u32);
     let mut security_access_levels = use_signal(Vec::<AccessLevel>::new);
     let mut security_users = use_signal(Vec::<User>::new);
     let mut security_permissions = use_signal(Vec::<Permission>::new);
@@ -320,6 +328,11 @@ pub fn App() -> Element {
                     security_access_levels.write().clear();
                     security_users.write().clear();
                     security_permissions.write().clear();
+                    data_entities.write().clear();
+                    data_entity_templates.write().clear();
+                    data_access_levels.write().clear();
+                    data_owner_users.write().clear();
+                    entity_details_windows.write().clear();
                     clear_stored_auth_session();
                     navigate_to(Route::Home, &mut route);
                     menu_open.set(false);
@@ -335,6 +348,12 @@ pub fn App() -> Element {
                             auth_session: auth_session(),
                             modals,
                             next_modal_id,
+                            entities: data_entities,
+                            entity_templates: data_entity_templates,
+                            access_levels: data_access_levels,
+                            owner_users: data_owner_users,
+                            entity_details_windows,
+                            next_window_id: next_entity_window_id,
                         }
                     },
                     Route::Templates => rsx! {
@@ -374,6 +393,35 @@ pub fn App() -> Element {
                                 navigate_to(Route::Home, &mut route);
                             },
                         }
+                    },
+                }
+            }
+            for window in entity_details_windows.read().iter().cloned() {
+                EntityDetailsModal {
+                    key: "{window.id}",
+                    window: window.clone(),
+                    windows: entity_details_windows,
+                    auth_session: auth_session(),
+                    session_key: auth_session
+                        .read()
+                        .as_ref()
+                        .map(|session| session.session_key.clone())
+                        .unwrap_or_default(),
+                    access_levels: data_access_levels.read().clone(),
+                    entities: data_entities,
+                    owner_users: data_owner_users.read().clone(),
+                    on_open_entity: move |entity_id: String| {
+                        let session_key = auth_session
+                            .read()
+                            .as_ref()
+                            .map(|session| session.session_key.clone())
+                            .unwrap_or_default();
+                        open_entity_details_window(
+                            entity_id,
+                            entity_details_windows,
+                            next_entity_window_id,
+                            session_key,
+                        );
                     },
                 }
             }

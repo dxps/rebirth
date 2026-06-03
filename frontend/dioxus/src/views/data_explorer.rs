@@ -4,7 +4,7 @@ use lucide_dioxus::{ArrowDownLeft, ArrowUpRight, ListFilter, Plus, RefreshCw, Tr
 use crate::components::modal::entity::{
     fetch_access_levels_list, fetch_entities, fetch_entity, fetch_entity_owners,
     fetch_entity_templates_list, load_saved_views, store_saved_views, CreateEntityModal,
-    CreateEntitySource, CreateEntityState, EntityDetailsModal, EntityDetailsWindow, EntityTab,
+    CreateEntitySource, CreateEntityState, EntityDetailsWindow, EntityTab,
 };
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
@@ -33,6 +33,12 @@ pub fn DataExplorerView(
     auth_session: Option<AuthSession>,
     modals: Signal<Vec<OpenModal>>,
     next_modal_id: Signal<u32>,
+    entities: Signal<Vec<Entity>>,
+    entity_templates: Signal<Vec<EntityTemplate>>,
+    access_levels: Signal<Vec<AccessLevel>>,
+    owner_users: Signal<Vec<User>>,
+    entity_details_windows: Signal<Vec<EntityDetailsWindow>>,
+    next_window_id: Signal<u32>,
 ) -> Element {
     let is_authenticated = auth_session.is_some();
     let is_authorized = auth_session
@@ -48,12 +54,6 @@ pub fn DataExplorerView(
         .map(|s| s.session_key.clone());
     let user_id = auth_session.as_ref().map(|s| s.user.id.clone());
 
-    // Core data
-    let mut entities = use_signal(Vec::<Entity>::new);
-    let mut entity_templates = use_signal(Vec::<EntityTemplate>::new);
-    let mut access_levels = use_signal(Vec::<AccessLevel>::new);
-    let mut owner_users = use_signal(Vec::<User>::new);
-
     // Saved views — loaded from localStorage
     let initial_saved_views = user_id.as_deref().map(load_saved_views).unwrap_or_default();
     let mut saved_views = use_signal(move || initial_saved_views);
@@ -66,10 +66,6 @@ pub fn DataExplorerView(
     let mut total = use_signal(|| 0_u32);
     let mut is_loading = use_signal(|| is_authorized);
     let mut error = use_signal(|| None::<String>);
-
-    // Entity details windows
-    let mut entity_details_windows = use_signal(Vec::<EntityDetailsWindow>::new);
-    let mut next_window_id = use_signal(|| 1_u32);
 
     // Create-choice popover
     let mut is_create_choice_open = use_signal(|| false);
@@ -491,31 +487,6 @@ pub fn DataExplorerView(
                             }
                         }
                     }
-                }
-            }
-
-            // Entity details windows
-            for window in entity_details_windows.read().iter().cloned() {
-                EntityDetailsModal {
-                    key: "{window.id}",
-                    window: window.clone(),
-                    windows: entity_details_windows,
-                    auth_session: auth_session.clone(),
-                    session_key: session_key.clone().unwrap_or_default(),
-                    access_levels: access_level_rows.clone(),
-                    entities,
-                    owner_users: owner_users.read().clone(),
-                    on_open_entity: {
-                        let sk = session_key.clone().unwrap_or_default();
-                        move |entity_id: String| {
-                            open_entity_details_window(
-                                entity_id,
-                                entity_details_windows,
-                                next_window_id,
-                                sk.clone(),
-                            );
-                        }
-                    },
                 }
             }
 
@@ -1046,7 +1017,7 @@ fn load_entities_page(
     });
 }
 
-fn open_entity_details_window(
+pub fn open_entity_details_window(
     entity_id: String,
     mut windows: Signal<Vec<EntityDetailsWindow>>,
     mut next_window_id: Signal<u32>,
