@@ -326,11 +326,19 @@ pub fn DataExplorerView(
                                                     Plus { class: "app-icon", size: 16 }
                                                 }
                                                 if is_create_choice_open() {
+                                                    span {
+                                                        class: "entity-create-outside-click-layer",
+                                                        onclick: move |event| {
+                                                            event.stop_propagation();
+                                                            is_create_choice_open.set(false);
+                                                        },
+                                                        onpointerdown: move |event| event.stop_propagation(),
+                                                        onpointerup: move |event| event.stop_propagation(),
+                                                    }
                                                     CreateChoicePopover {
                                                         entity_templates: template_rows.clone(),
                                                         selected_source: create_choice_source(),
                                                         selected_template_id: create_choice_template_id(),
-                                                        on_close: move |_| is_create_choice_open.set(false),
                                                         on_source_change: move |source| create_choice_source.set(source),
                                                         on_template_change: move |id| create_choice_template_id.set(id),
                                                         on_open_create: move |_| {
@@ -630,7 +638,6 @@ fn CreateChoicePopover(
     entity_templates: Vec<EntityTemplate>,
     selected_source: CreateEntitySource,
     selected_template_id: String,
-    on_close: EventHandler<MouseEvent>,
     on_source_change: EventHandler<CreateEntitySource>,
     on_template_change: EventHandler<String>,
     on_open_create: EventHandler<MouseEvent>,
@@ -668,12 +675,6 @@ fn CreateChoicePopover(
             aria_label: "Create entity",
             onclick: move |event| event.stop_propagation(),
             onpointerdown: move |event| event.stop_propagation(),
-            button {
-                class: "icon-only-button include-attribute-close-button",
-                aria_label: "Close create entity popup",
-                onclick: move |event| on_close.call(event),
-                lucide_dioxus::X { class: "app-icon", size: 14 }
-            }
             p { class: "entity-create-popover-title", "Create an entity from:" }
             div { class: "entity-create-radio-group",
                 label {

@@ -393,7 +393,7 @@ textarea {
 .login-form label > span,
 .profile-form label > span {
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 }
 
 .login-form button,
@@ -936,7 +936,7 @@ button.entity-views-manage-button:hover {
 
 .templates-table-wrap .data-table th {
 	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	padding-bottom: 0.3rem;
 	text-transform: none;
 }
@@ -1199,36 +1199,38 @@ button.entity-views-manage-button:hover {
 	position: relative;
 }
 
+.entity-create-outside-click-layer {
+	cursor: default;
+	inset: 0;
+	position: fixed;
+	z-index: 39;
+}
+
 .entity-create-popover {
 	position: fixed;
 	right: auto;
 	top: auto;
 	min-width: 11rem;
-	padding-top: 0.75rem;
+	padding: 0.75rem;
 	text-align: left;
 	width: 11rem;
 	z-index: 40;
 }
 
-.entity-create-popover .include-attribute-close-button,
-.entity-create-popover button.include-attribute-close-button {
-	border-radius: 999px;
-	height: 1.45rem;
-	min-height: 1.45rem;
-	width: 1.45rem;
+.include-attribute-popover.entity-create-popover {
+	gap: 0.42rem;
 }
 
 .entity-create-popover-title {
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: 0.85rem;
 	line-height: 1.25;
 	margin: 0;
-	padding-right: 1.6rem;
 }
 
 .entity-create-radio-group {
 	display: grid;
-	gap: 0.4rem;
+	gap: 0.16rem;
 }
 
 .entity-template-edit-form .entity-create-radio-group label,
@@ -1239,11 +1241,11 @@ button.entity-views-manage-button:hover {
 	cursor: pointer;
 	display: flex;
 	flex-direction: row;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	gap: 0.42rem;
 	grid-template-columns: none;
 	line-height: 1.2;
-	padding: 0.26rem 0.32rem;
+	padding: 0.16rem 0.2rem;
 	white-space: nowrap;
 }
 
@@ -1264,10 +1266,36 @@ button.entity-views-manage-button:hover {
 
 .entity-template-edit-form .entity-create-radio-group input,
 .entity-create-radio-group input {
+	appearance: none;
+	background: transparent;
+	border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
 	border-radius: 999px;
 	flex: 0 0 auto;
-	height: 1.05rem;
-	width: 1.05rem;
+	height: 0.84rem;
+	min-height: 0.84rem;
+	padding: 0;
+	position: relative;
+	width: 0.84rem;
+}
+
+.entity-template-edit-form .entity-create-radio-group input:checked,
+.entity-create-radio-group input:checked {
+	border-color: var(--focus-ring);
+	box-shadow: none;
+	outline: 0;
+}
+
+.entity-template-edit-form .entity-create-radio-group input:checked::after,
+.entity-create-radio-group input:checked::after {
+	background: var(--focus-ring);
+	border-radius: 999px;
+	content: '';
+	height: 38%;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 38%;
 }
 
 .entity-template-edit-form .entity-create-radio-group label > span:first-child {
@@ -1282,7 +1310,7 @@ button.entity-views-manage-button:hover {
 .entity-create-popover-fields label {
 	color: var(--muted);
 	display: grid;
-	font-size: 0.72rem;
+	font-size: 0.8rem;
 	gap: 0.2rem;
 }
 
@@ -1292,7 +1320,7 @@ button.entity-views-manage-button:hover {
 
 .entity-create-popover-fields .security-user-permissions-trigger,
 .entity-create-popover-fields button.security-user-permissions-trigger {
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	min-height: 1.38rem;
 	padding-bottom: 0.13rem;
 	padding-top: 0.13rem;
@@ -1310,7 +1338,7 @@ button.entity-views-manage-button:hover {
 	color: var(--fg);
 	cursor: pointer;
 	display: flex;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	justify-content: flex-start;
 	line-height: 1.2;
 	padding: 0.26rem 0.32rem;
@@ -1500,7 +1528,7 @@ button.entity-views-manage-button:hover {
 .entity-attributes-table button.security-user-permissions-trigger,
 .entity-create-summary-select-wrap .security-user-permissions-trigger,
 .entity-create-summary-select-wrap button.security-user-permissions-trigger {
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	min-height: 1.72rem;
 	padding-bottom: 0.16rem;
 	padding-top: 0.16rem;
@@ -1521,7 +1549,7 @@ button.entity-views-manage-button:hover {
 	color: var(--fg);
 	cursor: pointer;
 	display: flex;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	justify-content: flex-start;
 	line-height: 1.2;
 	padding: 0.26rem 0.32rem;
@@ -2274,7 +2302,7 @@ button.data-explorer-view-copy:hover {
 .entity-id-popover-title {
 	color: var(--fg);
 	cursor: text;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	line-height: 1.2;
 	margin: 0;
 	user-select: text;
@@ -2338,7 +2366,7 @@ button.entity-include-source-option {
 	border-radius: 6px;
 	color: var(--fg);
 	display: flex;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	gap: 0.42rem;
 	justify-content: flex-start;
 	line-height: 1.2;
@@ -2437,14 +2465,14 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .entity-ownership-popover label {
 	color: var(--muted);
 	display: grid;
-	font-size: 0.72rem;
+	font-size: 0.76rem;
 	gap: 0.25rem;
 }
 
 .entity-ownership-field {
 	color: var(--muted);
 	display: grid;
-	font-size: 0.72rem;
+	font-size: 0.76rem;
 	gap: 0.25rem;
 }
 
@@ -2474,7 +2502,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 
 .entity-ownership-read-title {
 	color: var(--fg);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	line-height: 1.2;
 	margin: 0;
 	white-space: nowrap;
@@ -2591,7 +2619,7 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 .access-level-edit-form label > span,
 .entity-template-edit-form label > span {
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	line-height: 1.2;
 }
 
@@ -3050,7 +3078,7 @@ button.entity-template-tab {
 	border-radius: 6px 6px 0 0;
 	color: var(--muted);
 	display: inline-flex;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	gap: 0.32rem;
 	min-height: 1.8rem;
 	padding: 0.25rem 0.55rem;
@@ -3629,7 +3657,7 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 	border-radius: 6px;
 	color: var(--fg);
 	font: inherit;
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	height: 1.72rem;
 	line-height: 1.35;
 	min-height: 1.72rem;
@@ -3652,7 +3680,7 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 
 .entity-template-links-table .security-user-permissions-trigger,
 .entity-template-links-table button.security-user-permissions-trigger {
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	min-height: 1.72rem;
 	padding-left: 0.36rem;
 }
