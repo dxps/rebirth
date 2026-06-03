@@ -405,8 +405,8 @@ pub fn EntityDetailsModal(
                 if let Some((offset_x, offset_y)) = drag_offset() {
                     if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id_move) {
                         w.position = crate::types::ModalPosition {
-                            x: (point.x - offset_x).max(16.0),
-                            y: (point.y - offset_y).max(64.0),
+                            x: (point.x - offset_x).max(0.0),
+                            y: (point.y - offset_y).max(0.0),
                         };
                     }
                 }
@@ -2850,8 +2850,8 @@ pub fn CreateEntityModal(
 
                 if let Some((offset_x, offset_y)) = drag_offset() {
                     modal_position.set(crate::types::ModalPosition {
-                        x: (point.x - offset_x).max(16.0),
-                        y: (point.y - offset_y).max(64.0),
+                        x: (point.x - offset_x).max(0.0),
+                        y: (point.y - offset_y).max(0.0),
                     });
                 }
 

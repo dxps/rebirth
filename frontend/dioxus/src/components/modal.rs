@@ -284,8 +284,8 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                     .find(|modal| modal.id == drag.modal_id)
                                 {
                                     modal.position = ModalPosition {
-                                        x: (point.x - drag.offset_x).max(16.0),
-                                        y: (point.y - drag.offset_y).max(64.0),
+                                        x: (point.x - drag.offset_x).max(0.0),
+                                        y: (point.y - drag.offset_y).max(0.0),
                                     };
                                 }
                             }

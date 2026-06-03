@@ -784,8 +784,8 @@ fn ViewsManagementModal(
                 if let Some((offset_x, offset_y)) = drag_offset() {
                     let point = event.data().client_coordinates();
                     position.set(ModalPosition {
-                        x: (point.x - offset_x).max(16.0),
-                        y: (point.y - offset_y).max(64.0),
+                        x: (point.x - offset_x).max(0.0),
+                        y: (point.y - offset_y).max(0.0),
                     });
                 }
             },
