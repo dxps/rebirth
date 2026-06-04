@@ -2305,7 +2305,7 @@ fn EntityLinksTab(
                         th { "description" }
                         th { "target" }
                         if is_edit {
-                            th { class: "data-table-action-heading",
+                            th { class: "data-table-action-heading entity-template-link-action-column",
                                 button {
                                     class: "section-action-button entity-template-link-add-button",
                                     "data-tooltip": "Include link",

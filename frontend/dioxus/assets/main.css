@@ -3843,6 +3843,14 @@ button.entity-template-attribute-source-tab[aria-selected='true'] {
 	width: 8%;
 }
 
+.entity-details-view-form
+	.entity-entity-links-table
+	th.entity-template-link-action-column {
+	align-items: center;
+	display: flex;
+	justify-content: flex-end;
+}
+
 .entity-template-links-table td {
 	padding-bottom: 0.24rem;
 	padding-top: 0.24rem;
