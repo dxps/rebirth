@@ -486,6 +486,7 @@ pub struct EntityIncomingLink {
 pub struct Entity {
     pub id: String,
     pub owner_user_id: String,
+    pub owner_username: Option<String>,
     pub attributes: Vec<EntityAttribute>,
     pub listing_attribute_id: String,
     pub links: Vec<EntityLink>,

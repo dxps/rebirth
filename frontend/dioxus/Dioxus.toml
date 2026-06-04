@@ -3,7 +3,7 @@
 [web.app]
 
 # HTML title tag content
-title = "rebirth-ui-dioxus"
+title = "Rebirth"
 
 # include `assets` in web platform
 [web.resource]

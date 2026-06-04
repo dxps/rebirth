@@ -205,7 +205,7 @@ const LABEL_UNION: &str = "SELECT id, value FROM text_entity_attributes \
         UNION ALL SELECT id, COALESCE(value::text, '') AS value FROM date_entity_attributes \
         UNION ALL SELECT id, COALESCE(value::text, '') AS value FROM datetime_entity_attributes";
 
-type EntityRow = (Uuid, Uuid, Uuid);
+type EntityRow = (Uuid, Uuid, Option<String>, Uuid);
 type AttrRow = (Uuid, Uuid, String, String, String, bool, i32, i32, String);
 type LinkRow = (Uuid, Uuid, Option<Uuid>, String, Option<String>, i32);
 type LabelRow = (Uuid, Option<String>);
@@ -222,13 +222,22 @@ async fn read_entity_rows(
         .map(|term| format!("%{term}%"));
 
     let rows: Vec<EntityRow> = if let Some(id) = id {
-        sqlx::query_as("SELECT id, owner_user_id, listing_attribute_id FROM entities WHERE id = $1")
+        sqlx::query_as(
+            "SELECT entities.id, entities.owner_user_id, users.username AS owner_username, \
+                    entities.listing_attribute_id \
+             FROM entities \
+             INNER JOIN users ON users.id = entities.owner_user_id \
+             WHERE entities.id = $1",
+        )
             .bind(id)
             .fetch_all(pool)
             .await?
     } else if let Some(pattern) = &search_pattern {
         let query = format!(
-            "SELECT id, owner_user_id, listing_attribute_id FROM entities \
+            "SELECT entities.id, entities.owner_user_id, users.username AS owner_username, \
+                    entities.listing_attribute_id \
+             FROM entities \
+             INNER JOIN users ON users.id = entities.owner_user_id \
              WHERE EXISTS ( \
                 SELECT 1 FROM ( \
                     SELECT entity_id, name, value FROM text_entity_attributes \
@@ -243,7 +252,12 @@ async fn read_entity_rows(
         );
         sqlx::query_as(&query).bind(pattern).fetch_all(pool).await?
     } else {
-        sqlx::query_as("SELECT id, owner_user_id, listing_attribute_id FROM entities")
+        sqlx::query_as(
+            "SELECT entities.id, entities.owner_user_id, users.username AS owner_username, \
+                    entities.listing_attribute_id \
+             FROM entities \
+             INNER JOIN users ON users.id = entities.owner_user_id",
+        )
             .fetch_all(pool)
             .await?
     };
@@ -332,7 +346,7 @@ async fn read_entity_rows(
 
     let mut entities: Vec<Entity> = rows
         .into_iter()
-        .map(|(eid, owner_user_id, listing_attribute_id)| {
+        .map(|(eid, owner_user_id, owner_username, listing_attribute_id)| {
             let mut attributes: Vec<&AttrRow> =
                 attribute_rows.iter().filter(|row| row.1 == eid).collect();
             attributes.sort_by_key(|row| row.7);
@@ -356,6 +370,7 @@ async fn read_entity_rows(
                     .collect(),
                 id: eid.to_string(),
                 owner_user_id: owner_user_id.to_string(),
+                owner_username,
                 links: links
                     .into_iter()
                     .map(|row| EntityLink {

@@ -2020,7 +2020,29 @@ button.data-explorer-view-copy {
 	.entity-attributes-tabpanel
 	.entity-attributes-table
 	tr {
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 8.6rem 7rem 3.6rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 6.6rem 7rem 3.6rem;
+}
+
+.entity-details-view-form
+	.entity-attributes-tabpanel
+	.entity-attributes-table
+	tr {
+	border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+.entity-details-view-form
+	.entity-attributes-tabpanel
+	.entity-attributes-table
+	:is(th, td) {
+	border-bottom: 0;
+}
+
+.entity-details-view-form
+	.entity-attributes-tabpanel
+	.entity-attributes-table
+	tbody
+	tr:last-child {
+	border-bottom: 0;
 }
 
 .entity-details-view-form.entity-edit-form
@@ -2208,18 +2230,22 @@ button.data-explorer-view-copy {
 .entity-details-status-bar {
 	align-items: center;
 	display: flex;
-	inset: auto 1.55rem 0.1rem 0;
-	justify-content: flex-end;
+	inset: auto 3.2rem 0.1rem 1.55rem;
+	justify-content: flex-start;
 	line-height: 0;
 	min-height: 1.25rem;
 	pointer-events: none;
 	position: absolute;
 }
 
+.entity-details-view-form > .entity-details-status-bar {
+	inset: auto 3.2rem -1.55rem 1.55rem;
+}
+
 .entity-details-status-error {
 	color: var(--error);
 	font-size: 0.86rem;
-	font-weight: 600;
+	font-weight: 400;
 	line-height: 1.2;
 	overflow: hidden;
 	text-overflow: ellipsis;

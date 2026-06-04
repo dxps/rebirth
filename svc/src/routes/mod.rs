@@ -139,6 +139,12 @@ fn opt_str(value: &Value, key: &str) -> Option<String> {
     value.get(key).and_then(Value::as_str).map(str::to_string)
 }
 
+fn creates_for_other_owner(owner_input: &Option<String>, user: &User) -> bool {
+    owner_input
+        .as_deref()
+        .is_some_and(|owner| owner != user.id.as_str() && !user.can_manage_data())
+}
+
 fn opt_i32(value: &Value, key: &str) -> Option<i32> {
     value.get(key).and_then(Value::as_i64).map(|n| n as i32)
 }
@@ -569,7 +575,7 @@ async fn create_attribute_template(
         return web::error(StatusCode::BAD_REQUEST, "Invalid attribute template");
     }
     let owner_input = opt_str(&input, "ownerUserId");
-    if owner_input.is_some() && !user.can_manage_data() {
+    if creates_for_other_owner(&owner_input, &user) {
         return web::authorization_required();
     }
     if let Some(owner) = &owner_input {
@@ -720,7 +726,7 @@ async fn create_entity_template(
         return web::error(StatusCode::BAD_REQUEST, "Invalid entity template");
     }
     let owner_input = opt_str(&input, "ownerUserId");
-    if owner_input.is_some() && !user.can_manage_data() {
+    if creates_for_other_owner(&owner_input, &user) {
         return web::authorization_required();
     }
     if let Some(owner) = &owner_input {
@@ -943,10 +949,12 @@ async fn create_entity(State(state): State<AppState>, headers: HeaderMap, body: 
         return internal("Unable to create entity");
     };
     if !v::is_create_entity_input(&input) {
-        return web::error(StatusCode::BAD_REQUEST, "Invalid entity");
+        let message =
+            v::create_entity_input_error(&input).unwrap_or_else(|| "Invalid entity".to_string());
+        return web::error(StatusCode::BAD_REQUEST, &message);
     }
     let owner_input = opt_str(&input, "ownerUserId");
-    if owner_input.is_some() && !user.can_manage_data() {
+    if creates_for_other_owner(&owner_input, &user) {
         return web::authorization_required();
     }
     if let Some(owner) = &owner_input {

@@ -5,8 +5,8 @@ use lucide_dioxus::{
 
 use crate::components::modal::entity::{
     fetch_access_levels_list, fetch_entities, fetch_entity, fetch_entity_owners,
-    fetch_entity_templates_list, load_saved_views, store_saved_views, CreateEntityModal,
-    CreateEntitySource, CreateEntityState, EntityDetailsWindow, EntityTab,
+    fetch_entity_templates_list, load_saved_views, new_entity_attribute_id, store_saved_views,
+    CreateEntityModal, CreateEntitySource, CreateEntityState, EntityDetailsWindow, EntityTab,
 };
 use crate::components::modal::{modal_position_from_pointer, DeleteConfirmPopover};
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
@@ -93,6 +93,7 @@ pub fn DataExplorerView(
     // --- Initial load ---
     let mut has_loaded = use_signal(|| false);
     let initial_sk = session_key.clone();
+    let initial_can_assign_owner = can_assign_owner;
 
     use_effect(move || {
         if has_loaded() {
@@ -115,11 +116,13 @@ pub fn DataExplorerView(
                     access_levels.set(levels);
                 }
             });
-            spawn(async move {
-                if let Ok(users) = fetch_entity_owners(&sk4).await {
-                    owner_users.set(users);
-                }
-            });
+            if initial_can_assign_owner {
+                spawn(async move {
+                    if let Ok(users) = fetch_entity_owners(&sk4).await {
+                        owner_users.set(users);
+                    }
+                });
+            }
 
             load_entities_page(sk, String::new(), 1, entities, total, is_loading, error);
         }
@@ -373,9 +376,8 @@ pub fn DataExplorerView(
                                                                             sorted.sort_by_key(|a| a.listing_index);
                                                                             let attrs = sorted
                                                                                 .into_iter()
-                                                                                .enumerate()
-                                                                                .map(|(i, ta)| {
-                                                                                    let id = format!("new-{i}");
+                                                                                .map(|ta| {
+                                                                                    let id = new_entity_attribute_id();
                                                                                     if ta.id == template_listing_attribute_id {
                                                                                         listing_attribute_id = id.clone();
                                                                                     }
@@ -414,6 +416,7 @@ pub fn DataExplorerView(
                                                                 open_value_type_menu_id: None,
                                                                 is_listing_attribute_menu_open: false,
                                                                 is_owner_open: false,
+                                                                dragged_attribute_id: None,
                                                                 position: modal_position_from_pointer(&event),
                                                             }));
                                                             is_create_choice_open.set(false);
@@ -514,6 +517,8 @@ pub fn DataExplorerView(
                 CreateEntityModal {
                     state: state.clone(),
                     create_state: create_entity_state,
+                    windows: entity_details_windows,
+                    next_window_id,
                     entity_templates: template_rows.clone(),
                     access_levels: access_level_rows.clone(),
                     session_key: session_key.clone().unwrap_or_default(),
@@ -522,7 +527,7 @@ pub fn DataExplorerView(
                     can_assign_owner,
                     entities,
                     position: state.position,
-                    size: ModalSize { height: 440.0, width: 600.0 },
+                    size: ModalSize { height: 440.0, width: 640.0 },
                     z_index: 50,
                 }
             }
@@ -1190,7 +1195,7 @@ pub fn open_entity_details_window(
         position,
         size: ModalSize {
             height: 440.0,
-            width: 600.0,
+            width: 640.0,
         },
         edit_attributes: Vec::new(),
         edit_links: Vec::new(),

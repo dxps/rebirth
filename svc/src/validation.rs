@@ -335,6 +335,78 @@ fn has_valid_entity_attributes(
     all_valid && ids.iter().any(|id| id == listing_id)
 }
 
+fn entity_attributes_error(
+    attributes: Option<&Value>,
+    listing_attribute_id: Option<&Value>,
+) -> Option<String> {
+    let Some(Value::Array(items)) = attributes else {
+        return Some("attributes must be a non-empty array".to_string());
+    };
+    if items.is_empty() {
+        return Some("attributes must contain at least one attribute".to_string());
+    }
+    let Some(listing_id) = listing_attribute_id.and_then(Value::as_str) else {
+        return Some("listingAttributeId is required".to_string());
+    };
+    if !is_loose_uuid(listing_id) {
+        return Some("listingAttributeId must be a UUID".to_string());
+    }
+
+    let mut ids = HashSet::new();
+    let mut listing_indexes = HashSet::new();
+    for (index, attribute) in items.iter().enumerate() {
+        if !attribute.is_object() {
+            return Some(format!("attributes[{index}] must be an object"));
+        }
+        let Some(id) = attribute.get("id").and_then(Value::as_str) else {
+            return Some(format!("attributes[{index}].id is required"));
+        };
+        if !is_loose_uuid(id) {
+            return Some(format!("attributes[{index}].id must be a UUID"));
+        }
+        if !ids.insert(id) {
+            return Some("attribute ids must be unique".to_string());
+        }
+        if !attribute.get("name").map(is_str).unwrap_or(false) {
+            return Some(format!("attributes[{index}].name must be a string"));
+        }
+        if !attribute.get("description").map(is_str).unwrap_or(false) {
+            return Some(format!("attributes[{index}].description must be a string"));
+        }
+        if !attribute.get("valueType").map(is_value_type).unwrap_or(false) {
+            return Some(format!("attributes[{index}].valueType is invalid"));
+        }
+        if !attribute.get("isRequired").map(Value::is_boolean).unwrap_or(false) {
+            return Some(format!("attributes[{index}].isRequired must be a boolean"));
+        }
+        if !attribute
+            .get("accessLevelId")
+            .map(is_access_level_id_value)
+            .unwrap_or(false)
+        {
+            return Some(format!("attributes[{index}].accessLevelId is invalid"));
+        }
+        let Some(listing_index) = attribute.get("listingIndex").and_then(Value::as_i64) else {
+            return Some(format!("attributes[{index}].listingIndex is required"));
+        };
+        if listing_index < 0 {
+            return Some(format!(
+                "attributes[{index}].listingIndex must be zero or greater"
+            ));
+        }
+        if !listing_indexes.insert(listing_index) {
+            return Some("attribute listingIndex values must be unique".to_string());
+        }
+        if !attribute.get("value").map(is_str).unwrap_or(false) {
+            return Some(format!("attributes[{index}].value must be a string"));
+        }
+    }
+    if !ids.contains(listing_id) {
+        return Some("listingAttributeId must match one of the attribute ids".to_string());
+    }
+    None
+}
+
 fn is_create_entity_link_input(v: &Value) -> bool {
     v.is_object()
         && match v.get("targetEntityId") {
@@ -395,6 +467,77 @@ pub fn is_create_entity_input(v: &Value) -> bool {
         && template_absent
         && has_valid_entity_attributes(v.get("attributes"), v.get("listingAttributeId"))
         && links_all(v, is_create_entity_link_input)
+}
+
+pub fn create_entity_input_error(v: &Value) -> Option<String> {
+    if !v.is_object() {
+        return Some("request body must be an object".to_string());
+    }
+    if !opt(v, "ownerUserId", is_owner_user_id) {
+        return Some("ownerUserId must be a user id".to_string());
+    }
+
+    if let Some(template_id) = v.get("entityTemplateId").and_then(Value::as_str) {
+        if !is_uuid_v7(template_id) {
+            return Some("entityTemplateId must be an entity template id".to_string());
+        }
+        if v.get("attributes").is_some() {
+            if let Some(message) =
+                entity_attributes_error(v.get("attributes"), v.get("listingAttributeId"))
+            {
+                return Some(message);
+            }
+        } else if let Some(value) = v.get("attributeValues") {
+            let Value::Array(items) = value else {
+                return Some("attributeValues must be an array".to_string());
+            };
+            for (index, item) in items.iter().enumerate() {
+                if !is_entity_template_attribute_value_input(item) {
+                    return Some(format!("attributeValues[{index}] is invalid"));
+                }
+            }
+        }
+        if v.get("links").is_some() && v.get("linkTargets").is_some() {
+            return Some("provide either links or linkTargets, not both".to_string());
+        }
+        if let Some(Value::Array(items)) = v.get("links") {
+            for (index, item) in items.iter().enumerate() {
+                if !is_create_entity_link_input(item) {
+                    return Some(format!("links[{index}] is invalid"));
+                }
+            }
+        } else if v.get("links").is_some() {
+            return Some("links must be an array".to_string());
+        }
+        if let Some(Value::Array(items)) = v.get("linkTargets") {
+            for (index, item) in items.iter().enumerate() {
+                if !is_entity_template_link_target_input(item) {
+                    return Some(format!("linkTargets[{index}] is invalid"));
+                }
+            }
+        } else if v.get("linkTargets").is_some() {
+            return Some("linkTargets must be an array".to_string());
+        }
+        return None;
+    }
+
+    if !matches!(v.get("entityTemplateId"), None | Some(Value::Null)) {
+        return Some("entityTemplateId must be an entity template id".to_string());
+    }
+    if let Some(message) = entity_attributes_error(v.get("attributes"), v.get("listingAttributeId"))
+    {
+        return Some(message);
+    }
+    if let Some(Value::Array(items)) = v.get("links") {
+        for (index, item) in items.iter().enumerate() {
+            if !is_create_entity_link_input(item) {
+                return Some(format!("links[{index}] is invalid"));
+            }
+        }
+    } else if v.get("links").is_some() {
+        return Some("links must be an array".to_string());
+    }
+    None
 }
 
 pub fn is_update_entity_input(v: &Value) -> bool {
