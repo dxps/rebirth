@@ -11,8 +11,8 @@ use crate::components::modal::entity::{
 use crate::components::modal::{modal_position_from_pointer, DeleteConfirmPopover};
 use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPicker};
 use crate::types::{
-    AccessLevel, AuthSession, Entity, EntityAttribute, EntityTemplate, ModalPosition, ModalSize,
-    OpenModal, SavedView, User,
+    AccessLevel, AuthSession, Entity, EntityAttribute, EntityLink, EntityTemplate, ModalPosition,
+    ModalSize, OpenModal, SavedView, User,
 };
 
 // ---------------------------------------------------------------------------
@@ -363,6 +363,7 @@ pub fn DataExplorerView(
                                                             };
                                                             let tmpl_id = create_choice_template_id();
                                                             let mut listing_attribute_id = String::new();
+                                                            let mut links = Vec::new();
                                                             let attrs = match &source {
                                                                 CreateEntitySource::Template => {
                                                                     entity_templates
@@ -372,6 +373,20 @@ pub fn DataExplorerView(
                                                                         .map(|t| {
                                                                             let template_listing_attribute_id =
                                                                                 t.listing_attribute_id.clone();
+                                                                            let mut sorted_links = t.links.clone();
+                                                                            sorted_links.sort_by_key(|link| link.listing_index);
+                                                                            links = sorted_links
+                                                                                .into_iter()
+                                                                                .map(|link| EntityLink {
+                                                                                    id: new_entity_attribute_id(),
+                                                                                    entity_id: String::new(),
+                                                                                    target_entity_id: None,
+                                                                                    target_entity_label: None,
+                                                                                    name: link.name,
+                                                                                    description: link.description,
+                                                                                    listing_index: link.listing_index,
+                                                                                })
+                                                                                .collect();
                                                                             let mut sorted = t.attributes.clone();
                                                                             sorted.sort_by_key(|a| a.listing_index);
                                                                             let attrs = sorted
@@ -408,15 +423,25 @@ pub fn DataExplorerView(
                                                                 entity_template_id: tmpl_id,
                                                                 owner_user_id: create_owner_user_id.clone(),
                                                                 attributes: attrs,
+                                                                links,
                                                                 listing_attribute_id,
                                                                 error: None,
                                                                 is_saving: false,
                                                                 active_tab: EntityTab::Attributes,
                                                                 open_access_level_menu_id: None,
                                                                 open_value_type_menu_id: None,
+                                                                open_link_target_menu_id: None,
+                                                                is_include_attribute_open: false,
+                                                                include_attribute_source: None,
+                                                                attribute_templates: Vec::new(),
+                                                                attribute_templates_error: None,
+                                                                is_attribute_templates_loading: false,
+                                                                selected_attribute_template_id: None,
+                                                                is_attribute_template_menu_open: false,
                                                                 is_listing_attribute_menu_open: false,
                                                                 is_owner_open: false,
                                                                 dragged_attribute_id: None,
+                                                                dragged_link_id: None,
                                                                 position: modal_position_from_pointer(&event),
                                                             }));
                                                             is_create_choice_open.set(false);

@@ -593,6 +593,8 @@ fn EntityDetailsTitlebarActions(
     let is_edit_mode = window.is_edit_mode;
     let can_assign_owner = has_any_permission(auth_session.as_ref(), &["Admin"]);
     let can_save = is_edit_mode
+        && !window.edit_attributes.is_empty()
+        && !window.edit_listing_attribute_id.is_empty()
         && window
             .edit_attributes
             .iter()
@@ -1970,7 +1972,7 @@ fn EntityAttributeRow(
                         class: "icon-only-button entity-template-row-action-button",
                         "data-tooltip": "Remove",
                         aria_label: "Remove {attr_name}",
-                        disabled: is_saving || edit_attrs.len() <= 1,
+                        disabled: is_saving,
                         r#type: "button",
                         onpointerdown: move |event| event.stop_propagation(),
                         onclick: {
@@ -2199,10 +2201,6 @@ fn remove_edit_entity_attribute(
     attribute_id: String,
 ) {
     if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
-        if w.edit_attributes.len() <= 1 {
-            return;
-        }
-
         w.edit_attributes
             .retain(|attribute| attribute.id != attribute_id);
         renumber_entity_attributes(&mut w.edit_attributes);
@@ -2791,15 +2789,25 @@ pub struct CreateEntityState {
     pub entity_template_id: String,
     pub owner_user_id: String,
     pub attributes: Vec<EntityAttribute>,
+    pub links: Vec<EntityLink>,
     pub listing_attribute_id: String,
     pub error: Option<String>,
     pub is_saving: bool,
     pub active_tab: EntityTab,
     pub open_access_level_menu_id: Option<String>,
     pub open_value_type_menu_id: Option<String>,
+    pub open_link_target_menu_id: Option<String>,
+    pub is_include_attribute_open: bool,
+    pub include_attribute_source: Option<EntityAttributeIncludeSource>,
+    pub attribute_templates: Vec<AttributeTemplate>,
+    pub attribute_templates_error: Option<String>,
+    pub is_attribute_templates_loading: bool,
+    pub selected_attribute_template_id: Option<String>,
+    pub is_attribute_template_menu_open: bool,
     pub is_listing_attribute_menu_open: bool,
     pub is_owner_open: bool,
     pub dragged_attribute_id: Option<String>,
+    pub dragged_link_id: Option<String>,
     pub position: ModalPosition,
 }
 
@@ -2871,10 +2879,42 @@ pub fn CreateEntityModal(
             value: user.id.clone(),
         })
         .collect::<Vec<_>>();
+    let target_entities = entities.read().clone();
+    let target_options = target_entities
+        .iter()
+        .map(|entity| SingleSelectOption {
+            label: entity_listing_label(entity),
+            value: entity.id.clone(),
+        })
+        .collect::<Vec<_>>();
+    let selected_attribute_template_id = state
+        .selected_attribute_template_id
+        .clone()
+        .or_else(|| state.attribute_templates.first().map(|template| template.id.clone()));
+    let selected_attribute_template_id_value =
+        selected_attribute_template_id.clone().unwrap_or_default();
+    let selected_attribute_template_label = state
+        .attribute_templates
+        .iter()
+        .find(|template| Some(template.id.as_str()) == selected_attribute_template_id.as_deref())
+        .map(|template| template.name.clone())
+        .unwrap_or_default();
+    let attribute_template_options = state
+        .attribute_templates
+        .iter()
+        .map(|template| SingleSelectOption {
+            label: template.name.clone(),
+            value: template.id.clone(),
+        })
+        .collect::<Vec<_>>();
 
     let can_save = !state.attributes.is_empty()
         && !state.listing_attribute_id.is_empty()
-        && state.attributes.iter().all(|a| !a.name.trim().is_empty());
+        && state.attributes.iter().all(|a| !a.name.trim().is_empty())
+        && state
+            .links
+            .iter()
+            .all(|link| !link.name.trim().is_empty() && link.target_entity_id.is_some());
 
     let title = "Entity :: New";
     let mut modal_position = use_signal(move || position);
@@ -2918,6 +2958,7 @@ pub fn CreateEntityModal(
                 resize_start.set(None);
                 if let Some(s) = create_state.write().as_mut() {
                     s.dragged_attribute_id = None;
+                    s.dragged_link_id = None;
                 }
             },
             onpointercancel: move |_| {
@@ -2925,6 +2966,7 @@ pub fn CreateEntityModal(
                 resize_start.set(None);
                 if let Some(s) = create_state.write().as_mut() {
                     s.dragged_attribute_id = None;
+                    s.dragged_link_id = None;
                 }
             },
             div {
@@ -2965,6 +3007,7 @@ pub fn CreateEntityModal(
                                             s.is_listing_attribute_menu_open = false;
                                             s.open_access_level_menu_id = None;
                                             s.open_value_type_menu_id = None;
+                                            s.open_link_target_menu_id = None;
                                         }
                                     },
                                     User { class: "app-icon", size: 15 }
@@ -3012,7 +3055,7 @@ pub fn CreateEntityModal(
                         }
                         button {
                             class: "draggable-modal-titlebar-button",
-                            "data-tooltip": if can_save { "Save" } else { "Add at least one attribute" },
+                            "data-tooltip": if can_save { "Save" } else { "All attributes and links must be valid" },
                             aria_label: "Save entity",
                             disabled: !can_save || is_saving,
                             onclick: move |_| {
@@ -3071,12 +3114,17 @@ pub fn CreateEntityModal(
                                                                 !s.is_listing_attribute_menu_open;
                                                             s.open_access_level_menu_id = None;
                                                             s.open_value_type_menu_id = None;
+                                                            s.open_link_target_menu_id = None;
+                                                            s.dragged_attribute_id = None;
+                                                            s.dragged_link_id = None;
                                                         }
                                                     },
                                                     on_select_item: move |attribute_id: String| {
                                                         if let Some(s) = create_state.write().as_mut() {
                                                             s.listing_attribute_id = attribute_id;
                                                             s.is_listing_attribute_menu_open = false;
+                                                            s.dragged_attribute_id = None;
+                                                            s.dragged_link_id = None;
                                                         }
                                                     },
                                                 }
@@ -3101,6 +3149,8 @@ pub fn CreateEntityModal(
                                         onclick: move |_| {
                                             if let Some(s) = create_state.write().as_mut() {
                                                 s.active_tab = EntityTab::Attributes;
+                                                s.open_link_target_menu_id = None;
+                                                s.dragged_link_id = None;
                                             }
                                         },
                                         span { "Attributes" }
@@ -3114,10 +3164,14 @@ pub fn CreateEntityModal(
                                         onclick: move |_| {
                                             if let Some(s) = create_state.write().as_mut() {
                                                 s.active_tab = EntityTab::Links;
+                                                s.open_access_level_menu_id = None;
+                                                s.open_value_type_menu_id = None;
+                                                s.is_listing_attribute_menu_open = false;
+                                                s.dragged_attribute_id = None;
                                             }
                                         },
                                         span { "Outlinks" }
-                                        span { class: "entity-template-tab-badge", "0" }
+                                        span { class: "entity-template-tab-badge", "{state.links.len()}" }
                                     }
                                 }
                             }
@@ -3148,9 +3202,182 @@ pub fn CreateEntityModal(
                                                             class: "section-action-button",
                                                             "data-tooltip": "Include an attribute",
                                                             aria_label: "Add attribute",
+                                                            disabled: is_saving,
                                                             onpointerdown: move |event| event.stop_propagation(),
-                                                            onclick: move |_| add_create_entity_attribute(create_state, default_access_level_id),
+                                                            onclick: {
+                                                                let sk = session_key.clone();
+                                                                move |event| {
+                                                                    event.stop_propagation();
+                                                                    let should_load = if let Some(s) = create_state.write().as_mut() {
+                                                                        s.is_include_attribute_open = !s.is_include_attribute_open;
+                                                                        s.open_access_level_menu_id = None;
+                                                                        s.open_value_type_menu_id = None;
+                                                                        s.open_link_target_menu_id = None;
+                                                                        s.is_listing_attribute_menu_open = false;
+                                                                        s.is_attribute_template_menu_open = false;
+                                                                        s.dragged_attribute_id = None;
+                                                                        s.dragged_link_id = None;
+                                                                        s.is_include_attribute_open
+                                                                            && s.attribute_templates.is_empty()
+                                                                            && !s.is_attribute_templates_loading
+                                                                    } else {
+                                                                        false
+                                                                    };
+
+                                                                    if should_load {
+                                                                        load_create_attribute_templates(create_state, sk.clone());
+                                                                    }
+                                                                }
+                                                            },
                                                             Plus { class: "app-icon", size: 16 }
+                                                        }
+                                                        if state.is_include_attribute_open {
+                                                            div {
+                                                                class: "include-attribute-popover entity-include-attribute-popover",
+                                                                onclick: move |event| {
+                                                                    event.prevent_default();
+                                                                    event.stop_propagation();
+                                                                },
+                                                                onpointerdown: move |event| {
+                                                                    event.prevent_default();
+                                                                    event.stop_propagation();
+                                                                },
+                                                                onpointerup: move |event| {
+                                                                    event.prevent_default();
+                                                                    event.stop_propagation();
+                                                                },
+                                                                p { class: "entity-create-popover-title", "Include attribute from:" }
+                                                                div { class: "entity-create-radio-group",
+                                                                    button {
+                                                                        class: "entity-include-source-option",
+                                                                        aria_pressed: "{state.include_attribute_source == Some(EntityAttributeIncludeSource::Template)}",
+                                                                        r#type: "button",
+                                                                        onpointerdown: move |event| {
+                                                                            event.prevent_default();
+                                                                            event.stop_propagation();
+                                                                        },
+                                                                        onpointerup: move |event| {
+                                                                            event.prevent_default();
+                                                                            event.stop_propagation();
+                                                                        },
+                                                                        onclick: {
+                                                                            let sk = session_key.clone();
+                                                                            move |event| {
+                                                                                event.prevent_default();
+                                                                                event.stop_propagation();
+                                                                                let should_load = if let Some(s) = create_state.write().as_mut() {
+                                                                                    s.include_attribute_source = Some(EntityAttributeIncludeSource::Template);
+                                                                                    s.is_attribute_template_menu_open = false;
+                                                                                    if s.selected_attribute_template_id.is_none() {
+                                                                                        s.selected_attribute_template_id = s
+                                                                                            .attribute_templates
+                                                                                            .first()
+                                                                                            .map(|template| template.id.clone());
+                                                                                    }
+                                                                                    s.attribute_templates.is_empty()
+                                                                                        && !s.is_attribute_templates_loading
+                                                                                } else {
+                                                                                    false
+                                                                                };
+
+                                                                                if should_load {
+                                                                                    load_create_attribute_templates(create_state, sk.clone());
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        span { class: "entity-include-source-dot" }
+                                                                        span { class: "entity-include-source-label", "Attribute template" }
+                                                                    }
+                                                                    button {
+                                                                        class: "entity-include-source-option",
+                                                                        aria_pressed: "{state.include_attribute_source == Some(EntityAttributeIncludeSource::Scratch)}",
+                                                                        r#type: "button",
+                                                                        onpointerdown: move |event| {
+                                                                            event.prevent_default();
+                                                                            event.stop_propagation();
+                                                                        },
+                                                                        onpointerup: move |event| {
+                                                                            event.prevent_default();
+                                                                            event.stop_propagation();
+                                                                        },
+                                                                        onclick: move |event| {
+                                                                            event.prevent_default();
+                                                                            event.stop_propagation();
+                                                                            if let Some(s) = create_state.write().as_mut() {
+                                                                                s.include_attribute_source = Some(EntityAttributeIncludeSource::Scratch);
+                                                                                s.is_attribute_template_menu_open = false;
+                                                                            }
+                                                                        },
+                                                                        span { class: "entity-include-source-dot" }
+                                                                        span { class: "entity-include-source-label", "Scratch" }
+                                                                    }
+                                                                }
+                                                                if state.include_attribute_source == Some(EntityAttributeIncludeSource::Template) {
+                                                                    div { class: "entity-create-popover-fields",
+                                                                        label {
+                                                                            span { "attribute template" }
+                                                                            span { class: "attribute-template-select-wrap",
+                                                                                SingleSelectPicker {
+                                                                                    disabled: is_saving || state.is_attribute_templates_loading || state.attribute_templates.is_empty(),
+                                                                                    empty_text: if state.is_attribute_templates_loading {
+                                                                                        "Loading templates".to_string()
+                                                                                    } else {
+                                                                                        "No attribute templates".to_string()
+                                                                                    },
+                                                                                    is_open: state.is_attribute_template_menu_open,
+                                                                                    options: attribute_template_options,
+                                                                                    selected_value: selected_attribute_template_id_value.clone(),
+                                                                                    summary: selected_attribute_template_label,
+                                                                                    on_toggle_open: move |_| {
+                                                                                        if let Some(s) = create_state.write().as_mut() {
+                                                                                            s.is_attribute_template_menu_open =
+                                                                                                !s.is_attribute_template_menu_open;
+                                                                                        }
+                                                                                    },
+                                                                                    on_select_item: move |attribute_template_id: String| {
+                                                                                        if let Some(s) = create_state.write().as_mut() {
+                                                                                            s.selected_attribute_template_id = Some(attribute_template_id);
+                                                                                            s.is_attribute_template_menu_open = false;
+                                                                                        }
+                                                                                    },
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        if let Some(message) = state.attribute_templates_error.clone() {
+                                                                            span { class: "entity-details-status-error", "{message}" }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                button {
+                                                                    class: "icon-only-button include-attribute-submit-button entity-include-attribute-continue",
+                                                                    "data-tooltip": "Continue",
+                                                                    aria_label: "Continue",
+                                                                    disabled: is_saving
+                                                                        || state.include_attribute_source.is_none()
+                                                                        || (state.include_attribute_source == Some(EntityAttributeIncludeSource::Template)
+                                                                            && selected_attribute_template_id_value.is_empty()),
+                                                                    r#type: "button",
+                                                                    onclick: {
+                                                                        let template_id = selected_attribute_template_id_value.clone();
+                                                                        move |event| {
+                                                                            event.prevent_default();
+                                                                            event.stop_propagation();
+                                                                            if state.include_attribute_source == Some(EntityAttributeIncludeSource::Template) {
+                                                                                add_create_entity_attribute_from_template(
+                                                                                    create_state,
+                                                                                    template_id.clone(),
+                                                                                );
+                                                                            } else if state.include_attribute_source == Some(EntityAttributeIncludeSource::Scratch) {
+                                                                                add_create_entity_attribute(
+                                                                                    create_state,
+                                                                                    default_access_level_id,
+                                                                                );
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    Plus { class: "app-icon", size: 16 }
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -3182,17 +3409,50 @@ pub fn CreateEntityModal(
                                     }
                                 } else {
                                     table { class: "data-table entity-template-modal-table entity-template-links-table entity-entity-links-table",
+                                        colgroup {
+                                            col { class: "entity-template-link-name-column" }
+                                            col { class: "entity-template-link-description-column" }
+                                            col { class: "entity-template-link-target-column" }
+                                            col { class: "entity-template-link-action-column" }
+                                        }
                                         thead {
                                             tr {
                                                 th { "name" }
+                                                th { "description" }
                                                 th { "target" }
-                                                th { class: "data-table-action-heading", "" }
+                                                th { class: "data-table-action-heading entity-template-link-action-column",
+                                                    button {
+                                                        class: "section-action-button entity-template-link-add-button",
+                                                        "data-tooltip": "Include link",
+                                                        aria_label: "Include link",
+                                                        disabled: is_saving || target_entities.is_empty(),
+                                                        r#type: "button",
+                                                        onpointerdown: move |event| event.stop_propagation(),
+                                                        onclick: move |_| add_create_entity_link(create_state),
+                                                        Plus { class: "app-icon", size: 16 }
+                                                    }
+                                                }
                                             }
                                         }
                                         tbody {
-                                            tr {
-                                                td { class: "data-table-empty-cell", colspan: "3",
-                                                    span { "No links" }
+                                            if state.links.is_empty() {
+                                                tr {
+                                                    td { class: "data-table-empty-cell", colspan: "4",
+                                                        span { "No links" }
+                                                    }
+                                                }
+                                            } else {
+                                                for link in state.links.iter() {
+                                                    CreateEntityLinkRow {
+                                                        key: "{link.id}",
+                                                        link: link.clone(),
+                                                        target_entities: target_entities.clone(),
+                                                        target_options: target_options.clone(),
+                                                        is_saving,
+                                                        create_state,
+                                                        is_target_menu_open: state.open_link_target_menu_id.as_deref() == Some(link.id.as_str()),
+                                                        is_dragging: state.dragged_link_id.as_deref() == Some(link.id.as_str()),
+                                                    }
                                                 }
                                             }
                                         }
@@ -3348,7 +3608,9 @@ fn CreateEntityAttributeRow(
                                         };
                                     s.open_access_level_menu_id = None;
                                     s.is_listing_attribute_menu_open = false;
+                                    s.open_link_target_menu_id = None;
                                     s.dragged_attribute_id = None;
+                                    s.dragged_link_id = None;
                                 }
                             }
                         },
@@ -3361,7 +3623,9 @@ fn CreateEntityAttributeRow(
                                         a.value.clear();
                                     }
                                     s.open_value_type_menu_id = None;
+                                    s.open_link_target_menu_id = None;
                                     s.dragged_attribute_id = None;
+                                    s.dragged_link_id = None;
                                 }
                             }
                         },
@@ -3391,7 +3655,9 @@ fn CreateEntityAttributeRow(
                                         };
                                     s.open_value_type_menu_id = None;
                                     s.is_listing_attribute_menu_open = false;
+                                    s.open_link_target_menu_id = None;
                                     s.dragged_attribute_id = None;
+                                    s.dragged_link_id = None;
                                 }
                             }
                         },
@@ -3404,7 +3670,9 @@ fn CreateEntityAttributeRow(
                                             a.access_level_id = access_level_id;
                                         }
                                         s.open_access_level_menu_id = None;
+                                        s.open_link_target_menu_id = None;
                                         s.dragged_attribute_id = None;
+                                        s.dragged_link_id = None;
                                     }
                                 }
                             }
@@ -3451,6 +3719,195 @@ fn CreateEntityAttributeRow(
     }
 }
 
+#[component]
+fn CreateEntityLinkRow(
+    link: EntityLink,
+    target_entities: Vec<Entity>,
+    target_options: Vec<SingleSelectOption>,
+    is_saving: bool,
+    create_state: Signal<Option<CreateEntityState>>,
+    is_target_menu_open: bool,
+    is_dragging: bool,
+) -> Element {
+    let description = link.description.clone().unwrap_or_default();
+    let target_id = link.target_entity_id.clone().unwrap_or_default();
+    let target_label = target_entities
+        .iter()
+        .find(|entity| Some(entity.id.as_str()) == link.target_entity_id.as_deref())
+        .map(entity_listing_label)
+        .or_else(|| link.target_entity_label.clone())
+        .unwrap_or_else(|| target_id.clone());
+    let link_name = if link.name.trim().is_empty() {
+        "link".to_string()
+    } else {
+        link.name.clone()
+    };
+    let link_id_name = link.id.clone();
+    let link_id_description = link.id.clone();
+    let link_id_target = link.id.clone();
+    let link_id_target_select = link.id.clone();
+    let link_id_remove = link.id.clone();
+    let link_id_drag = link.id.clone();
+    let link_id_reorder = link.id.clone();
+    let row_class = if is_dragging {
+        "entity-link-edit-row is-dragging"
+    } else {
+        "entity-link-edit-row"
+    };
+
+    rsx! {
+        tr {
+            class: "{row_class}",
+            "data-entity-link-id": "{link.id}",
+            onpointerover: {
+                let target_link_id = link_id_reorder.clone();
+                move |_| reorder_dragged_create_entity_link(create_state, target_link_id.clone())
+            },
+            td {
+                input {
+                    class: "entity-template-link-input",
+                    r#type: "text",
+                    value: "{link.name}",
+                    disabled: is_saving,
+                    placeholder: "name",
+                    onpointerdown: move |event| event.stop_propagation(),
+                    oninput: {
+                        let lid = link_id_name.clone();
+                        move |event: Event<FormData>| {
+                            let value = event.value();
+                            if let Some(s) = create_state.write().as_mut() {
+                                if let Some(edit_link) = s.links.iter_mut().find(|item| item.id == lid) {
+                                    edit_link.name = value;
+                                }
+                            }
+                        }
+                    },
+                }
+            }
+            td {
+                span {
+                    class: "entity-template-link-description-value entity-template-link-description-edit-value",
+                    "data-tooltip": if description.is_empty() { None } else { Some(description.clone()) },
+                    input {
+                        class: "entity-template-link-input",
+                        r#type: "text",
+                        value: "{description}",
+                        disabled: is_saving,
+                        placeholder: "description",
+                        onpointerdown: move |event| event.stop_propagation(),
+                        oninput: {
+                            let lid = link_id_description.clone();
+                            move |event: Event<FormData>| {
+                                let value = event.value();
+                                if let Some(s) = create_state.write().as_mut() {
+                                    if let Some(edit_link) = s.links.iter_mut().find(|item| item.id == lid) {
+                                        edit_link.description = if value.is_empty() {
+                                            None
+                                        } else {
+                                            Some(value)
+                                        };
+                                    }
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+            td {
+                span {
+                    class: "attribute-template-select-wrap entity-template-link-target-wrap",
+                    onpointerdown: move |event| event.stop_propagation(),
+                    SingleSelectPicker {
+                        disabled: is_saving || target_entities.is_empty(),
+                        empty_text: "Select an entity",
+                        is_open: is_target_menu_open,
+                        options: target_options,
+                        selected_value: target_id,
+                        summary: target_label.clone(),
+                        on_toggle_open: {
+                            let lid = link_id_target.clone();
+                            move |_| {
+                                if let Some(s) = create_state.write().as_mut() {
+                                    s.open_link_target_menu_id =
+                                        if s.open_link_target_menu_id.as_deref() == Some(&lid) {
+                                            None
+                                        } else {
+                                            Some(lid.clone())
+                                        };
+                                    s.open_access_level_menu_id = None;
+                                    s.open_value_type_menu_id = None;
+                                    s.is_listing_attribute_menu_open = false;
+                                    s.dragged_attribute_id = None;
+                                    s.dragged_link_id = None;
+                                }
+                            }
+                        },
+                        on_select_item: {
+                            let lid = link_id_target_select.clone();
+                            let target_entities = target_entities.clone();
+                            move |target_entity_id: String| {
+                                let target_label = target_entities
+                                    .iter()
+                                    .find(|entity| entity.id == target_entity_id)
+                                    .map(entity_listing_label);
+                                if let Some(s) = create_state.write().as_mut() {
+                                    if let Some(edit_link) = s.links.iter_mut().find(|item| item.id == lid) {
+                                        edit_link.target_entity_id = if target_entity_id.is_empty() {
+                                            None
+                                        } else {
+                                            Some(target_entity_id)
+                                        };
+                                        edit_link.target_entity_label = target_label;
+                                    }
+                                    s.open_link_target_menu_id = None;
+                                    s.dragged_link_id = None;
+                                }
+                            }
+                        },
+                    }
+                }
+            }
+            td { class: "entity-template-link-actions entity-template-link-action-column",
+                button {
+                    class: "icon-only-button entity-template-row-action-button",
+                    "data-tooltip": "Exclude",
+                    aria_label: "Remove {link_name}",
+                    disabled: is_saving,
+                    r#type: "button",
+                    onpointerdown: move |event| event.stop_propagation(),
+                    onclick: {
+                        let lid = link_id_remove.clone();
+                        move |_| remove_create_entity_link(create_state, lid.clone())
+                    },
+                    Trash2 { class: "app-icon", size: 14 }
+                }
+                button {
+                    class: "icon-only-button entity-template-drag-handle",
+                    "data-tooltip": "Drag up or down\nto reorder",
+                    aria_label: "Drag {link_name}",
+                    disabled: is_saving,
+                    r#type: "button",
+                    onpointerdown: {
+                        let lid = link_id_drag.clone();
+                        move |event| {
+                            event.stop_propagation();
+                            if let Some(s) = create_state.write().as_mut() {
+                                s.dragged_link_id = Some(lid.clone());
+                                s.open_link_target_menu_id = None;
+                                s.open_access_level_menu_id = None;
+                                s.open_value_type_menu_id = None;
+                                s.is_listing_attribute_menu_open = false;
+                                s.dragged_attribute_id = None;
+                            }
+                        }
+                    },
+                    GripVertical { class: "app-icon", size: 14 }
+                }
+            }
+        }
+    }
+}
+
 fn add_create_entity_attribute(
     mut create_state: Signal<Option<CreateEntityState>>,
     default_access_level_id: u32,
@@ -3474,9 +3931,101 @@ fn add_create_entity_attribute(
         s.active_tab = EntityTab::Attributes;
         s.open_access_level_menu_id = None;
         s.open_value_type_menu_id = None;
+        s.open_link_target_menu_id = None;
+        s.is_include_attribute_open = false;
+        s.include_attribute_source = None;
+        s.is_attribute_template_menu_open = false;
         s.is_listing_attribute_menu_open = false;
         s.dragged_attribute_id = None;
+        s.dragged_link_id = None;
     }
+}
+
+fn add_create_entity_attribute_from_template(
+    mut create_state: Signal<Option<CreateEntityState>>,
+    attribute_template_id: String,
+) {
+    if attribute_template_id.is_empty() {
+        return;
+    }
+
+    if let Some(s) = create_state.write().as_mut() {
+        let Some(attribute_template) = s
+            .attribute_templates
+            .iter()
+            .find(|template| template.id == attribute_template_id)
+            .cloned()
+        else {
+            return;
+        };
+
+        let id = new_entity_attribute_id();
+        let listing_index = s.attributes.len() as i32;
+
+        s.attributes.push(EntityAttribute {
+            access_level_id: attribute_template.access_level_id,
+            description: attribute_template.description,
+            id: id.clone(),
+            is_required: attribute_template.is_required,
+            listing_index,
+            name: attribute_template.name,
+            value: attribute_template.default_value.unwrap_or_default(),
+            value_type: attribute_template.value_type,
+        });
+
+        if s.listing_attribute_id.is_empty() {
+            s.listing_attribute_id = id;
+        }
+
+        s.active_tab = EntityTab::Attributes;
+        s.error = None;
+        s.open_access_level_menu_id = None;
+        s.open_value_type_menu_id = None;
+        s.open_link_target_menu_id = None;
+        s.is_include_attribute_open = false;
+        s.include_attribute_source = None;
+        s.is_attribute_template_menu_open = false;
+        s.is_listing_attribute_menu_open = false;
+        s.dragged_attribute_id = None;
+        s.dragged_link_id = None;
+    }
+}
+
+fn load_create_attribute_templates(
+    mut create_state: Signal<Option<CreateEntityState>>,
+    session_key: String,
+) {
+    if let Some(s) = create_state.write().as_mut() {
+        s.is_attribute_templates_loading = true;
+        s.attribute_templates_error = None;
+    }
+
+    spawn(async move {
+        match fetch_attribute_templates_list(&session_key).await {
+            Ok(mut templates) => {
+                templates.sort_by(|left, right| {
+                    left.name
+                        .to_ascii_lowercase()
+                        .cmp(&right.name.to_ascii_lowercase())
+                });
+                if let Some(s) = create_state.write().as_mut() {
+                    s.selected_attribute_template_id = s
+                        .selected_attribute_template_id
+                        .clone()
+                        .or_else(|| templates.first().map(|template| template.id.clone()));
+                    s.attribute_templates = templates;
+                    s.attribute_templates_error = None;
+                    s.is_attribute_templates_loading = false;
+                }
+            }
+            Err(message) => {
+                if let Some(s) = create_state.write().as_mut() {
+                    s.attribute_templates_error = Some(message);
+                    s.is_attribute_templates_loading = false;
+                }
+            }
+        }
+    });
 }
 
 fn remove_create_entity_attribute(
@@ -3498,8 +4047,10 @@ fn remove_create_entity_attribute(
         }
         s.open_access_level_menu_id = None;
         s.open_value_type_menu_id = None;
+        s.open_link_target_menu_id = None;
         s.is_listing_attribute_menu_open = false;
         s.dragged_attribute_id = None;
+        s.dragged_link_id = None;
     }
 }
 
@@ -3534,6 +4085,77 @@ fn reorder_dragged_create_entity_attribute(
         for (index, attribute) in s.attributes.iter_mut().enumerate() {
             attribute.listing_index = index as i32;
         }
+    }
+}
+
+fn add_create_entity_link(mut create_state: Signal<Option<CreateEntityState>>) {
+    if let Some(s) = create_state.write().as_mut() {
+        let id = new_entity_attribute_id();
+        let listing_index = s.links.len() as i32;
+
+        s.links.push(EntityLink {
+            id,
+            entity_id: String::new(),
+            target_entity_id: None,
+            target_entity_label: None,
+            name: String::new(),
+            description: None,
+            listing_index,
+        });
+
+        s.active_tab = EntityTab::Links;
+        s.error = None;
+        s.open_link_target_menu_id = None;
+        s.open_access_level_menu_id = None;
+        s.open_value_type_menu_id = None;
+        s.is_listing_attribute_menu_open = false;
+        s.dragged_attribute_id = None;
+        s.dragged_link_id = None;
+    }
+}
+
+fn remove_create_entity_link(
+    mut create_state: Signal<Option<CreateEntityState>>,
+    link_id: String,
+) {
+    if let Some(s) = create_state.write().as_mut() {
+        s.links.retain(|link| link.id != link_id);
+        renumber_entity_links(&mut s.links);
+        if s.open_link_target_menu_id.as_deref() == Some(link_id.as_str()) {
+            s.open_link_target_menu_id = None;
+        }
+        s.error = None;
+        s.dragged_link_id = None;
+    }
+}
+
+fn reorder_dragged_create_entity_link(
+    mut create_state: Signal<Option<CreateEntityState>>,
+    target_link_id: String,
+) {
+    if let Some(s) = create_state.write().as_mut() {
+        let Some(dragged_link_id) = s.dragged_link_id.clone() else {
+            return;
+        };
+        if dragged_link_id == target_link_id {
+            return;
+        }
+        let Some(dragged_index) = s
+            .links
+            .iter()
+            .position(|link| link.id == dragged_link_id)
+        else {
+            s.dragged_link_id = None;
+            return;
+        };
+        let Some(target_index) = s.links.iter().position(|link| link.id == target_link_id) else {
+            return;
+        };
+
+        let dragged_link = s.links.remove(dragged_index);
+        let insert_index = target_index.min(s.links.len());
+        s.links.insert(insert_index, dragged_link);
+        renumber_entity_links(&mut s.links);
     }
 }
 
@@ -3609,6 +4231,11 @@ fn save_new_entity(
         .as_ref()
         .map(|s| s.attributes.clone())
         .unwrap_or_default();
+    let links = create_state
+        .read()
+        .as_ref()
+        .map(|s| s.links.clone())
+        .unwrap_or_default();
 
     let entity_template_id = create_state
         .read()
@@ -3635,6 +4262,7 @@ fn save_new_entity(
     spawn(async move {
         let body = build_entity_create_body(
             &attributes,
+            &links,
             if can_assign_owner { Some(owner_user_id.as_str()) } else { None },
             &entity_template_id,
             &listing_attribute_id,
@@ -3690,6 +4318,7 @@ fn save_new_entity(
 
 fn build_entity_create_body(
     attributes: &[EntityAttribute],
+    links: &[EntityLink],
     owner_user_id: Option<&str>,
     entity_template_id: &str,
     listing_attribute_id: &str,
@@ -3708,6 +4337,25 @@ fn build_entity_create_body(
                 attr.is_required,
                 json_string(&attr.description),
                 i,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let links_json = links
+        .iter()
+        .map(|link| {
+            format!(
+                "{{\"description\":{},\"listingIndex\":{},\"name\":{},\"targetEntityId\":{}}}",
+                link.description
+                    .as_ref()
+                    .map(|description| json_string(description))
+                    .unwrap_or_else(|| "null".to_string()),
+                link.listing_index,
+                json_string(link.name.trim()),
+                link.target_entity_id
+                    .as_ref()
+                    .map(|target_id| json_string(target_id))
+                    .unwrap_or_else(|| "null".to_string()),
             )
         })
         .collect::<Vec<_>>()
@@ -3733,5 +4381,7 @@ fn build_entity_create_body(
         )
     };
 
-    format!("{{\"attributes\":[{attrs_json}]{template_part}{owner_part}{listing_part}}}")
+    format!(
+        "{{\"attributes\":[{attrs_json}],\"links\":[{links_json}]{template_part}{owner_part}{listing_part}}}"
+    )
 }
