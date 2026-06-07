@@ -1,0 +1,47 @@
+extends "layout"
+
+<div
+    id="zynapse-app"
+    class="min-h-screen bg-base-100 text-base-content"
+    data-signals="{identifier: '', password: '', profileFirstName: '', profileLastName: '', profileUsername: '', profileEmail: ''}"
+    data-init="@get('/ui/session')"
+>
+    <header id="app-header" class="navbar bg-base-100 border-b border-base-300 px-4 lg:px-6">
+        <div class="flex-1">
+            <a class="btn btn-ghost px-2 text-lg normal-case" href="/">
+                <img src="/images/logo.png" alt="" class="h-7 w-7 rounded object-cover">
+                <span>Zynapse</span>
+            </a>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-base-content/60">
+            <span>Not signed in</span>
+        </div>
+    </header>
+
+    <main id="app-content" class="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:px-6">
+        <section class="mx-auto grid w-full max-w-sm gap-5 pt-16">
+            <div>
+                <p class="text-sm font-medium text-warning">Rebirth access</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-normal">Sign in</h1>
+                <p class="mt-2 text-sm text-base-content/60">
+                    Use your Rebirth account to open the Datastar workspace.
+                </p>
+            </div>
+
+            <form class="grid gap-4">
+                <label class="form-control gap-2">
+                    <span class="label-text text-base-content/60">Username or email</span>
+                    <input class="input input-bordered" autocomplete="username" data-bind:identifier>
+                </label>
+                <label class="form-control gap-2">
+                    <span class="label-text text-base-content/60">Password</span>
+                    <input class="input input-bordered" type="password" autocomplete="current-password" data-bind:password>
+                </label>
+                <button class="btn btn-warning" type="button" data-on:click="@post('/ui/login')">
+                    <i class="ti ti-login-2" aria-hidden="true"></i>
+                    Login
+                </button>
+            </form>
+        </section>
+    </main>
+</div>

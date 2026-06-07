@@ -1,0 +1,17 @@
+.{
+    .name = .zynapse,
+    .version = "0.1.0",
+    .fingerprint = 0x31fa82eadb18c04e,
+    .minimum_zig_version = "0.17.0-dev.704+b8cb78023",
+    .dependencies = .{
+        .spider = .{
+            .url = "git+https://github.com/llllOllOOll/spider?ref=main#c5283efca94c3e2c722908a53222c1ca5cbd2ebd",
+            .hash = "spider-0.6.5-P7cGrhbGrgAirZSDRtlZch9YgjM9DtpyJZdwSLIBETzh",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

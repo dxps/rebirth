@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{ title ?? "zynapse" }</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/tabler-icons.min.css">
+    <script type="module" src="/js/zynapse-datastar.js"></script>
+    <style>
+        @font-face {
+            font-family: 'tabler-icons';
+            src: url('/fonts/tabler-icons.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body class="bg-base-100 text-base-content min-h-screen">
+    { slot }
+</body>
+</html>
