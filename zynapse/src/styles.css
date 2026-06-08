@@ -1,2 +1,24 @@
 @import "tailwindcss";
 @plugin "../bin/daisyui.mjs";
+
+.zynapse-modal-layer {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.zynapse-draggable-modal {
+  max-height: min(34rem, calc(100vh - 2rem));
+  pointer-events: auto;
+  position: fixed;
+  width: min(28rem, calc(100vw - 1rem));
+}
+
+.zynapse-draggable-modal[data-dragging="true"] {
+  user-select: none;
+}
+
+.zynapse-draggable-handle {
+  touch-action: none;
+}

@@ -20,7 +20,19 @@ const ProfileSignals = struct {
 };
 
 pub fn index(c: *spider.Ctx) !Response {
-    return c.view("app/index", .{ .title = "Zynapse" }, .{});
+    return appShell(c, "/ui/session");
+}
+
+pub fn profilePage(c: *spider.Ctx) !Response {
+    return appShell(c, "/ui/profile");
+}
+
+pub fn usersPage(c: *spider.Ctx) !Response {
+    return appShell(c, "/ui/users");
+}
+
+fn appShell(c: *spider.Ctx, init_endpoint: []const u8) !Response {
+    return c.view("app/index", .{ .title = "Zynapse", .initEndpoint = init_endpoint }, .{});
 }
 
 pub fn session(c: *spider.Ctx) !Response {
@@ -127,6 +139,17 @@ pub fn users(c: *spider.Ctx) !Response {
     return datastar(c, try contentOnly(c, try usersPanel(c, user_list)));
 }
 
+pub fn usersDraggableModal(c: *spider.Ctx) !Response {
+    _ = c.cookie(session_cookie) orelse return datastar(c, try loginScreen(c, "Please sign in first."));
+    return datastar(c, usersDraggableModalLayer());
+}
+
+pub fn usersModalClose(c: *spider.Ctx) !Response {
+    return datastar(c,
+        \\<div id="zynapse-modal-layer" class="zynapse-modal-layer"></div>
+    );
+}
+
 fn apiUrl(c: *spider.Ctx, path: []const u8) ![]const u8 {
     return std.mem.concat(c.arena, u8, &.{ api_base_url, path });
 }
@@ -204,8 +227,8 @@ fn signedInScreen(c: *spider.Ctx, user: std.json.ObjectMap, message: ?[]const u8
         \\    </a>
         \\  </div>
         \\  <nav class="flex items-center gap-1">
-        \\    <button class="btn btn-ghost btn-sm" data-on:click="@get('/ui/profile')"><i class="ti ti-user" aria-hidden="true"></i>Profile</button>
-        \\    <button class="btn btn-ghost btn-sm" data-on:click="@get('/ui/users')"><i class="ti ti-users" aria-hidden="true"></i>Users</button>
+        \\    <button class="btn btn-ghost btn-sm" data-zynapse-nav="/profile" data-on:click="@get('/ui/profile')"><i class="ti ti-user" aria-hidden="true"></i>Profile</button>
+        \\    <button class="btn btn-ghost btn-sm" data-zynapse-nav="/users" data-on:click="@get('/ui/users')"><i class="ti ti-users" aria-hidden="true"></i>Users</button>
         \\    <button class="btn btn-ghost btn-sm text-error" data-on:click="@post('/ui/logout')"><i class="ti ti-logout" aria-hidden="true"></i>Logout</button>
         \\  </nav>
         \\</header>
@@ -321,7 +344,10 @@ fn usersPanel(c: *spider.Ctx, user_values: []const JsonValue) ![]const u8 {
         \\      <h1 class="mt-2 text-3xl font-semibold tracking-normal">Users</h1>
         \\      <p class="mt-2 text-sm text-base-content/60">Browse Rebirth users. Create/edit controls can build on this panel next.</p>
         \\    </div>
-        \\    <button class="btn btn-ghost btn-sm" data-on:click="@get('/ui/users')"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
+        \\    <div class="flex flex-wrap gap-2">
+        \\      <button class="btn btn-ghost btn-sm" data-on:click="@get('/ui/users')"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
+        \\      <button class="btn btn-warning btn-sm" data-on:click="@get('/ui/users/draggable-modal')"><i class="ti ti-window" aria-hidden="true"></i>Open modal experiment</button>
+        \\    </div>
         \\  </div>
         \\  <div class="overflow-x-auto rounded-lg border border-base-300 bg-base-200">
         \\    <table class="table">
@@ -329,8 +355,32 @@ fn usersPanel(c: *spider.Ctx, user_values: []const JsonValue) ![]const u8 {
         \\      <tbody>{s}</tbody>
         \\    </table>
         \\  </div>
+        \\  <div id="zynapse-modal-layer" class="zynapse-modal-layer"></div>
         \\</section>
     , .{try rows.toOwnedSlice(c.arena)});
+}
+
+fn usersDraggableModalLayer() []const u8 {
+    return
+        \\<div id="zynapse-modal-layer" class="zynapse-modal-layer">
+        \\  <section class="zynapse-draggable-modal rounded-lg border border-base-300 bg-base-100 shadow-2xl" data-draggable-modal style="left: min(7vw, 6rem); top: 7rem;">
+        \\    <header class="zynapse-draggable-handle flex cursor-move select-none items-center justify-between gap-3 border-b border-base-300 px-4 py-3" data-drag-handle>
+        \\      <div class="min-w-0">
+        \\        <p class="text-xs font-medium uppercase text-warning">Datastar experiment</p>
+        \\        <h2 class="truncate text-base font-semibold">Draggable Users modal</h2>
+        \\      </div>
+        \\      <button class="btn btn-ghost btn-sm btn-square" title="Close" data-on:click="@get('/ui/users/modal/close')"><i class="ti ti-x" aria-hidden="true"></i></button>
+        \\    </header>
+        \\    <div class="grid gap-4 p-4 text-sm">
+        \\      <p class="text-base-content/70">This modal was inserted by a Datastar patch from the Users section. Dragging is handled locally so pointer movement stays instant.</p>
+        \\      <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+        \\        <p class="font-medium">What this proves</p>
+        \\        <p class="mt-1 text-base-content/60">Server-rendered modal lifecycle and reusable client-side drag behavior can live together cleanly.</p>
+        \\      </div>
+        \\    </div>
+        \\  </section>
+        \\</div>
+    ;
 }
 
 fn errorPanel(c: *spider.Ctx, title: []const u8, message: []const u8) ![]const u8 {

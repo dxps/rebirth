@@ -2,7 +2,7 @@ extends "layout"
 
 <div id="zynapse-app" class="min-h-screen bg-base-100 text-base-content"
     data-signals="{identifier: '', password: '', profileFirstName: '', profileLastName: '', profileUsername: '', profileEmail: ''}"
-    data-init="@get('/ui/session')">
+    data-init="@get('{ initEndpoint ?? "/ui/session" }')">
     <header id="app-header" class="navbar bg-base-100 border-b border-base-300 px-4 lg:px-6">
         <div class="flex-1">
             <a class="btn btn-ghost px-2 text-lg normal-case" href="/">

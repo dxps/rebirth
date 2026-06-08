@@ -19,12 +19,16 @@ pub fn main(init: std.process.Init) !void {
 
     server
         .get("/", app.index)
+        .get("/profile", app.profilePage)
+        .get("/users", app.usersPage)
         .get("/ui/session", app.session)
         .post("/ui/login", app.login)
         .post("/ui/logout", app.logout)
         .get("/ui/profile", app.profile)
         .post("/ui/profile", app.updateProfile)
         .get("/ui/users", app.users)
+        .get("/ui/users/draggable-modal", app.usersDraggableModal)
+        .get("/ui/users/modal/close", app.usersModalClose)
         .onError(errorHandler)
         .listen(.{ .port = 3000, .host = "0.0.0.0" }) catch |err| return err;
 }
