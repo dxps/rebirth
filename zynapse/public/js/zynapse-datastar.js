@@ -2,11 +2,21 @@ import '/js/datastar.js';
 
 const navSelector = '[data-zynapse-nav]';
 const userRowSelector = '[data-zynapse-user-url]';
+const closeModalSelector = '[data-zynapse-close-modal]';
 const draggableSelector = '[data-draggable-modal]';
 const dragHandleSelector = '[data-drag-handle]';
 let topModalZIndex = 60;
 
 document.addEventListener('click', (event) => {
+  const closeTrigger = event.target.closest(closeModalSelector);
+  if (closeTrigger) {
+    console.log('zynapse delegated modal close click', closeTrigger.dataset.zynapseCloseModal);
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById(closeTrigger.dataset.zynapseCloseModal)?.remove();
+    return;
+  }
+
   const userRow = event.target.closest(userRowSelector);
   if (userRow) {
     event.preventDefault();
@@ -32,11 +42,22 @@ document.addEventListener('keydown', (event) => {
 });
 
 document.addEventListener('pointerdown', (event) => {
+  const closeTrigger = event.target.closest(closeModalSelector);
+  if (closeTrigger) {
+    console.log('zynapse delegated modal close pointerdown', closeTrigger.dataset.zynapseCloseModal);
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById(closeTrigger.dataset.zynapseCloseModal)?.remove();
+    return;
+  }
+
   const clickedModal = event.target.closest(draggableSelector);
   if (clickedModal) bringModalToFront(clickedModal);
 
   const handle = event.target.closest(dragHandleSelector);
   if (!handle) return;
+
+  if (event.target.closest('button, a, input, select, textarea, [data-no-drag]')) return;
 
   const modal = handle.closest(draggableSelector);
   if (!modal) return;

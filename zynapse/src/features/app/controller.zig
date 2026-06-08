@@ -414,7 +414,7 @@ fn usersExperimentModalHtml(c: *spider.Ctx, modal_id: []const u8) ![]const u8 {
         \\        <p class="text-xs font-medium uppercase text-warning">Datastar experiment</p>
         \\        <h2 class="truncate text-base font-semibold">Draggable Users modal</h2>
         \\      </div>
-        \\      <button class="btn btn-ghost btn-sm btn-square" title="Close" data-on:click="@get('/ui/users/modal/close?modalId={s}')"><i class="ti ti-x" aria-hidden="true"></i></button>
+        \\      <button class="btn btn-ghost btn-sm btn-square" title="Close" data-zynapse-close-modal="{s}" onpointerdown="console.log('zynapse inline modal close pointerdown', this.dataset.zynapseCloseModal); event.preventDefault(); event.stopPropagation(); this.closest('[data-draggable-modal]')?.remove()" onclick="console.log('zynapse inline modal close click', this.dataset.zynapseCloseModal); this.closest('[data-draggable-modal]')?.remove()"><i class="ti ti-x" aria-hidden="true"></i></button>
         \\    </header>
         \\    <div class="grid gap-4 p-4 text-sm">
         \\      <p class="text-base-content/70">This modal was inserted by a Datastar patch from the Users section. Dragging is handled locally so pointer movement stays instant.</p>
@@ -443,7 +443,7 @@ fn userDetailsModalHtml(c: *spider.Ctx, user: std.json.ObjectMap, modal_id: []co
         \\      <p class="text-xs font-medium uppercase text-warning">User</p>
         \\      <h2 class="truncate text-base font-semibold">{s}</h2>
         \\    </div>
-        \\    <button class="btn btn-ghost btn-sm btn-square" title="Close" data-on:click="@get('/ui/users/modal/close?modalId={s}')"><i class="ti ti-x" aria-hidden="true"></i></button>
+        \\    <button class="btn btn-ghost btn-sm btn-square" title="Close" data-zynapse-close-modal="{s}" onpointerdown="console.log('zynapse inline modal close pointerdown', this.dataset.zynapseCloseModal); event.preventDefault(); event.stopPropagation(); this.closest('[data-draggable-modal]')?.remove()" onclick="console.log('zynapse inline modal close click', this.dataset.zynapseCloseModal); this.closest('[data-draggable-modal]')?.remove()"><i class="ti ti-x" aria-hidden="true"></i></button>
         \\  </header>
         \\  <div class="grid gap-4 p-4 text-sm">
         \\    <div class="grid gap-3 sm:grid-cols-2">
