@@ -36,12 +36,15 @@ pub fn TemplatesView(
         .filter(|_| is_authorized)
         .map(|session| session.session_key.clone());
     let initial_session_key = session_key.clone();
-    let refresh_session_key = session_key.clone();
+    let error_refresh_session_key = session_key.clone();
+    let entity_templates_refresh_session_key = session_key.clone();
+    let attribute_templates_refresh_session_key = session_key.clone();
     let attribute_templates = use_signal(Vec::<AttributeTemplate>::new);
     let entity_templates = use_signal(Vec::<EntityTemplate>::new);
     let access_levels = use_signal(Vec::<AccessLevel>::new);
     let owner_users = use_signal(Vec::<User>::new);
     let attribute_templates_error = use_signal(|| None::<String>);
+    let is_entity_templates_loading = use_signal(|| is_authorized);
     let is_attribute_templates_loading = use_signal(|| is_authorized);
     let mut has_loaded_templates_data = use_signal(|| false);
 
@@ -53,7 +56,7 @@ pub fn TemplatesView(
         has_loaded_templates_data.set(true);
 
         if let Some(session_key) = initial_session_key.clone() {
-            load_attribute_templates(
+            load_templates_data(
                 session_key,
                 attribute_templates,
                 entity_templates,
@@ -61,6 +64,7 @@ pub fn TemplatesView(
                 owner_users,
                 can_manage_templates,
                 attribute_templates_error,
+                is_entity_templates_loading,
                 is_attribute_templates_loading,
             );
         }
@@ -157,14 +161,32 @@ pub fn TemplatesView(
                             }
                         }
                         tbody {
-                            if is_attribute_templates_loading() {
+                            if is_entity_templates_loading() {
                                 tr {
                                     td { colspan: "3", "Loading entity templates" }
                                 }
                             } else if entity_template_rows.is_empty() {
                                 tr {
                                     td { class: "data-table-empty-cell", colspan: "3",
-                                        span { "There are no entries" }
+                                        div { class: "data-table-empty-state",
+                                            span { "There are no entries" }
+                                            button {
+                                                class: "access-level-refresh-button",
+                                                "data-tooltip": "Try again",
+                                                aria_label: "Refresh entity templates",
+                                                onclick: move |_| {
+                                                    if let Some(session_key) = entity_templates_refresh_session_key.clone() {
+                                                        load_entity_templates(
+                                                            session_key,
+                                                            entity_templates,
+                                                            attribute_templates_error,
+                                                            is_entity_templates_loading,
+                                                        );
+                                                    }
+                                                },
+                                                RefreshCw { class: "app-icon", size: 16 }
+                                            }
+                                        }
                                     }
                                 }
                             } else {
@@ -201,8 +223,8 @@ pub fn TemplatesView(
                             "data-tooltip": "Try again",
                             aria_label: "Refresh attribute templates",
                             onclick: move |_| {
-                                if let Some(session_key) = refresh_session_key.clone() {
-                                    load_attribute_templates(
+                                if let Some(session_key) = error_refresh_session_key.clone() {
+                                    load_templates_data(
                                         session_key,
                                         attribute_templates,
                                         entity_templates,
@@ -210,6 +232,7 @@ pub fn TemplatesView(
                                         owner_users,
                                         can_manage_templates,
                                         attribute_templates_error,
+                                        is_entity_templates_loading,
                                         is_attribute_templates_loading,
                                     );
                                 }
@@ -257,7 +280,25 @@ pub fn TemplatesView(
                                 } else if attribute_template_rows.is_empty() {
                                     tr {
                                         td { class: "data-table-empty-cell", colspan: "4",
-                                            span { "There are no entries" }
+                                            div { class: "data-table-empty-state",
+                                                span { "There are no entries" }
+                                                button {
+                                                    class: "access-level-refresh-button",
+                                                    "data-tooltip": "Try again",
+                                                    aria_label: "Refresh attribute templates",
+                                                    onclick: move |_| {
+                                                        if let Some(session_key) = attribute_templates_refresh_session_key.clone() {
+                                                            load_attribute_templates(
+                                                                session_key,
+                                                                attribute_templates,
+                                                                attribute_templates_error,
+                                                                is_attribute_templates_loading,
+                                                            );
+                                                        }
+                                                    },
+                                                    RefreshCw { class: "app-icon", size: 16 }
+                                                }
+                                            }
                                         }
                                     }
                                 } else {
@@ -381,7 +422,7 @@ fn has_any_permission(session: &AuthSession, names: &[&str]) -> bool {
         .any(|permission| names.contains(&permission.name.as_str()))
 }
 
-fn load_attribute_templates(
+fn load_templates_data(
     session_key: String,
     mut attribute_templates: Signal<Vec<AttributeTemplate>>,
     mut entity_templates: Signal<Vec<EntityTemplate>>,
@@ -389,8 +430,10 @@ fn load_attribute_templates(
     mut owner_users: Signal<Vec<User>>,
     can_manage_templates: bool,
     mut attribute_templates_error: Signal<Option<String>>,
+    mut is_entity_templates_loading: Signal<bool>,
     mut is_attribute_templates_loading: Signal<bool>,
 ) {
+    is_entity_templates_loading.set(true);
     is_attribute_templates_loading.set(true);
 
     spawn(async move {
@@ -417,6 +460,59 @@ fn load_attribute_templates(
                 entity_templates.set(next_entity_templates);
                 access_levels.set(next_access_levels);
                 owner_users.set(next_owner_users);
+                attribute_templates_error.set(None);
+            }
+            Err(message) => attribute_templates_error.set(Some(message)),
+        }
+
+        is_entity_templates_loading.set(false);
+        is_attribute_templates_loading.set(false);
+    });
+}
+
+fn load_entity_templates(
+    session_key: String,
+    mut entity_templates: Signal<Vec<EntityTemplate>>,
+    mut attribute_templates_error: Signal<Option<String>>,
+    mut is_entity_templates_loading: Signal<bool>,
+) {
+    is_entity_templates_loading.set(true);
+
+    spawn(async move {
+        match fetch_entity_templates(session_key).await {
+            Ok(mut next_entity_templates) => {
+                next_entity_templates.sort_by(|left, right| {
+                    left.name
+                        .to_ascii_lowercase()
+                        .cmp(&right.name.to_ascii_lowercase())
+                });
+                entity_templates.set(next_entity_templates);
+                attribute_templates_error.set(None);
+            }
+            Err(message) => attribute_templates_error.set(Some(message)),
+        }
+
+        is_entity_templates_loading.set(false);
+    });
+}
+
+fn load_attribute_templates(
+    session_key: String,
+    mut attribute_templates: Signal<Vec<AttributeTemplate>>,
+    mut attribute_templates_error: Signal<Option<String>>,
+    mut is_attribute_templates_loading: Signal<bool>,
+) {
+    is_attribute_templates_loading.set(true);
+
+    spawn(async move {
+        match fetch_attribute_templates(session_key).await {
+            Ok(mut next_attribute_templates) => {
+                next_attribute_templates.sort_by(|left, right| {
+                    left.name
+                        .to_ascii_lowercase()
+                        .cmp(&right.name.to_ascii_lowercase())
+                });
+                attribute_templates.set(next_attribute_templates);
                 attribute_templates_error.set(None);
             }
             Err(message) => attribute_templates_error.set(Some(message)),

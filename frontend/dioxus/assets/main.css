@@ -118,6 +118,7 @@ textarea:focus {
 	color: var(--tooltip-fg);
 	content: attr(data-tooltip);
 	font-size: 0.72rem;
+	font-style: normal;
 	font-weight: 400;
 	left: var(--tooltip-left);
 	line-height: 1;
@@ -1138,6 +1139,7 @@ button.entity-views-manage-button:hover {
 	border-bottom: 0;
 }
 
+.data-table-empty-state,
 .entities-empty-state {
 	align-items: center;
 	display: flex;
