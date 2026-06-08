@@ -4,6 +4,7 @@ CREATE TABLE "entity_template_attributes" (
 	"name" text NOT NULL,
 	"description" text NOT NULL,
 	"value_type" "attribute_template_value_type" NOT NULL,
+	"default_value" text,
 	"is_required" boolean DEFAULT false NOT NULL,
 	"access_level_id" integer NOT NULL,
 	"listing_index" integer NOT NULL,

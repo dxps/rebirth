@@ -403,7 +403,7 @@ pub fn DataExplorerView(
                                                                                         is_required: ta.is_required,
                                                                                         listing_index: ta.listing_index,
                                                                                         name: ta.name.clone(),
-                                                                                        value: String::new(),
+                                                                                        value: ta.default_value.unwrap_or_default(),
                                                                                         value_type: ta.value_type.clone(),
                                                                                     }
                                                                                 })

@@ -11,6 +11,7 @@ export interface EntityTemplateAttribute {
 	name: string
 	description: string
 	valueType: ValueType
+	defaultValue: string | null
 	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
@@ -21,6 +22,7 @@ export interface CreateEntityTemplateAttributeInput {
 	name: string
 	description: string
 	valueType: ValueType
+	defaultValue?: string | null
 	isRequired: boolean
 	accessLevelId: AccessLevelId
 	listingIndex: number
@@ -149,6 +151,9 @@ export function hasValidEntityTemplateAttributes(
 				typeof input.name === 'string' &&
 				typeof input.description === 'string' &&
 				isValueType(input.valueType) &&
+				(input.defaultValue === undefined ||
+					input.defaultValue === null ||
+					typeof input.defaultValue === 'string') &&
 				typeof input.isRequired === 'boolean' &&
 				typeof input.accessLevelId === 'number' &&
 				isAccessLevelId(input.accessLevelId) &&

@@ -10,6 +10,7 @@ pub struct EtAttr {
     pub name: String,
     pub description: String,
     pub value_type: String,
+    pub default_value: Option<String>,
     pub is_required: bool,
     pub access_level_id: i32,
     pub listing_index: Option<i32>,
@@ -28,6 +29,7 @@ struct NormAttr {
     name: String,
     description: String,
     value_type: String,
+    default_value: Option<String>,
     is_required: bool,
     access_level_id: i32,
     listing_index: i32,
@@ -65,6 +67,7 @@ fn normalize_attributes(attributes: Vec<EtAttr>) -> Vec<NormAttr> {
             name: attribute.name.trim().to_string(),
             description: attribute.description.trim().to_string(),
             value_type: attribute.value_type,
+            default_value: normalize_nullable_text(attribute.default_value),
             is_required: attribute.is_required,
             access_level_id: attribute.access_level_id,
             listing_index: attribute.listing_index.unwrap_or(index as i32),
@@ -83,6 +86,7 @@ fn normalize_attributes_existing(attributes: &[EntityTemplateAttribute]) -> Vec<
                 name: attribute.name.clone(),
                 description: attribute.description.clone(),
                 value_type: attribute.value_type.clone(),
+                default_value: attribute.default_value.clone(),
                 is_required: attribute.is_required,
                 access_level_id: attribute.access_level_id,
                 listing_index: Some(attribute.listing_index),
@@ -111,41 +115,54 @@ fn normalize_links(links: Vec<EtLink>) -> Vec<NormLink> {
 }
 
 fn listing_attribute_included(attributes: &[NormAttr], listing_attribute_id: Uuid) -> bool {
-    attributes.iter().any(|attribute| attribute.id == listing_attribute_id)
+    attributes
+        .iter()
+        .any(|attribute| attribute.id == listing_attribute_id)
 }
 
 type TemplateRow = (Uuid, String, String, Uuid, Uuid, String);
-type AttrRow = (Uuid, Uuid, String, String, String, bool, i32, i32);
+type AttrRow = (
+    Uuid,
+    Uuid,
+    String,
+    String,
+    String,
+    Option<String>,
+    bool,
+    i32,
+    i32,
+);
 type LinkRow = (Uuid, Uuid, Option<Uuid>, String, Option<String>, i32);
 
 async fn read_entity_template_rows(
     pool: &PgPool,
     id: Option<Uuid>,
 ) -> DbResult<Vec<EntityTemplate>> {
-    let rows: Vec<TemplateRow> = match id {
-        Some(id) => sqlx::query_as(
-            "SELECT entity_templates.id, entity_templates.name, entity_templates.description, \
+    let rows: Vec<TemplateRow> =
+        match id {
+            Some(id) => sqlx::query_as(
+                "SELECT entity_templates.id, entity_templates.name, entity_templates.description, \
                     entity_templates.listing_attribute_id, entity_templates.owner_user_id, \
                     users.username AS owner_username \
              FROM entity_templates \
              INNER JOIN users ON users.id = entity_templates.owner_user_id \
              WHERE entity_templates.id = $1 \
              ORDER BY entity_templates.name",
-        )
-        .bind(id)
-        .fetch_all(pool)
-        .await?,
-        None => sqlx::query_as(
-            "SELECT entity_templates.id, entity_templates.name, entity_templates.description, \
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await?,
+            None => sqlx::query_as(
+                "SELECT entity_templates.id, entity_templates.name, entity_templates.description, \
                     entity_templates.listing_attribute_id, entity_templates.owner_user_id, \
                     users.username AS owner_username \
              FROM entity_templates \
              INNER JOIN users ON users.id = entity_templates.owner_user_id \
              ORDER BY entity_templates.name",
-        )
-        .fetch_all(pool)
-        .await?,
-    };
+            )
+            .fetch_all(pool)
+            .await?,
+        };
 
     if rows.is_empty() {
         return Ok(Vec::new());
@@ -153,7 +170,7 @@ async fn read_entity_template_rows(
 
     let ids: Vec<Uuid> = rows.iter().map(|row| row.0).collect();
     let attribute_rows: Vec<AttrRow> = sqlx::query_as(
-        "SELECT id, entity_template_id, name, description, value_type::text, is_required, \
+        "SELECT id, entity_template_id, name, description, value_type::text, default_value, is_required, \
                 access_level_id, listing_index \
          FROM entity_template_attributes \
          WHERE entity_template_id = ANY($1) \
@@ -174,41 +191,44 @@ async fn read_entity_template_rows(
 
     let templates = rows
         .into_iter()
-        .map(|(tid, name, description, listing_attribute_id, owner_user_id, owner_username)| {
-            EntityTemplate {
-                attributes: attribute_rows
-                    .iter()
-                    .filter(|row| row.1 == tid)
-                    .map(|row| EntityTemplateAttribute {
-                        id: row.0.to_string(),
-                        name: row.2.clone(),
-                        description: row.3.clone(),
-                        value_type: row.4.clone(),
-                        is_required: row.5,
-                        access_level_id: row.6,
-                        listing_index: row.7,
-                    })
-                    .collect(),
-                description,
-                id: tid.to_string(),
-                owner_user_id: owner_user_id.to_string(),
-                owner_username: Some(owner_username),
-                links: link_rows
-                    .iter()
-                    .filter(|row| row.1 == tid)
-                    .map(|row| EntityTemplateLink {
-                        id: row.0.to_string(),
-                        entity_template_id: row.1.to_string(),
-                        target_entity_template_id: row.2.map(|t| t.to_string()),
-                        name: row.3.clone(),
-                        description: row.4.clone(),
-                        listing_index: row.5,
-                    })
-                    .collect(),
-                listing_attribute_id: listing_attribute_id.to_string(),
-                name,
-            }
-        })
+        .map(
+            |(tid, name, description, listing_attribute_id, owner_user_id, owner_username)| {
+                EntityTemplate {
+                    attributes: attribute_rows
+                        .iter()
+                        .filter(|row| row.1 == tid)
+                        .map(|row| EntityTemplateAttribute {
+                            id: row.0.to_string(),
+                            name: row.2.clone(),
+                            description: row.3.clone(),
+                            value_type: row.4.clone(),
+                            default_value: row.5.clone(),
+                            is_required: row.6,
+                            access_level_id: row.7,
+                            listing_index: row.8,
+                        })
+                        .collect(),
+                    description,
+                    id: tid.to_string(),
+                    owner_user_id: owner_user_id.to_string(),
+                    owner_username: Some(owner_username),
+                    links: link_rows
+                        .iter()
+                        .filter(|row| row.1 == tid)
+                        .map(|row| EntityTemplateLink {
+                            id: row.0.to_string(),
+                            entity_template_id: row.1.to_string(),
+                            target_entity_template_id: row.2.map(|t| t.to_string()),
+                            name: row.3.clone(),
+                            description: row.4.clone(),
+                            listing_index: row.5,
+                        })
+                        .collect(),
+                    listing_attribute_id: listing_attribute_id.to_string(),
+                    name,
+                }
+            },
+        )
         .collect();
 
     Ok(templates)
@@ -234,13 +254,14 @@ async fn replace_attributes(
     for attribute in attributes {
         sqlx::query(
             "INSERT INTO entity_template_attributes \
-                (id, entity_template_id, name, description, value_type, is_required, access_level_id, listing_index) \
-             VALUES ($1, $2, $3, $4, $5::attribute_template_value_type, $6, $7, $8) \
+                (id, entity_template_id, name, description, value_type, default_value, is_required, access_level_id, listing_index) \
+             VALUES ($1, $2, $3, $4, $5::attribute_template_value_type, $6, $7, $8, $9) \
              ON CONFLICT (id) DO UPDATE SET \
                 entity_template_id = EXCLUDED.entity_template_id, \
                 name = EXCLUDED.name, \
                 description = EXCLUDED.description, \
                 value_type = EXCLUDED.value_type, \
+                default_value = EXCLUDED.default_value, \
                 is_required = EXCLUDED.is_required, \
                 access_level_id = EXCLUDED.access_level_id, \
                 listing_index = EXCLUDED.listing_index",
@@ -250,6 +271,7 @@ async fn replace_attributes(
         .bind(&attribute.name)
         .bind(&attribute.description)
         .bind(&attribute.value_type)
+        .bind(&attribute.default_value)
         .bind(attribute.is_required)
         .bind(attribute.access_level_id)
         .bind(attribute.listing_index)
@@ -275,12 +297,11 @@ async fn replace_links(
     entity_template_id: Uuid,
     links: &[NormLink],
 ) -> DbResult<()> {
-    let existing: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM entity_template_links WHERE entity_template_id = $1",
-    )
-    .bind(entity_template_id)
-    .fetch_all(&mut **tx)
-    .await?;
+    let existing: Vec<Uuid> =
+        sqlx::query_scalar("SELECT id FROM entity_template_links WHERE entity_template_id = $1")
+            .bind(entity_template_id)
+            .fetch_all(&mut **tx)
+            .await?;
     let next_ids: Vec<Uuid> = links.iter().map(|l| l.id).collect();
 
     for link in links {
@@ -358,7 +379,10 @@ pub async fn create_entity_template(
     replace_links(&mut tx, id, &links).await?;
     tx.commit().await?;
 
-    Ok(read_entity_template_rows(pool, Some(id)).await?.into_iter().next())
+    Ok(read_entity_template_rows(pool, Some(id))
+        .await?
+        .into_iter()
+        .next())
 }
 
 #[derive(Default)]
@@ -376,7 +400,11 @@ pub async fn update_entity_template(
     id: Uuid,
     input: UpdateEntityTemplate,
 ) -> DbResult<Option<EntityTemplate>> {
-    let Some(existing) = read_entity_template_rows(pool, Some(id)).await?.into_iter().next() else {
+    let Some(existing) = read_entity_template_rows(pool, Some(id))
+        .await?
+        .into_iter()
+        .next()
+    else {
         return Ok(None);
     };
 
@@ -400,7 +428,10 @@ pub async fn update_entity_template(
     let owner_user_id = input
         .owner_user_id
         .unwrap_or_else(|| parse_uuid(&existing.owner_user_id));
-    let name = input.name.map(|n| n.trim().to_string()).unwrap_or(existing.name);
+    let name = input
+        .name
+        .map(|n| n.trim().to_string())
+        .unwrap_or(existing.name);
     let description = input
         .description
         .map(|d| d.trim().to_string())
@@ -425,11 +456,18 @@ pub async fn update_entity_template(
     }
     tx.commit().await?;
 
-    Ok(read_entity_template_rows(pool, Some(id)).await?.into_iter().next())
+    Ok(read_entity_template_rows(pool, Some(id))
+        .await?
+        .into_iter()
+        .next())
 }
 
 pub async fn delete_entity_template(pool: &PgPool, id: Uuid) -> DbResult<Option<EntityTemplate>> {
-    let Some(template) = read_entity_template_rows(pool, Some(id)).await?.into_iter().next() else {
+    let Some(template) = read_entity_template_rows(pool, Some(id))
+        .await?
+        .into_iter()
+        .next()
+    else {
         return Ok(None);
     };
     sqlx::query("DELETE FROM entity_templates WHERE id = $1")
@@ -441,5 +479,8 @@ pub async fn delete_entity_template(pool: &PgPool, id: Uuid) -> DbResult<Option<
 
 // Exposed for the entities module (building an entity from a template).
 pub async fn read_one(pool: &PgPool, id: Uuid) -> DbResult<Option<EntityTemplate>> {
-    Ok(read_entity_template_rows(pool, Some(id)).await?.into_iter().next())
+    Ok(read_entity_template_rows(pool, Some(id))
+        .await?
+        .into_iter()
+        .next())
 }

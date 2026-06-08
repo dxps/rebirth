@@ -30,7 +30,9 @@ pub struct User {
 
 impl User {
     pub fn has_permission(&self, name: &str) -> bool {
-        self.permissions.iter().any(|permission| permission.name == name)
+        self.permissions
+            .iter()
+            .any(|permission| permission.name == name)
     }
 
     pub fn can_manage_own_data(&self) -> bool {
@@ -84,6 +86,7 @@ pub struct EntityTemplateAttribute {
     pub name: String,
     pub description: String,
     pub value_type: String,
+    pub default_value: Option<String>,
     pub is_required: bool,
     pub access_level_id: i32,
     pub listing_index: i32,

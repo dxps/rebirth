@@ -800,9 +800,17 @@ fn entity_template_create_body(entity_template: &EntityTemplate) -> String {
         .iter()
         .enumerate()
         .map(|(index, attribute)| {
+            let default_value = attribute
+                .default_value
+                .as_deref()
+                .map(str::trim)
+                .filter(|default_value| !default_value.is_empty())
+                .map(json_string)
+                .unwrap_or_else(|| "null".to_string());
             format!(
-                "{{\"accessLevelId\":{},\"description\":{},\"id\":{},\"isRequired\":{},\"listingIndex\":{},\"name\":{},\"valueType\":{}}}",
+                "{{\"accessLevelId\":{},\"defaultValue\":{},\"description\":{},\"id\":{},\"isRequired\":{},\"listingIndex\":{},\"name\":{},\"valueType\":{}}}",
                 attribute.access_level_id,
+                default_value,
                 json_string(&attribute.description),
                 json_string(&attribute.id),
                 attribute.is_required,
@@ -1127,7 +1135,7 @@ fn AttributesTable(
     open_value_type_menu_id: Option<String>,
     selected_attribute_template_id: Option<String>,
 ) -> Element {
-    let empty_colspan = if is_readonly { "3" } else { "4" };
+    let empty_colspan = if is_readonly { "4" } else { "5" };
     let table_class = if is_readonly {
         "data-table entity-template-modal-table entity-template-attributes-table entity-template-view-attributes-table"
     } else {
@@ -1140,6 +1148,7 @@ fn AttributesTable(
                 tr {
                     th { "name" }
                     th { "value type" }
+                    th { "default value" }
                     th { "access level" }
                     if !is_readonly {
                         th { class: "entity-template-attribute-action-column",
@@ -1351,6 +1360,39 @@ fn IncludedAttributeRow(
                                         attribute.value_type = value_type;
                                     }
                                     entity_template.open_attribute_value_type_menu_id = None;
+                                },
+                            )
+                        },
+                    }
+                }
+            }
+            td {
+                if is_readonly {
+                    span { class: "empty-value-space", "{attribute.default_value.clone().unwrap_or_default()}" }
+                } else {
+                    input {
+                        class: "entity-template-attribute-default-value-input",
+                        r#type: "text",
+                        value: "{attribute.default_value.clone().unwrap_or_default()}",
+                        oninput: {
+                            let attribute_id = attribute_id.clone();
+                            move |event| update_entity_template_modal(
+                                modals,
+                                modal_id,
+                                |entity_template| {
+                                    if let Some(attribute) = entity_template
+                                        .entity_template
+                                        .attributes
+                                        .iter_mut()
+                                        .find(|attribute| attribute.id == attribute_id)
+                                    {
+                                        let default_value = event.value();
+                                        attribute.default_value = if default_value.is_empty() {
+                                            None
+                                        } else {
+                                            Some(default_value)
+                                        };
+                                    }
                                 },
                             )
                         },
@@ -2141,6 +2183,7 @@ fn add_selected_attribute_template(entity_template: &mut EntityTemplateModal) {
         .attributes
         .push(EntityTemplateAttribute {
             access_level_id: attribute_template.access_level_id,
+            default_value: attribute_template.default_value.clone(),
             description: attribute_template.description,
             id: attribute_template.id.clone(),
             is_required: attribute_template.is_required,
@@ -2307,6 +2350,7 @@ fn add_new_attribute_from_values(
         .attributes
         .push(EntityTemplateAttribute {
             access_level_id,
+            default_value: None,
             description,
             id: attribute_id.clone(),
             is_required,

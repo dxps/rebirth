@@ -2,7 +2,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::Response;
-use axum::routing::{delete, get, patch, post, put};
+use axum::routing::{get, patch, post, put};
 use axum::Router;
 use base64::Engine;
 use serde_json::Value;
@@ -38,7 +38,10 @@ pub fn app(pool: PgPool) -> Router {
         .route("/audit-events", get(list_audit_events))
         .route("/users", get(list_users).post(create_user))
         .route("/entity-owners", get(entity_owners))
-        .route("/access-levels", get(list_access_levels).post(create_access_level))
+        .route(
+            "/access-levels",
+            get(list_access_levels).post(create_access_level),
+        )
         .route(
             "/access-levels/:id",
             patch(update_access_level).delete(delete_access_level),
@@ -124,7 +127,11 @@ where
 }
 
 fn gs(value: &Value, key: &str) -> String {
-    value.get(key).and_then(Value::as_str).unwrap_or("").to_string()
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string()
 }
 
 fn gb(value: &Value, key: &str) -> bool {
@@ -153,7 +160,12 @@ fn id_vec(value: &Value, key: &str) -> Vec<i32> {
     value
         .get(key)
         .and_then(Value::as_array)
-        .map(|arr| arr.iter().filter_map(Value::as_i64).map(|n| n as i32).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(Value::as_i64)
+                .map(|n| n as i32)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -175,7 +187,10 @@ fn visible_entity(user: &User, mut entity: Entity) -> Entity {
             owner == user.id
         } else {
             attribute.access_level_id == 1
-                || user.access_levels.iter().any(|al| al.id == attribute.access_level_id)
+                || user
+                    .access_levels
+                    .iter()
+                    .any(|al| al.id == attribute.access_level_id)
         };
         if !visible {
             attribute.value = masked();
@@ -235,6 +250,7 @@ fn et_attr_inputs(value: &Value) -> Vec<entity_templates::EtAttr> {
                     name: gs(a, "name"),
                     description: gs(a, "description"),
                     value_type: gs(a, "valueType"),
+                    default_value: opt_str(a, "defaultValue"),
                     is_required: gb(a, "isRequired"),
                     access_level_id: gi(a, "accessLevelId"),
                     listing_index: opt_i32(a, "listingIndex"),
@@ -291,10 +307,11 @@ async fn auth_login(State(state): State<AppState>, body: Bytes) -> Response {
     let password = gs(&input, "password");
     match users::authenticate_user(&state.pool, &identifier, &password).await {
         Ok(Some(user)) => {
-            let session_key = match users::create_user_session(&state.pool, parse_uuid(&user.id)).await {
-                Ok(key) => key,
-                Err(_) => return internal("Unable to login"),
-            };
+            let session_key =
+                match users::create_user_session(&state.pool, parse_uuid(&user.id)).await {
+                    Ok(key) => key,
+                    Err(_) => return internal("Unable to login"),
+                };
             web::data(StatusCode::OK, LoginData { session_key, user })
         }
         Ok(None) => web::error(StatusCode::UNAUTHORIZED, "Invalid username or password"),
@@ -331,7 +348,9 @@ async fn user_password(State(state): State<AppState>, headers: HeaderMap, body: 
     }
     let current = gs(&input, "currentPassword");
     let new_password = gs(&input, "newPassword");
-    match users::update_user_password(&state.pool, parse_uuid(&user.id), &current, &new_password).await {
+    match users::update_user_password(&state.pool, parse_uuid(&user.id), &current, &new_password)
+        .await
+    {
         Ok(users::PasswordUpdate::InvalidCurrent) => {
             web::error(StatusCode::UNAUTHORIZED, "Current password is incorrect")
         }
@@ -366,6 +385,7 @@ async fn user_info(State(state): State<AppState>, headers: HeaderMap, body: Byte
         Ok(None) => web::error(StatusCode::NOT_FOUND, "User not found"),
         Err(DbError::User(message)) => web::error(StatusCode::FORBIDDEN, &message),
         Err(DbError::Entity(message)) => web::error(StatusCode::BAD_REQUEST, &message),
+        Err(DbError::Other(message)) => web::error(StatusCode::BAD_REQUEST, &message),
         Err(DbError::Sqlx(e)) if dberr::is_unique_violation(&e) => {
             if dberr::has_constraint(&e, "users_username_unique") {
                 web::username_unique_conflict()
@@ -458,7 +478,11 @@ async fn list_access_levels(State(state): State<AppState>, headers: HeaderMap) -
     }
 }
 
-async fn create_access_level(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> Response {
+async fn create_access_level(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
     if let Err(response) = require_with(&state, &headers, User::can_manage_security).await {
         return response;
     }
@@ -510,13 +534,22 @@ async fn update_access_level(
                 return web::error(StatusCode::NOT_FOUND, "Access level not found");
             };
             if name.trim() != existing.name {
-                return web::error(StatusCode::FORBIDDEN, "Built-in access levels cannot be renamed");
+                return web::error(
+                    StatusCode::FORBIDDEN,
+                    "Built-in access levels cannot be renamed",
+                );
             }
         }
     }
 
-    let name = input.get("name").and_then(Value::as_str).map(|s| s.trim().to_string());
-    let description = input.get("description").and_then(Value::as_str).map(|s| s.trim().to_string());
+    let name = input
+        .get("name")
+        .and_then(Value::as_str)
+        .map(|s| s.trim().to_string());
+    let description = input
+        .get("description")
+        .and_then(Value::as_str)
+        .map(|s| s.trim().to_string());
     match access_levels::update_access_level(&state.pool, id, name, description).await {
         Ok(Some(updated)) => web::data(StatusCode::OK, updated),
         Ok(None) => web::error(StatusCode::NOT_FOUND, "Access level not found"),
@@ -540,7 +573,10 @@ async fn delete_access_level(
         return web::error(StatusCode::BAD_REQUEST, "Invalid access level id");
     }
     if id <= 4 {
-        return web::error(StatusCode::FORBIDDEN, "Built-in access levels cannot be deleted");
+        return web::error(
+            StatusCode::FORBIDDEN,
+            "Built-in access levels cannot be deleted",
+        );
     }
     match access_levels::delete_access_level(&state.pool, id).await {
         Ok(Some(deleted)) => web::data(StatusCode::OK, deleted),
@@ -586,7 +622,10 @@ async fn create_attribute_template(
         }
     }
     let owner_user_id = if user.can_manage_data() {
-        owner_input.as_deref().map(parse_uuid).unwrap_or_else(|| parse_uuid(&user.id))
+        owner_input
+            .as_deref()
+            .map(parse_uuid)
+            .unwrap_or_else(|| parse_uuid(&user.id))
     } else {
         parse_uuid(&user.id)
     };
@@ -601,7 +640,9 @@ async fn create_attribute_template(
     match attribute_templates::create_attribute_template(&state.pool, owner_user_id, create).await {
         Ok(Some(created)) => web::data(StatusCode::CREATED, created),
         Ok(None) => internal("Unable to create attribute template"),
-        Err(DbError::Sqlx(e)) if dberr::has_constraint(&e, "attribute_templates_name_description_unique") => {
+        Err(DbError::Sqlx(e))
+            if dberr::has_constraint(&e, "attribute_templates_name_description_unique") =>
+        {
             web::attribute_template_unique_conflict()
         }
         Err(DbError::Sqlx(e)) if dberr::is_unique_violation(&e) => web::unique_conflict(),
@@ -651,7 +692,10 @@ async fn update_attribute_template(
         description: opt_str(&input, "description"),
         value_type: opt_str(&input, "valueType"),
         default_value_provided: input.get("defaultValue").is_some(),
-        default_value: input.get("defaultValue").and_then(Value::as_str).map(str::to_string),
+        default_value: input
+            .get("defaultValue")
+            .and_then(Value::as_str)
+            .map(str::to_string),
         is_required: input.get("isRequired").and_then(Value::as_bool),
         access_level_id: opt_i32(&input, "accessLevelId"),
         owner_user_id: if user.can_manage_data() {
@@ -660,10 +704,13 @@ async fn update_attribute_template(
             None
         },
     };
-    match attribute_templates::update_attribute_template(&state.pool, parse_uuid(&id), update).await {
+    match attribute_templates::update_attribute_template(&state.pool, parse_uuid(&id), update).await
+    {
         Ok(Some(updated)) => web::data(StatusCode::OK, updated),
         Ok(None) => web::error(StatusCode::NOT_FOUND, "Attribute template not found"),
-        Err(DbError::Sqlx(e)) if dberr::has_constraint(&e, "attribute_templates_name_description_unique") => {
+        Err(DbError::Sqlx(e))
+            if dberr::has_constraint(&e, "attribute_templates_name_description_unique") =>
+        {
             web::attribute_template_unique_conflict()
         }
         Err(DbError::Sqlx(e)) if dberr::is_unique_violation(&e) => web::unique_conflict(),
@@ -737,7 +784,10 @@ async fn create_entity_template(
         }
     }
     let owner_user_id = if user.can_manage_data() {
-        owner_input.as_deref().map(parse_uuid).unwrap_or_else(|| parse_uuid(&user.id))
+        owner_input
+            .as_deref()
+            .map(parse_uuid)
+            .unwrap_or_else(|| parse_uuid(&user.id))
     } else {
         parse_uuid(&user.id)
     };
@@ -867,26 +917,27 @@ async fn list_entities(
     let visible: Vec<Entity> = if manage {
         all
     } else {
-        all.into_iter().filter(|e| e.owner_user_id == user.id).collect()
+        all.into_iter()
+            .filter(|e| e.owner_user_id == user.id)
+            .collect()
     };
 
     let normalized = search.as_deref().map(|s| s.trim().to_lowercase());
-    let filtered: Vec<Entity> = if !manage
-        && normalized.as_deref().map(|s| s.len() >= 3).unwrap_or(false)
-    {
-        let term = normalized.unwrap();
-        visible
-            .into_iter()
-            .filter(|entity| {
-                entity.attributes.iter().any(|attribute| {
-                    attribute.name.to_lowercase().contains(&term)
-                        || attribute.value.to_lowercase().contains(&term)
+    let filtered: Vec<Entity> =
+        if !manage && normalized.as_deref().map(|s| s.len() >= 3).unwrap_or(false) {
+            let term = normalized.unwrap();
+            visible
+                .into_iter()
+                .filter(|entity| {
+                    entity.attributes.iter().any(|attribute| {
+                        attribute.name.to_lowercase().contains(&term)
+                            || attribute.value.to_lowercase().contains(&term)
+                    })
                 })
-            })
-            .collect()
-    } else {
-        visible
-    };
+                .collect()
+        } else {
+            visible
+        };
 
     let total = filtered.len() as i64;
     let start = ((page - 1) * page_size) as usize;
@@ -896,7 +947,10 @@ async fn list_entities(
     } else {
         Vec::new()
     };
-    let data: Vec<Entity> = page_slice.into_iter().map(|e| visible_entity(&user, e)).collect();
+    let data: Vec<Entity> = page_slice
+        .into_iter()
+        .map(|e| visible_entity(&user, e))
+        .collect();
 
     web::json(
         StatusCode::OK,
@@ -965,7 +1019,10 @@ async fn create_entity(State(state): State<AppState>, headers: HeaderMap, body: 
         }
     }
     let owner_user_id = if user.can_manage_data() {
-        owner_input.as_deref().map(parse_uuid).unwrap_or_else(|| parse_uuid(&user.id))
+        owner_input
+            .as_deref()
+            .map(parse_uuid)
+            .unwrap_or_else(|| parse_uuid(&user.id))
     } else {
         parse_uuid(&user.id)
     };
@@ -1168,13 +1225,28 @@ async fn update_user(
                 );
             }
         }
-        return web::error(StatusCode::FORBIDDEN, "The built-in admin user cannot be managed");
+        return web::error(
+            StatusCode::FORBIDDEN,
+            "The built-in admin user cannot be managed",
+        );
     }
     let update = users::UpdateUser {
-        email: input.get("email").and_then(Value::as_str).map(|s| s.trim().to_string()),
-        first_name: input.get("firstName").and_then(Value::as_str).map(|s| s.trim().to_string()),
-        last_name: input.get("lastName").and_then(Value::as_str).map(|s| s.trim().to_string()),
-        username: input.get("username").and_then(Value::as_str).map(|s| s.trim().to_string()),
+        email: input
+            .get("email")
+            .and_then(Value::as_str)
+            .map(|s| s.trim().to_string()),
+        first_name: input
+            .get("firstName")
+            .and_then(Value::as_str)
+            .map(|s| s.trim().to_string()),
+        last_name: input
+            .get("lastName")
+            .and_then(Value::as_str)
+            .map(|s| s.trim().to_string()),
+        username: input
+            .get("username")
+            .and_then(Value::as_str)
+            .map(|s| s.trim().to_string()),
         password: opt_str(&input, "password"),
         access_level_ids: opt_id_vec(&input, "accessLevelIds"),
         permission_ids: opt_id_vec(&input, "permissionIds"),
@@ -1204,7 +1276,10 @@ async fn delete_user(
         Err(_) => return internal("Unable to delete user"),
     };
     if existing.username == "admin" {
-        return web::error(StatusCode::FORBIDDEN, "The built-in admin user cannot be managed");
+        return web::error(
+            StatusCode::FORBIDDEN,
+            "The built-in admin user cannot be managed",
+        );
     }
     match users::delete_user(&state.pool, parse_uuid(&id)).await {
         Ok(Some(deleted)) => web::data(StatusCode::OK, deleted),
@@ -1236,7 +1311,9 @@ async fn spring_config_user(state: &AppState, headers: &HeaderMap) -> Option<Use
         return Some(user);
     }
     let value = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
-    let encoded = value.strip_prefix("Basic ").or_else(|| value.strip_prefix("basic "))?;
+    let encoded = value
+        .strip_prefix("Basic ")
+        .or_else(|| value.strip_prefix("basic "))?;
     let decoded = base64::engine::general_purpose::STANDARD
         .decode(encoded.trim())
         .ok()?;
@@ -1271,7 +1348,11 @@ async fn config_response(
         .unwrap_or_else(|| "main".to_string());
     let label = {
         let trimmed = label.trim();
-        if trimmed.is_empty() { "main".to_string() } else { trimmed.to_string() }
+        if trimmed.is_empty() {
+            "main".to_string()
+        } else {
+            trimmed.to_string()
+        }
     };
     let profiles: Vec<String> = profile_segment
         .split(',')

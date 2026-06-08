@@ -627,7 +627,7 @@ function CreateEntityModal({
 						isRequired: attribute.isRequired,
 						listingIndex: index,
 						name: attribute.name,
-						value: '',
+						value: attribute.defaultValue ?? '',
 						valueType: attribute.valueType,
 					}
 				})

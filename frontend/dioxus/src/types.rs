@@ -358,6 +358,7 @@ pub struct AttributeTemplateResponse {
 #[serde(rename_all = "camelCase")]
 pub struct EntityTemplateAttribute {
     pub access_level_id: u32,
+    pub default_value: Option<String>,
     pub description: String,
     pub id: String,
     pub is_required: bool,

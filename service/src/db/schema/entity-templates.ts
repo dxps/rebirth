@@ -54,6 +54,7 @@ export const entityTemplateAttributes = pgTable(
 		name: text('name').notNull(),
 		description: text('description').notNull(),
 		valueType: attributeTemplateValueType('value_type').notNull(),
+		defaultValue: text('default_value'),
 		isRequired: boolean('is_required').notNull().default(false),
 		accessLevelId: integer('access_level_id').notNull(),
 		listingIndex: integer('listing_index').notNull(),

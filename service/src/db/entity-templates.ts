@@ -41,6 +41,7 @@ interface EntityTemplateAttributeRow {
 	name: string
 	description: string
 	value_type: ValueType
+	default_value: string | null
 	is_required: boolean
 	access_level_id: number
 	listing_index: number
@@ -99,6 +100,7 @@ function normalizeAttributes(
 			id: attribute.id,
 			accessLevelId: attribute.accessLevelId,
 			description: attribute.description.trim(),
+			defaultValue: normalizeNullableText(attribute.defaultValue),
 			isRequired: attribute.isRequired,
 			listingIndex: attribute.listingIndex ?? index,
 			name: attribute.name.trim(),
@@ -140,6 +142,7 @@ function toEntityTemplate(
 				id: attributeRow.id,
 				accessLevelId: attributeRow.access_level_id,
 				description: attributeRow.description,
+				defaultValue: attributeRow.default_value,
 				isRequired: attributeRow.is_required,
 				listingIndex: attributeRow.listing_index,
 				name: attributeRow.name,
@@ -202,7 +205,7 @@ export async function readEntityTemplateRows(
 
 	const ids = rows.map((row) => row.id)
 	const attributeRows = await client<EntityTemplateAttributeRow[]>`
-		SELECT id, entity_template_id, name, description, value_type, is_required, access_level_id, listing_index
+		SELECT id, entity_template_id, name, description, value_type, default_value, is_required, access_level_id, listing_index
 		FROM entity_template_attributes
 		WHERE entity_template_id = ANY(${ids})
 		ORDER BY entity_template_id, listing_index
@@ -238,6 +241,7 @@ async function replaceEntityTemplateAttributes(
 				name,
 				description,
 				value_type,
+				default_value,
 				is_required,
 				access_level_id,
 				listing_index
@@ -248,6 +252,7 @@ async function replaceEntityTemplateAttributes(
 				${attribute.name},
 				${attribute.description},
 				${attribute.valueType},
+				${attribute.defaultValue},
 				${attribute.isRequired},
 				${attribute.accessLevelId},
 				${attribute.listingIndex}
@@ -257,6 +262,7 @@ async function replaceEntityTemplateAttributes(
 				name = EXCLUDED.name,
 				description = EXCLUDED.description,
 				value_type = EXCLUDED.value_type,
+				default_value = EXCLUDED.default_value,
 				is_required = EXCLUDED.is_required,
 				access_level_id = EXCLUDED.access_level_id,
 				listing_index = EXCLUDED.listing_index

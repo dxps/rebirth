@@ -929,6 +929,7 @@ interface EntityTemplateEditFormProps {
 interface IncludedEntityAttribute {
 	id: string
 	accessLevelId: number
+	defaultValue: string | null
 	description: string
 	isRequired: boolean
 	listingIndex: number
@@ -992,6 +993,7 @@ function EntityTemplateEditForm({
 							accessLevels,
 							attribute.accessLevelId,
 						),
+						defaultValue: attribute.defaultValue,
 						description: attribute.description,
 						isRequired: attribute.isRequired,
 						listingIndex: index,
@@ -1340,6 +1342,7 @@ function EntityTemplateEditForm({
 					accessLevels,
 					attributeTemplate.accessLevelId,
 				),
+				defaultValue: attributeTemplate.defaultValue,
 				description: attributeTemplate.description,
 				isRequired: attributeTemplate.isRequired,
 				listingIndex: current.length,
@@ -1378,6 +1381,7 @@ function EntityTemplateEditForm({
 					description:
 						savedAttributeTemplate?.description ??
 						newAttributeDescription.trim(),
+					defaultValue: savedAttributeTemplate?.defaultValue ?? null,
 					isRequired: savedAttributeTemplate?.isRequired ?? false,
 					listingIndex: current.length,
 					name:
@@ -1530,6 +1534,23 @@ function updateLinkTarget(
 							...attribute,
 							description: '',
 							name,
+						}
+					: attribute,
+			),
+		)
+	}
+
+	function updateAttributeDefaultValue(
+		attributeId: string,
+		defaultValue: string,
+	): void {
+		setIncludedAttributes((current) =>
+			current.map((attribute) =>
+				attribute.id === attributeId
+					? {
+							...attribute,
+							defaultValue:
+								defaultValue.length > 0 ? defaultValue : null,
 						}
 					: attribute,
 			),
@@ -1793,6 +1814,11 @@ function updateLinkTarget(
 				attributes: includedAttributes.map((attribute, index) => ({
 					id: attribute.id,
 					accessLevelId: attribute.accessLevelId,
+					defaultValue:
+						attribute.defaultValue &&
+						attribute.defaultValue.trim().length > 0
+							? attribute.defaultValue.trim()
+							: null,
 					description: attribute.description,
 					isRequired: attribute.isRequired,
 					listingIndex: index,
@@ -1927,6 +1953,7 @@ function updateLinkTarget(
 							<colgroup>
 								<col className="entity-template-attribute-name-column" />
 								<col className="entity-template-attribute-value-type-column" />
+								<col className="entity-template-attribute-default-value-column" />
 								<col className="entity-template-attribute-access-level-column" />
 								<col className="entity-template-attribute-action-column" />
 							</colgroup>
@@ -1934,6 +1961,7 @@ function updateLinkTarget(
 								<tr>
 									<th>name</th>
 									<th>value type</th>
+									<th>default value</th>
 									<th>access level</th>
 									<th className="entity-template-attributes-header-action-cell">
 										<div
@@ -2203,7 +2231,7 @@ function updateLinkTarget(
 									<tr>
 										<td
 											className="data-table-empty-cell"
-											colSpan={4}
+											colSpan={5}
 										>
 											<span>There are no entries</span>
 										</td>
@@ -2283,6 +2311,25 @@ function updateLinkTarget(
 															)}
 														</select>
 													</span>
+												</td>
+												<td>
+													<input
+														aria-label={`${includedAttribute.name} default value`}
+														className="entity-template-attribute-name-input"
+														data-no-drag="true"
+														type="text"
+														value={
+															includedAttribute.defaultValue ??
+															''
+														}
+														onChange={(event) =>
+															updateAttributeDefaultValue(
+																includedAttribute.id,
+																event.target
+																	.value,
+															)
+														}
+													/>
 												</td>
 												<td>
 													<span

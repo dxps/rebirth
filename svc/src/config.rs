@@ -63,13 +63,3 @@ pub fn port() -> u16 {
         .unwrap_or(9908)
 }
 
-pub fn log_requests_and_responses() -> bool {
-    matches!(
-        std::env::var("LOG_REQUESTS_AND_RESPONSES")
-            .unwrap_or_default()
-            .trim()
-            .to_lowercase()
-            .as_str(),
-        "1" | "true" | "yes" | "on"
-    )
-}
