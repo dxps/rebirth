@@ -1,8 +1,9 @@
 use dioxus::prelude::*;
 use gloo_net::http::Request;
-use lucide_dioxus::{ArrowLeft, Eye, EyeOff, Info, Pencil, Save, Trash2};
+use lucide_dioxus::{ArrowLeft, Info, Pencil, Save, Trash2};
 
 use crate::components::multi_select_picker::{MultiSelectOption, MultiSelectPicker};
+use crate::components::password_input::PasswordInput;
 use crate::types::{
     AccessLevel, ModalContent, ModalInteraction, ModalPosition, ModalSize, OpenModal, Permission,
     SecurityModalMode, User, UserModal, UserResponse, API_BASE_URL,
@@ -72,7 +73,6 @@ pub fn open_user_modal(
             is_access_level_menu_open: false,
             is_delete_confirm_open: false,
             is_info_open: false,
-            is_password_visible: false,
             is_permission_menu_open: false,
             is_saving: false,
             last_name: user.last_name,
@@ -118,7 +118,6 @@ pub fn open_user_modal(
                 is_access_level_menu_open: false,
                 is_delete_confirm_open: false,
                 is_info_open: false,
-                is_password_visible: false,
                 is_permission_menu_open: false,
                 is_saving: false,
                 last_name: String::new(),
@@ -139,7 +138,7 @@ pub fn open_user_modal(
         position,
         size: ModalSize {
             height: if content.mode == SecurityModalMode::Details {
-                300.0
+                320.0
             } else {
                 400.0
             },
@@ -739,41 +738,36 @@ pub(super) fn UserContentView(modal: OpenModal, modals: Signal<Vec<OpenModal>>) 
                 }
             }
             if !is_readonly {
-                label { onpointerdown: move |event| event.stop_propagation(),
-                    span {
-                        if user.mode == SecurityModalMode::Create {
-                            "password"
-                        } else {
-                            "new password"
+                if user.mode == SecurityModalMode::Create {
+                    div { onpointerdown: move |event| event.stop_propagation(),
+                        PasswordInput {
+                            label: "password",
+                            name: "security-user-password",
+                            autocomplete: "new-password",
+                            disabled: user.is_saving,
+                            placeholder: "",
+                            value: user.password.clone(),
+                            on_change: move |value| update_user_modal(
+                                modals,
+                                modal.id,
+                                |user| user.password = value,
+                            ),
                         }
                     }
-                    span { class: "security-user-password-wrap",
-                        input {
+                } else {
+                    div { onpointerdown: move |event| event.stop_propagation(),
+                        PasswordInput {
+                            label: "new password",
+                            name: "security-user-new-password",
+                            autocomplete: "new-password",
                             disabled: user.is_saving,
-                            placeholder: if user.mode == SecurityModalMode::Create { "" } else { "Leave empty to keep current" },
-                            r#type: if user.is_password_visible { "text" } else { "password" },
-                            value: "{user.password}",
-                            oninput: move |event| update_user_modal(
+                            placeholder: "Leave empty to keep current",
+                            value: user.password.clone(),
+                            on_change: move |value| update_user_modal(
                                 modals,
                                 modal.id,
-                                |user| user.password = event.value(),
+                                |user| user.password = value,
                             ),
-                        }
-                        button {
-                            class: "security-user-password-toggle",
-                            aria_label: if user.is_password_visible { "Hide password" } else { "Show password" },
-                            disabled: user.is_saving,
-                            r#type: "button",
-                            onclick: move |_| update_user_modal(
-                                modals,
-                                modal.id,
-                                |user| user.is_password_visible = !user.is_password_visible,
-                            ),
-                            if user.is_password_visible {
-                                Eye { class: "app-icon", size: 14 }
-                            } else {
-                                EyeOff { class: "app-icon", size: 14 }
-                            }
                         }
                     }
                 }

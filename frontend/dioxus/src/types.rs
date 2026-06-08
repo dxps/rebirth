@@ -154,7 +154,6 @@ pub struct UserModal {
     pub is_access_level_menu_open: bool,
     pub is_delete_confirm_open: bool,
     pub is_info_open: bool,
-    pub is_password_visible: bool,
     pub is_permission_menu_open: bool,
     pub is_saving: bool,
     pub last_name: String,

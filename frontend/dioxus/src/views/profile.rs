@@ -140,6 +140,8 @@ pub fn ProfileView(
                         label: "Current password",
                         name: "current-password",
                         autocomplete: "current-password",
+                        disabled: false,
+                        placeholder: "",
                         value: current_password(),
                         on_change: move |value| current_password.set(value),
                     }
@@ -147,6 +149,8 @@ pub fn ProfileView(
                         label: "New password",
                         name: "new-password",
                         autocomplete: "new-password",
+                        disabled: false,
+                        placeholder: "",
                         value: new_password(),
                         on_change: move |value| new_password.set(value),
                     }
@@ -154,6 +158,8 @@ pub fn ProfileView(
                         label: "Confirm password",
                         name: "confirm-password",
                         autocomplete: "new-password",
+                        disabled: false,
+                        placeholder: "",
                         value: confirm_password(),
                         on_change: move |value| confirm_password.set(value),
                     }

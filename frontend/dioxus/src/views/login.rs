@@ -78,6 +78,8 @@ pub fn LoginView(on_login: EventHandler<AuthSession>) -> Element {
                     label: "Password",
                     name: "password",
                     autocomplete: "current-password",
+                    disabled: false,
+                    placeholder: "",
                     value: password(),
                     on_change: move |value| password.set(value),
                 }

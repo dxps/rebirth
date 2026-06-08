@@ -3047,7 +3047,6 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.security-user-password-wrap,
 .security-user-permissions-picker {
 	display: block;
 	position: relative;
@@ -3060,36 +3059,22 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	padding-left: 0;
 }
 
-.security-user-password-wrap input {
+.access-level-edit-form .password-input-wrap input {
 	padding-right: 2.1rem;
 	width: 100%;
 }
 
-.security-user-password-toggle,
-button.security-user-password-toggle {
-	background: transparent;
-	background-color: transparent;
+.access-level-edit-form .password-input-toggle,
+.access-level-edit-form button.password-input-toggle {
 	border-radius: 999px;
-	color: color-mix(in srgb, var(--fg) 62%, transparent);
 	height: 1.45rem;
-	justify-content: center;
 	min-height: 1.45rem;
 	padding: 0;
-	position: absolute;
 	right: 0.14rem;
-	top: 50%;
-	transform: translateY(-50%);
 	width: 1.45rem;
 }
 
-.security-user-password-toggle:hover,
-button.security-user-password-toggle:hover {
-	background: var(--button-hover-bg);
-	background-color: var(--button-hover-bg);
-	color: var(--button-fg);
-}
-
-.security-user-password-toggle svg {
+.access-level-edit-form .password-input-toggle svg {
 	height: 0.85rem;
 	width: 0.85rem;
 }
