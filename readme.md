@@ -1,10 +1,17 @@
 # Rebirth
 
-This TBD implemented as a fullstack project using React.js (and React Native) with TypeScript.
+This project is implemented as a fullstack project using:
+
+- React.js (and React Native) with TypeScript on frontend (see `frontend/web` and `frontend/mobile` directories)
+  with Bun.js with TypeScript on backend (see `service` directory)
+- Rust on frontend (`frontend/dioxus` directory) and backend (`svc` directory)
+- using PostgreSQL as database
 
 <br/>
 
 ## Project layout
+
+Regarding the TypeScript based stack:
 
 - `service` - Bun.js API written in TypeScript.
 - `frontend/web` - React.js web app powered by Vite.
@@ -15,7 +22,7 @@ This TBD implemented as a fullstack project using React.js (and React Native) wi
 
 ## Getting started
 
-Install the dependencies using `bun install`.
+Install the dependencies on the TypeScript based stack using `bun install`.
 
 <br/>
 
