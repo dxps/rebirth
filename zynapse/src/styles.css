@@ -8,6 +8,17 @@
   z-index: 50;
 }
 
+.zynapse-clickable-row {
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease;
+}
+
+.zynapse-clickable-row:hover,
+.zynapse-clickable-row:focus {
+  background-color: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+}
+
 .zynapse-draggable-modal {
   max-height: min(34rem, calc(100vh - 2rem));
   pointer-events: auto;

@@ -141,13 +141,27 @@ pub fn users(c: *spider.Ctx) !Response {
 
 pub fn usersDraggableModal(c: *spider.Ctx) !Response {
     _ = c.cookie(session_cookie) orelse return datastar(c, try loginScreen(c, "Please sign in first."));
-    return datastar(c, usersDraggableModalLayer());
+    const modal_id = try std.fmt.allocPrint(c.arena, "users-experiment-modal-{s}", .{c.query("instance") orelse "single"});
+    return datastarAppend(c, "#zynapse-modal-layer", try usersExperimentModalHtml(c, modal_id));
+}
+
+pub fn userDetailsModal(c: *spider.Ctx) !Response {
+    const token = c.cookie(session_cookie) orelse return datastar(c, try loginScreen(c, "Please sign in first."));
+    const user_id = c.params.get("id") orelse return datastar(c, try errorPanel(c, "Users", "Missing user id."));
+    const response = apiGetJson(c, "/users", token) catch return datastar(c, try errorPanel(c, "Users", "Unable to load user."));
+    defer response.deinit();
+
+    const user_list = getArray(response.value.object.get("data")) orelse return datastar(c, try errorPanel(c, "Users", "Unable to read users."));
+    const user = findUserById(user_list, user_id) orelse return datastar(c, try errorPanel(c, "Users", "User not found."));
+    const instance = c.query("instance") orelse "single";
+    const modal_id = try std.fmt.allocPrint(c.arena, "user-detail-modal-{s}-{s}", .{ user_id, instance });
+    return datastarAppend(c, "#zynapse-modal-layer", try userDetailsModalHtml(c, user, modal_id));
 }
 
 pub fn usersModalClose(c: *spider.Ctx) !Response {
-    return datastar(c,
-        \\<div id="zynapse-modal-layer" class="zynapse-modal-layer"></div>
-    );
+    const modal_id = c.query("modalId") orelse return datastar(c, "");
+    const selector = try std.fmt.allocPrint(c.arena, "#{s}", .{modal_id});
+    return datastarRemove(c, selector);
 }
 
 fn apiUrl(c: *spider.Ctx, path: []const u8) ![]const u8 {
@@ -189,8 +203,36 @@ fn datastar(c: *spider.Ctx, html: []const u8) !Response {
 }
 
 fn datastarWithHeaders(c: *spider.Ctx, html: []const u8, headers: []const [2][]const u8) !Response {
+    return datastarPatchElements(c, html, headers, null, null);
+}
+
+fn datastarAppend(c: *spider.Ctx, selector: []const u8, html: []const u8) !Response {
+    return datastarPatchElements(c, html, &.{}, selector, "append");
+}
+
+fn datastarRemove(c: *spider.Ctx, selector: []const u8) !Response {
+    return datastarPatchElements(c, "", &.{}, selector, "remove");
+}
+
+fn datastarPatchElements(
+    c: *spider.Ctx,
+    html: []const u8,
+    headers: []const [2][]const u8,
+    selector: ?[]const u8,
+    mode: ?[]const u8,
+) !Response {
     var body = std.ArrayList(u8).initCapacity(c.arena, html.len + 128) catch unreachable;
     try body.appendSlice(c.arena, "event: datastar-patch-elements\n");
+    if (selector) |value| {
+        try body.appendSlice(c.arena, "data: selector ");
+        try body.appendSlice(c.arena, value);
+        try body.append(c.arena, '\n');
+    }
+    if (mode) |value| {
+        try body.appendSlice(c.arena, "data: mode ");
+        try body.appendSlice(c.arena, value);
+        try body.append(c.arena, '\n');
+    }
 
     var lines = std.mem.splitScalar(u8, html, '\n');
     while (lines.next()) |line| {
@@ -327,7 +369,11 @@ fn usersPanel(c: *spider.Ctx, user_values: []const JsonValue) ![]const u8 {
     var rows = std.ArrayList(u8).initCapacity(c.arena, user_values.len * 256) catch unreachable;
     for (user_values) |value| {
         const user = getObjectValue(value) orelse continue;
-        try rows.appendSlice(c.arena, "<tr>");
+        const user_id = stringField(user, "id") orelse continue;
+        const open_url = try std.fmt.allocPrint(c.arena, "/ui/users/{s}/modal?instance=", .{user_id});
+        try rows.appendSlice(c.arena, try std.fmt.allocPrint(c.arena,
+            \\<tr class="zynapse-clickable-row" tabindex="0" data-zynapse-user-url="{s}">
+        , .{try escape(c, open_url)}));
         try appendCell(c, &rows, stringField(user, "username") orelse "");
         try appendCell(c, &rows, stringField(user, "email") orelse "");
         try appendCell(c, &rows, fullName(c, user) catch "");
@@ -346,7 +392,7 @@ fn usersPanel(c: *spider.Ctx, user_values: []const JsonValue) ![]const u8 {
         \\    </div>
         \\    <div class="flex flex-wrap gap-2">
         \\      <button class="btn btn-ghost btn-sm" data-on:click="@get('/ui/users')"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
-        \\      <button class="btn btn-warning btn-sm" data-on:click="@get('/ui/users/draggable-modal')"><i class="ti ti-window" aria-hidden="true"></i>Open modal experiment</button>
+        \\      <button class="btn btn-warning btn-sm" data-on:click="@get('/ui/users/draggable-modal?instance=' + Date.now())"><i class="ti ti-window" aria-hidden="true"></i>Open modal experiment</button>
         \\    </div>
         \\  </div>
         \\  <div class="overflow-x-auto rounded-lg border border-base-300 bg-base-200">
@@ -360,16 +406,15 @@ fn usersPanel(c: *spider.Ctx, user_values: []const JsonValue) ![]const u8 {
     , .{try rows.toOwnedSlice(c.arena)});
 }
 
-fn usersDraggableModalLayer() []const u8 {
-    return
-        \\<div id="zynapse-modal-layer" class="zynapse-modal-layer">
-        \\  <section class="zynapse-draggable-modal rounded-lg border border-base-300 bg-base-100 shadow-2xl" data-draggable-modal style="left: min(7vw, 6rem); top: 7rem;">
+fn usersExperimentModalHtml(c: *spider.Ctx, modal_id: []const u8) ![]const u8 {
+    return std.fmt.allocPrint(c.arena,
+        \\<section id="{s}" class="zynapse-draggable-modal rounded-lg border border-base-300 bg-base-100 shadow-2xl" data-draggable-modal style="left: min(7vw, 6rem); top: 7rem;">
         \\    <header class="zynapse-draggable-handle flex cursor-move select-none items-center justify-between gap-3 border-b border-base-300 px-4 py-3" data-drag-handle>
         \\      <div class="min-w-0">
         \\        <p class="text-xs font-medium uppercase text-warning">Datastar experiment</p>
         \\        <h2 class="truncate text-base font-semibold">Draggable Users modal</h2>
         \\      </div>
-        \\      <button class="btn btn-ghost btn-sm btn-square" title="Close" data-on:click="@get('/ui/users/modal/close')"><i class="ti ti-x" aria-hidden="true"></i></button>
+        \\      <button class="btn btn-ghost btn-sm btn-square" title="Close" data-on:click="@get('/ui/users/modal/close?modalId={s}')"><i class="ti ti-x" aria-hidden="true"></i></button>
         \\    </header>
         \\    <div class="grid gap-4 p-4 text-sm">
         \\      <p class="text-base-content/70">This modal was inserted by a Datastar patch from the Users section. Dragging is handled locally so pointer movement stays instant.</p>
@@ -379,8 +424,54 @@ fn usersDraggableModalLayer() []const u8 {
         \\      </div>
         \\    </div>
         \\  </section>
-        \\</div>
-    ;
+    , .{ try escape(c, modal_id), try escape(c, modal_id) });
+}
+
+fn userDetailsModalHtml(c: *spider.Ctx, user: std.json.ObjectMap, modal_id: []const u8) ![]const u8 {
+    const username = stringField(user, "username") orelse "";
+    const email = stringField(user, "email") orelse "";
+    const first_name = stringField(user, "firstName") orelse "";
+    const last_name = stringField(user, "lastName") orelse "";
+    const user_id = stringField(user, "id") orelse "";
+    const permissions = try namesList(c, getArray(user.get("permissions")) orelse &.{});
+    const access_levels = try namesList(c, getArray(user.get("accessLevels")) orelse &.{});
+
+    return std.fmt.allocPrint(c.arena,
+        \\<section id="{s}" class="zynapse-draggable-modal rounded-lg border border-base-300 bg-base-100 shadow-2xl" data-draggable-modal style="left: min(9vw, 8rem); top: 8rem;">
+        \\  <header class="zynapse-draggable-handle flex cursor-move select-none items-center justify-between gap-3 border-b border-base-300 px-4 py-3" data-drag-handle>
+        \\    <div class="min-w-0">
+        \\      <p class="text-xs font-medium uppercase text-warning">User</p>
+        \\      <h2 class="truncate text-base font-semibold">{s}</h2>
+        \\    </div>
+        \\    <button class="btn btn-ghost btn-sm btn-square" title="Close" data-on:click="@get('/ui/users/modal/close?modalId={s}')"><i class="ti ti-x" aria-hidden="true"></i></button>
+        \\  </header>
+        \\  <div class="grid gap-4 p-4 text-sm">
+        \\    <div class="grid gap-3 sm:grid-cols-2">
+        \\      <label class="form-control gap-1"><span class="label-text text-base-content/60">First name</span><input class="input input-bordered input-sm" readonly value="{s}"></label>
+        \\      <label class="form-control gap-1"><span class="label-text text-base-content/60">Last name</span><input class="input input-bordered input-sm" readonly value="{s}"></label>
+        \\    </div>
+        \\    <label class="form-control gap-1"><span class="label-text text-base-content/60">Email</span><input class="input input-bordered input-sm" readonly value="{s}"></label>
+        \\    <label class="form-control gap-1"><span class="label-text text-base-content/60">Username</span><input class="input input-bordered input-sm" readonly value="{s}"></label>
+        \\    <label class="form-control gap-1"><span class="label-text text-base-content/60">Permissions</span><input class="input input-bordered input-sm" readonly value="{s}"></label>
+        \\    <label class="form-control gap-1"><span class="label-text text-base-content/60">Access levels</span><input class="input input-bordered input-sm" readonly value="{s}"></label>
+        \\    <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+        \\      <p class="text-xs font-medium text-base-content/60">id</p>
+        \\      <p class="mt-1 break-all font-mono text-xs">{s}</p>
+        \\    </div>
+        \\  </div>
+        \\</section>
+    , .{
+        try escape(c, modal_id),
+        try escape(c, username),
+        try escape(c, modal_id),
+        try escape(c, first_name),
+        try escape(c, last_name),
+        try escape(c, email),
+        try escape(c, username),
+        permissions,
+        access_levels,
+        try escape(c, user_id),
+    });
 }
 
 fn errorPanel(c: *spider.Ctx, title: []const u8, message: []const u8) ![]const u8 {
@@ -405,6 +496,30 @@ fn fullName(c: *spider.Ctx, user: std.json.ObjectMap) ![]const u8 {
         stringField(user, "firstName") orelse "",
         stringField(user, "lastName") orelse "",
     });
+}
+
+fn findUserById(user_values: []const JsonValue, user_id: []const u8) ?std.json.ObjectMap {
+    for (user_values) |value| {
+        const user = getObjectValue(value) orelse continue;
+        const id = stringField(user, "id") orelse continue;
+        if (std.mem.eql(u8, id, user_id)) return user;
+    }
+
+    return null;
+}
+
+fn namesList(c: *spider.Ctx, values: []const JsonValue) ![]const u8 {
+    var out = std.ArrayList(u8).initCapacity(c.arena, values.len * 16) catch unreachable;
+    for (values, 0..) |value, item_index| {
+        const item = getObjectValue(value) orelse continue;
+        const name = stringField(item, "name") orelse continue;
+        if (item_index > 0 and out.items.len > 0) {
+            try out.appendSlice(c.arena, ", ");
+        }
+        try out.appendSlice(c.arena, try escape(c, name));
+    }
+
+    return out.toOwnedSlice(c.arena);
 }
 
 fn getObject(value: ?JsonValue) ?std.json.ObjectMap {

@@ -1,10 +1,19 @@
 import '/js/datastar.js';
 
 const navSelector = '[data-zynapse-nav]';
+const userRowSelector = '[data-zynapse-user-url]';
 const draggableSelector = '[data-draggable-modal]';
 const dragHandleSelector = '[data-drag-handle]';
+let topModalZIndex = 60;
 
 document.addEventListener('click', (event) => {
+  const userRow = event.target.closest(userRowSelector);
+  if (userRow) {
+    event.preventDefault();
+    patchFromEndpoint(`${userRow.dataset.zynapseUserUrl}${Date.now()}`);
+    return;
+  }
+
   const trigger = event.target.closest(navSelector);
   if (!trigger) return;
 
@@ -14,7 +23,18 @@ document.addEventListener('click', (event) => {
   window.history.pushState({}, '', nextPath);
 });
 
+document.addEventListener('keydown', (event) => {
+  const userRow = event.target.closest(userRowSelector);
+  if (!userRow || (event.key !== 'Enter' && event.key !== ' ')) return;
+
+  event.preventDefault();
+  patchFromEndpoint(`${userRow.dataset.zynapseUserUrl}${Date.now()}`);
+});
+
 document.addEventListener('pointerdown', (event) => {
+  const clickedModal = event.target.closest(draggableSelector);
+  if (clickedModal) bringModalToFront(clickedModal);
+
   const handle = event.target.closest(dragHandleSelector);
   if (!handle) return;
 
@@ -56,4 +76,70 @@ document.addEventListener('pointerdown', (event) => {
 function clamp(value, min, max) {
   if (max < min) return min;
   return Math.min(Math.max(value, min), max);
+}
+
+function bringModalToFront(modal) {
+  topModalZIndex += 1;
+  modal.style.zIndex = `${topModalZIndex}`;
+}
+
+async function patchFromEndpoint(url) {
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'text/event-stream, text/html, application/json',
+      'Datastar-Request': 'true',
+    },
+  });
+
+  if (!response.ok) return;
+
+  const text = await response.text();
+  const patch = parseDatastarPatch(text);
+  if (!patch) return;
+
+  applyPatch(patch);
+}
+
+function parseDatastarPatch(text) {
+  const patch = { elements: '', mode: 'outer', selector: '' };
+
+  for (const line of text.split('\n')) {
+    if (!line.startsWith('data: ')) continue;
+
+    const data = line.slice(6);
+    const space = data.indexOf(' ');
+    if (space === -1) continue;
+
+    const field = data.slice(0, space);
+    const value = data.slice(space + 1);
+
+    if (field === 'elements') {
+      patch.elements += `${value}\n`;
+    } else if (field === 'mode') {
+      patch.mode = value;
+    } else if (field === 'selector') {
+      patch.selector = value;
+    }
+  }
+
+  return patch;
+}
+
+function applyPatch({ elements, mode, selector }) {
+  if (mode === 'append') {
+    document.querySelector(selector)?.insertAdjacentHTML('beforeend', elements);
+    return;
+  }
+
+  if (mode === 'remove') {
+    document.querySelector(selector)?.remove();
+    return;
+  }
+
+  const template = document.createElement('template');
+  template.innerHTML = elements.trim();
+  for (const element of template.content.children) {
+    const target = element.id ? document.getElementById(element.id) : null;
+    target?.replaceWith(element);
+  }
 }

@@ -10,4 +10,5 @@ pub const profile = controller.profile;
 pub const updateProfile = controller.updateProfile;
 pub const users = controller.users;
 pub const usersDraggableModal = controller.usersDraggableModal;
+pub const userDetailsModal = controller.userDetailsModal;
 pub const usersModalClose = controller.usersModalClose;
