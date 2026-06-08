@@ -1,4 +1,4 @@
 #!/bin/sh
 
-dx serve --hot-patch --platform web --port 9910
+~/.cargo/bin/dx serve --hot-patch --platform web --port 9910
 

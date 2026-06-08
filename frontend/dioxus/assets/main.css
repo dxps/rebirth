@@ -217,8 +217,7 @@ textarea {
 	background: transparent;
 }
 
-.brand img,
-.home-logo {
+.brand img {
 	display: block;
 	filter: var(--brand-logo-filter);
 	width: auto;
@@ -323,32 +322,34 @@ textarea {
 }
 
 .home-logo {
+	display: block;
 	height: 5rem;
 	margin-bottom: 0.85rem;
 	opacity: 0.65;
+	width: auto;
 }
 
 .striped-title {
-	background:
-		repeating-linear-gradient(
-			0deg,
-			var(--striped-title-fill) 0,
-			var(--striped-title-fill) var(--striped-title-line),
-			transparent var(--striped-title-line),
-			transparent var(--striped-title-gap)
-		),
-		var(--striped-title-fg);
-	-webkit-background-clip: text;
+	background: repeating-linear-gradient(
+		to bottom,
+		var(--striped-title-fg) 0,
+		var(--striped-title-fg) var(--striped-title-line),
+		transparent var(--striped-title-line),
+		transparent var(--striped-title-gap)
+	);
 	background-clip: text;
 	color: transparent;
-	font-size: clamp(4rem, 12vw, 8.5rem);
+	font-size: clamp(0.55rem, 5vw, 4.8rem);
 	font-weight: 600;
 	letter-spacing: 0;
 	line-height: 0.9;
 	margin: 0;
+	text-shadow: 0 0 0 var(--striped-title-fill);
+	-webkit-background-clip: text;
 }
 
 .intro p {
+	color: var(--muted);
 	font-weight: 300;
 	margin: 0.75rem 0 0;
 }
@@ -4163,7 +4164,4 @@ button.entity-reference-button:hover {
 		grid-template-columns: 1fr;
 	}
 
-	.striped-title {
-		font-size: 4rem;
-	}
 }
