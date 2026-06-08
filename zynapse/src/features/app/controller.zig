@@ -1,8 +1,9 @@
 const std = @import("std");
-const spider = @import("spider");
-
-const Response = spider.Response;
 const JsonValue = std.json.Value;
+
+const spider = @import("spider");
+const Response = spider.Response;
+
 const api_base_url = "http://localhost:9908";
 const session_cookie = "zynapse_session";
 
@@ -234,7 +235,7 @@ fn loginScreen(c: *spider.Ctx, message: ?[]const u8) ![]const u8 {
         \\    <div>
         \\      <p class="text-sm font-medium text-warning">Rebirth access</p>
         \\      <h1 class="mt-2 text-3xl font-semibold tracking-normal">Sign in</h1>
-        \\      <p class="mt-2 text-sm text-base-content/60">Use your Rebirth account to open the Datastar workspace.</p>
+        \\      <p class="mt-2 text-sm text-base-content/60">Login to enter into Zynapse knowledge space.</p>
         \\    </div>
         \\    {s}
         \\    <form class="grid gap-4">

@@ -7,10 +7,9 @@ watchexec \
   --watch src \
   --watch build.zig \
   --watch build.zig.zon \
-  --exts zig,zon \
+  --exts zig,zon,html,css \
   --ignore src/embedded_templates.zig \
   --ignore zig-cache \
   --ignore .zig-cache \
   --ignore zig-out \
   -- zig build run
-

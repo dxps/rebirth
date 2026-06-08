@@ -9,6 +9,39 @@
     <link rel="stylesheet" href="/css/app.css">
     <link rel="stylesheet" href="/css/tabler-icons.min.css">
     <script type="module" src="/js/zynapse-datastar.js"></script>
+    <script>
+        (() => {
+            const devHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+            if (!devHosts.has(window.location.hostname)) return;
+
+            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+            const reloadUrl = `${protocol}://${window.location.host}/_spider/reload`;
+            let reloadOnConnect = false;
+
+            const connect = () => {
+                const socket = new WebSocket(reloadUrl);
+
+                socket.addEventListener("open", () => {
+                    if (reloadOnConnect) window.location.reload();
+                });
+
+                socket.addEventListener("message", (event) => {
+                    if (event.data === "reload") window.location.reload();
+                });
+
+                socket.addEventListener("close", () => {
+                    reloadOnConnect = true;
+                    window.setTimeout(connect, 250);
+                });
+
+                socket.addEventListener("error", () => {
+                    socket.close();
+                });
+            };
+
+            connect();
+        })();
+    </script>
     <style>
         @font-face {
             font-family: 'tabler-icons';
