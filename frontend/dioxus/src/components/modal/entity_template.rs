@@ -267,6 +267,7 @@ pub(super) fn EntityTemplateTitlebarActions(
         let save_modal_edit = modal.clone();
         let edit_entity_template_id = entity_template.entity_template.id.clone();
         let edit_entity_template_id_for_delete = edit_entity_template_id.clone();
+        let edit_entity_templates_snapshot = entity_template.entity_templates_snapshot.clone();
         let edit_entity_templates = entity_template.entity_templates;
         let edit_session_key = entity_template.session_key.clone();
         let edit_owner_users = owner_users.clone();
@@ -278,8 +279,7 @@ pub(super) fn EntityTemplateTitlebarActions(
                 "data-tooltip": "Cancel",
                 aria_label: "Cancel edit",
                 onclick: move |_| {
-                    let original = edit_entity_templates
-                        .read()
+                    let original = edit_entity_templates_snapshot
                         .iter()
                         .find(|t| t.id == edit_entity_template_id)
                         .cloned();

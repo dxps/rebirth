@@ -574,8 +574,11 @@ textarea {
 .data-explorer-view {
 	display: grid;
 	gap: 1rem;
+	height: calc(100vh - 7.5rem);
 	margin: 0 auto;
 	max-width: 62rem;
+	min-height: 0;
+	overflow: hidden;
 	width: 100%;
 }
 
@@ -797,10 +800,27 @@ button.entity-views-manage-button:hover {
 	width: 100%;
 }
 
+.data-explorer-view .types-mgmt-section {
+	grid-template-rows: auto minmax(0, 1fr);
+	min-height: 0;
+}
+
+.data-explorer-view .data-table-wrap {
+	max-height: calc(100vh - 11.5rem);
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
 .security-table-wrap,
 .templates-table-wrap,
 .audit-table-wrap {
 	overflow: visible;
+}
+
+.data-explorer-view .templates-table-wrap {
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .data-table {
@@ -2840,6 +2860,10 @@ button.include-attribute-submit-button.icon-only-button[data-tooltip]:focus-visi
 	user-select: none;
 }
 
+.draggable-modal-content.entity-details-modal-content {
+	overflow-y: hidden;
+}
+
 .draggable-modal-content:has(.security-user-permissions-menu),
 .draggable-modal-content:has(.include-attribute-popover),
 .draggable-modal-content:has(.delete-confirm-popover),
@@ -4165,4 +4189,40 @@ button.entity-reference-button:hover {
 		grid-template-columns: 1fr;
 	}
 
+}
+
+@media (max-height: 300px) {
+	.app-shell {
+		padding: 4rem 1rem 0.75rem;
+	}
+
+	.data-explorer-view {
+		height: calc(100vh - 4.75rem);
+	}
+
+	.data-explorer-view .types-mgmt-section {
+		gap: 0.4rem;
+	}
+
+	.data-explorer-view .section-heading {
+		gap: 0.35rem;
+	}
+
+	.data-explorer-view .data-table-wrap {
+		max-height: none;
+	}
+
+	.intro {
+		min-height: calc(100vh - 4.75rem);
+	}
+
+	.home-logo {
+		height: clamp(2rem, 18vh, 5rem);
+		margin-bottom: 0.35rem;
+	}
+
+	.intro p {
+		line-height: 1.2;
+		margin-top: 0.45rem;
+	}
 }

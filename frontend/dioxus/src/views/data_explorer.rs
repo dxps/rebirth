@@ -492,6 +492,7 @@ pub fn DataExplorerView(
                                                     open_entity_details_window(
                                                         entity_id,
                                                         entity_details_windows,
+                                                        modals,
                                                         next_window_id,
                                                         sk.clone(),
                                                         position,
@@ -1179,6 +1180,7 @@ fn load_entities_page(
 pub fn open_entity_details_window(
     entity_id: String,
     mut windows: Signal<Vec<EntityDetailsWindow>>,
+    modals: Signal<Vec<OpenModal>>,
     mut next_window_id: Signal<u32>,
     session_key: String,
     position: ModalPosition,
@@ -1191,7 +1193,14 @@ pub fn open_entity_details_window(
             .map(|w| w.id.clone())
     };
     if let Some(win_id) = existing {
-        let next_z = windows.read().iter().map(|w| w.z_index).max().unwrap_or(20) + 1;
+        let next_z = modals
+            .read()
+            .iter()
+            .map(|modal| modal.z_index)
+            .chain(windows.read().iter().map(|w| w.z_index))
+            .max()
+            .unwrap_or(20)
+            + 1;
         if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
             w.z_index = next_z;
         }
@@ -1199,7 +1208,14 @@ pub fn open_entity_details_window(
     }
 
     let id_num = next_window_id();
-    let z_index = windows.read().iter().map(|w| w.z_index).max().unwrap_or(20) + 1;
+    let z_index = modals
+        .read()
+        .iter()
+        .map(|modal| modal.z_index)
+        .chain(windows.read().iter().map(|w| w.z_index))
+        .max()
+        .unwrap_or(20)
+        + 1;
     next_window_id.set(id_num + 1);
 
     let win_id = format!("entity-window-{id_num}");

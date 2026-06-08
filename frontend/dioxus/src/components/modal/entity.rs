@@ -9,11 +9,14 @@ use crate::components::single_select_picker::{SingleSelectOption, SingleSelectPi
 use crate::types::{
     AccessLevel, AccessLevelsResponse, AttributeTemplate, AttributeTemplatesResponse, AuthSession,
     EntitiesResponse, Entity, EntityAttribute, EntityIncomingLink, EntityLink, EntityResponse,
-    EntityTemplate, EntityTemplatesResponse, ModalPosition, SavedView, User as RebirthUser,
-    UsersResponse, API_BASE_URL,
+    EntityTemplate, EntityTemplatesResponse, ModalPosition, OpenModal, SavedView,
+    User as RebirthUser, UsersResponse, API_BASE_URL,
 };
 
-use super::{json_string, modal_position_from_pointer, read_response_error, DeleteConfirmPopover};
+use super::{
+    json_string, modal_position_from_pointer, next_modal_z_index_for_all, read_response_error,
+    DeleteConfirmPopover,
+};
 
 const VALUE_TYPES: [&str; 5] = ["text", "number", "boolean", "date", "datetime"];
 static ENTITY_ATTRIBUTE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -354,6 +357,7 @@ fn store_saved_views_impl(_user_id: &str, _views: &[SavedView]) {}
 pub fn EntityDetailsModal(
     window: EntityDetailsWindow,
     windows: Signal<Vec<EntityDetailsWindow>>,
+    modals: Signal<Vec<OpenModal>>,
     auth_session: Option<AuthSession>,
     session_key: String,
     access_levels: Vec<AccessLevel>,
@@ -372,7 +376,7 @@ pub fn EntityDetailsModal(
     let mut raise_window = {
         let win_id = win_id.clone();
         move || {
-            let next_z = windows.read().iter().map(|w| w.z_index).max().unwrap_or(20) + 1;
+            let next_z = next_modal_z_index_for_all(&modals.read(), &windows.read());
             if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
                 w.z_index = next_z;
             }
@@ -487,13 +491,7 @@ pub fn EntityDetailsModal(
                     move |event: Event<PointerData>| {
                         event.stop_propagation();
                         let point = event.data().client_coordinates();
-                        let next_z = windows
-                            .read()
-                            .iter()
-                            .map(|w| w.z_index)
-                            .max()
-                            .unwrap_or(20)
-                            + 1;
+                        let next_z = next_modal_z_index_for_all(&modals.read(), &windows.read());
                         if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
                             w.z_index = next_z;
                         }
@@ -529,7 +527,7 @@ pub fn EntityDetailsModal(
                         }
                     }
                 }
-                div { class: "draggable-modal-content",
+                div { class: "draggable-modal-content entity-details-modal-content",
                     EntityDetailsContent {
                         window: window.clone(),
                         windows,
@@ -549,13 +547,7 @@ pub fn EntityDetailsModal(
                     move |event: Event<PointerData>| {
                         event.stop_propagation();
                         let point = event.data().client_coordinates();
-                        let next_z = windows
-                            .read()
-                            .iter()
-                            .map(|w| w.z_index)
-                            .max()
-                            .unwrap_or(20)
-                            + 1;
+                        let next_z = next_modal_z_index_for_all(&modals.read(), &windows.read());
                         if let Some(w) = windows.write().iter_mut().find(|w| w.id == win_id) {
                             w.z_index = next_z;
                         }

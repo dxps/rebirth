@@ -403,6 +403,7 @@ pub fn App() -> Element {
                     key: "{window.id}",
                     window: window.clone(),
                     windows: entity_details_windows,
+                    modals,
                     auth_session: auth_session(),
                     session_key: auth_session
                         .read()
@@ -421,6 +422,7 @@ pub fn App() -> Element {
                         open_entity_details_window(
                             entity_id,
                             entity_details_windows,
+                            modals,
                             next_entity_window_id,
                             session_key,
                             position,
@@ -428,7 +430,7 @@ pub fn App() -> Element {
                     },
                 }
             }
-            ModalLayer { modals }
+            ModalLayer { modals, entity_windows: entity_details_windows }
         }
     }
 }

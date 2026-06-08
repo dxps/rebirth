@@ -73,6 +73,19 @@ pub(super) fn next_modal_z_index(modals: &[OpenModal]) -> u32 {
     modals.iter().map(|modal| modal.z_index).max().unwrap_or(20) + 1
 }
 
+pub(super) fn next_modal_z_index_for_all(
+    modals: &[OpenModal],
+    entity_windows: &[entity::EntityDetailsWindow],
+) -> u32 {
+    modals
+        .iter()
+        .map(|modal| modal.z_index)
+        .chain(entity_windows.iter().map(|window| window.z_index))
+        .max()
+        .unwrap_or(20)
+        + 1
+}
+
 fn close_modal_popovers(mut modals: Signal<Vec<OpenModal>>, modal_id: u32) {
     if let Some(open_modal) = modals
         .write()
@@ -287,8 +300,17 @@ fn ModalContentView(modal: OpenModal, modals: Signal<Vec<OpenModal>>) -> Element
 }
 
 #[component]
-pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
+pub fn ModalLayer(
+    modals: Signal<Vec<OpenModal>>,
+    entity_windows: Signal<Vec<entity::EntityDetailsWindow>>,
+) -> Element {
     let mut modal_interaction = use_signal(|| None::<ModalInteraction>);
+    let modal_layer_z_index = modals
+        .read()
+        .iter()
+        .map(|modal| modal.z_index)
+        .max()
+        .unwrap_or(20);
 
     rsx! {
         if !modals.read().is_empty() {
@@ -298,6 +320,7 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                     Some(ModalInteraction::Resize(_)) => "draggable-modal-layer is-resizing",
                     None => "draggable-modal-layer",
                 },
+                style: "z-index: {modal_layer_z_index};",
                 onpointermove: move |event| {
                     if let Some(interaction) = modal_interaction() {
                         let point = event.data().client_coordinates();
@@ -348,7 +371,10 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                         },
                         style: "left: {modal.position.x}px; top: {modal.position.y}px; width: {modal.size.width}px; height: {modal.size.height}px; min-width: {MODAL_MIN_WIDTH}px; min-height: {MODAL_MIN_HEIGHT}px; z-index: {modal.z_index};",
                         onpointerdown: move |_| {
-                            let next_z_index = next_modal_z_index(&modals.read());
+                            let next_z_index = next_modal_z_index_for_all(
+                                &modals.read(),
+                                &entity_windows.read(),
+                            );
                             if let Some(open_modal) = modals
                                 .write()
                                 .iter_mut()
@@ -364,7 +390,10 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                 event.stop_propagation();
 
                                 let point = event.data().client_coordinates();
-                                let next_z_index = next_modal_z_index(&modals.read());
+                                let next_z_index = next_modal_z_index_for_all(
+                                    &modals.read(),
+                                    &entity_windows.read(),
+                                );
 
                                 if let Some(open_modal) = modals
                                     .write()
@@ -419,7 +448,10 @@ pub fn ModalLayer(modals: Signal<Vec<OpenModal>>) -> Element {
                                 event.stop_propagation();
 
                                 let point = event.data().client_coordinates();
-                                let next_z_index = next_modal_z_index(&modals.read());
+                                let next_z_index = next_modal_z_index_for_all(
+                                    &modals.read(),
+                                    &entity_windows.read(),
+                                );
 
                                 if let Some(open_modal) = modals
                                     .write()
